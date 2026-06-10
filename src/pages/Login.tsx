@@ -36,8 +36,7 @@ export default function Login() {
           setError(errMsg);
         } else {
           setError('');
-          alert('注册成功！请在邮箱中查收确认邮件（如有），确认后即可登录。');
-          setIsRegister(false);
+          navigate('/');
         }
       } else {
         // 登录
