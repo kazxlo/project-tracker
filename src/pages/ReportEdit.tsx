@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getReport, getLatestReport, saveReport, generateWeekLabel } from '../api/storage';
+import { getProject, getReport, getLatestReport, saveReport, generateWeekLabel } from '../api/db';
 import { WeeklyReport, ReportItem, Risk } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -15,7 +15,6 @@ export default function ReportEdit() {
   const { id: projectId, reportId } = useParams<{ id: string; reportId: string }>();
   const navigate = useNavigate();
   const isEdit = !!reportId;
-  // 仅"在建项目验收管理"使用三字段结构
   const isP1 = projectId === 'p1';
 
   const getWeekRange = () => {
@@ -39,60 +38,77 @@ export default function ReportEdit() {
   const [weekEnd, setWeekEnd] = useState('');
   const [savedCreatedAt, setSavedCreatedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   // 上一周计划完成确认（仅新建时）
   const [planConfirm, setPlanConfirm] = useState<PlanConfirmItem[]>([]);
 
   useEffect(() => {
     if (!projectId) return;
-    const project = getProject(projectId);
-    if (!project) { navigate('/'); return; }
+    let cancelled = false;
 
-    if (isEdit && reportId) {
-      const existing = getReport(reportId);
-      if (existing) {
-        setGoals(existing.goals || existing.summary || '');
-        setHighlights(existing.highlights || '');
-        setProgress(existing.progress || 0);
-        setCompleted(existing.completedItems.length > 0 ? existing.completedItems : []);
-        setPlanned(existing.plannedItems.length > 0 ? existing.plannedItems : []);
-        setRisks(existing.risks);
-        setWeekLabel(existing.weekLabel);
-        setWeekStart(existing.weekStart);
-        setWeekEnd(existing.weekEnd);
-        setSavedCreatedAt(existing.createdAt);
-      }
-    } else {
-      const { start, end } = getWeekRange();
-      setWeekStart(start);
-      setWeekEnd(end);
-      setWeekLabel(generateWeekLabel(start));
-
-      const prev = getLatestReport(projectId);
-      if (prev) {
-        setGoals(prev.goals || prev.summary || '');
-        setHighlights(prev.highlights || '');
-        setProgress(prev.progress || 0);
-        setCompleted(prev.completedItems.length > 0
-          ? prev.completedItems.map(c => ({ ...c, id: 'c_' + Date.now() + '_' + c.order }))
-          : []);
-        setPlanned(prev.plannedItems.length > 0
-          ? prev.plannedItems.map(p => ({ ...p, id: 'p_' + Date.now() + '_' + p.order }))
-          : []);
-        setRisks(prev.risks.length > 0
-          ? prev.risks.map(r => ({ ...r, id: 'r_' + Date.now() + '_' + r.order, status: r.status === '已解决' ? '持续关注' as const : r.status }))
-          : []);
-
-        // 上一周计划事项完成确认：列出上一周 plannedItems，供用户勾选完成/未完成
-        if (prev.plannedItems.length > 0) {
-          setPlanConfirm(prev.plannedItems.map(p => ({
-            item: { ...p, id: 'pc_' + Date.now() + '_' + p.order }, // 新 id
-            done: false,
-            reason: '',
-          })));
+    async function load() {
+      try {
+        const project = await getProject(projectId!);
+        if (!cancelled) {
+          if (!project) { navigate('/'); return; }
         }
+
+        if (isEdit && reportId) {
+          const existing = await getReport(reportId);
+          if (!cancelled && existing) {
+            setGoals(existing.goals || existing.summary || '');
+            setHighlights(existing.highlights || '');
+            setProgress(existing.progress || 0);
+            setCompleted(existing.completedItems.length > 0 ? existing.completedItems : []);
+            setPlanned(existing.plannedItems.length > 0 ? existing.plannedItems : []);
+            setRisks(existing.risks);
+            setWeekLabel(existing.weekLabel);
+            setWeekStart(existing.weekStart);
+            setWeekEnd(existing.weekEnd);
+            setSavedCreatedAt(existing.createdAt);
+          }
+        } else {
+          const { start, end } = getWeekRange();
+          if (!cancelled) {
+            setWeekStart(start);
+            setWeekEnd(end);
+            setWeekLabel(generateWeekLabel(start));
+          }
+
+          const prev = await getLatestReport(projectId!);
+          if (!cancelled && prev) {
+            setGoals(prev.goals || prev.summary || '');
+            setHighlights(prev.highlights || '');
+            setProgress(prev.progress || 0);
+            setCompleted(prev.completedItems.length > 0
+              ? prev.completedItems.map(c => ({ ...c, id: 'c_' + Date.now() + '_' + c.order }))
+              : []);
+            setPlanned(prev.plannedItems.length > 0
+              ? prev.plannedItems.map(p => ({ ...p, id: 'p_' + Date.now() + '_' + p.order }))
+              : []);
+            setRisks(prev.risks.length > 0
+              ? prev.risks.map(r => ({ ...r, id: 'r_' + Date.now() + '_' + r.order, status: r.status === '已解决' ? '持续关注' as const : r.status }))
+              : []);
+
+            if (prev.plannedItems.length > 0) {
+              setPlanConfirm(prev.plannedItems.map(p => ({
+                item: { ...p, id: 'pc_' + Date.now() + '_' + p.order },
+                done: false,
+                reason: '',
+              })));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('加载周报数据失败:', err);
+      } finally {
+        if (!cancelled) setPageLoading(false);
       }
     }
+
+    load();
+    return () => { cancelled = true; };
   }, [projectId, reportId, isEdit, navigate]);
 
   // 计划确认：切换完成状态
@@ -104,7 +120,6 @@ export default function ReportEdit() {
     setPlanConfirm(prev => prev.map(pc => pc.item.id === id ? { ...pc, reason } : pc));
   };
 
-  // 将已确认完成的计划事项一键移入本周完成事项
   const confirmCompletedPlans = () => {
     const doneItems = planConfirm.filter(pc => pc.done).map((pc, idx) => ({
       ...pc.item,
@@ -142,31 +157,46 @@ export default function ReportEdit() {
   };
 
   // --- 提交 ---
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!projectId || saving) return;
     setSaving(true);
-    const filteredCompleted = completed.filter(i => i.title.trim());
-    const filteredPlanned = planned.filter(i => i.title.trim());
-    const filteredRisks = risks.filter(r => r.description.trim());
+    try {
+      const filteredCompleted = completed.filter(i => i.title.trim());
+      const filteredPlanned = planned.filter(i => i.title.trim());
+      const filteredRisks = risks.filter(r => r.description.trim());
 
-    const report: WeeklyReport = {
-      id: isEdit && reportId ? reportId : 'wr_' + Date.now(),
-      projectId,
-      weekLabel: weekLabel || generateWeekLabel(weekStart),
-      weekStart,
-      weekEnd,
-      createdAt: savedCreatedAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      goals,
-      highlights,
-      progress,
-      completedItems: filteredCompleted,
-      plannedItems: filteredPlanned,
-      risks: filteredRisks,
-    };
-    saveReport(report);
-    navigate(`/project/${projectId}`);
+      const report: WeeklyReport = {
+        id: isEdit && reportId ? reportId : 'wr_' + Date.now(),
+        projectId,
+        weekLabel: weekLabel || generateWeekLabel(weekStart),
+        weekStart,
+        weekEnd,
+        createdAt: savedCreatedAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        goals,
+        highlights,
+        progress,
+        completedItems: filteredCompleted,
+        plannedItems: filteredPlanned,
+        risks: filteredRisks,
+      };
+      await saveReport(report);
+      navigate(`/project/${projectId}`);
+    } catch (err) {
+      console.error('保存周报失败:', err);
+      alert('保存失败，请重试');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (pageLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
+        加载中...
+      </div>
+    );
+  }
 
   return (
     <div className={shared.editorWrap}>
@@ -299,7 +329,6 @@ export default function ReportEdit() {
               />
               <button className={shared.delBtn} onClick={() => removeItem(completed, setCompleted, item.id)} title="删除">×</button>
             </div>
-            {/* 仅 p1 显示三字段子行 */}
             {isP1 && (
               <div style={{ display: 'flex', gap: 8, paddingLeft: 20, marginBottom: completed.indexOf(item) === completed.length - 1 ? 0 : 4 }}>
                 <input
@@ -345,7 +374,7 @@ export default function ReportEdit() {
         </button>
       </Section>
 
-      {/* 风险提示（改为三部分：等级＋描述＋解决建议） */}
+      {/* 风险提示 */}
       <Section title="风险提示">
         {risks.map((risk) => (
           <div key={risk.id} className={shared.riskBlock}>

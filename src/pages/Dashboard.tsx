@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, getAllReports, initDemoData, saveProject, deleteProject, exportAllData, importAllData } from '../api/storage';
+import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData } from '../api/db';
 import { Project } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -21,6 +21,8 @@ function emptyProject(): Project {
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,14 +46,25 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    initDemoData();
-    setProjects(getProjects());
+    let cancelled = false;
+    async function load() {
+      try {
+        const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
+        if (!cancelled) {
+          setProjects(projs);
+          setAllReports(reps);
+        }
+      } catch (err) {
+        console.error('加载数据失败:', err);
+        if (!cancelled) showToast('加载数据失败，请刷新重试', 'error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   }, [refreshKey]);
 
-  // ===== 修复 Bug 1: 使用 getAllReports 替代 getReports('') =====
-  const allReports = getAllReports();
-
-  // ===== 修复 Bug 2: 使用 computed 值替代硬编码 =====
   const totalCompleted = allReports.reduce((s, r) => s + r.completedItems.length, 0);
   const totalPlanned = allReports.reduce((s, r) => s + r.plannedItems.length, 0);
   const totalRisks = allReports.reduce((s, r) => s + r.risks.length, 0);
@@ -77,61 +90,87 @@ export default function Dashboard() {
     setProjectModal({ open: true, editing: p });
   };
 
-  const handleSaveProject = () => {
+  const handleSaveProject = async () => {
     const project = editForm.id
       ? editForm
       : { ...editForm, id: 'p_' + Date.now() };
-    saveProject(project);
-    setProjectModal({ open: false, editing: null });
-    setRefreshKey(k => k + 1);
-    // 修复：判断是否编辑模式，而非判断 project 对象（永远 truthy）
-    showToast(editForm.id ? '项目已保存' : '项目已创建', 'success');
+    try {
+      await saveProject(project);
+      setProjectModal({ open: false, editing: null });
+      setRefreshKey(k => k + 1);
+      showToast(editForm.id ? '项目已保存' : '项目已创建', 'success');
+    } catch (err) {
+      console.error('保存项目失败:', err);
+      showToast('保存失败，请重试', 'error');
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    deleteProject(id);
-    setConfirmDelete(null);
-    setRefreshKey(k => k + 1);
-    showToast('项目已删除', 'success');
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await deleteProject(id);
+      setConfirmDelete(null);
+      setRefreshKey(k => k + 1);
+      showToast('项目已删除', 'success');
+    } catch (err) {
+      console.error('删除项目失败:', err);
+      showToast('删除失败，请重试', 'error');
+    }
   };
 
   // ===== 导入导出 =====
-  const handleExport = () => {
-    const json = exportAllData();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `project-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('数据已导出', 'success');
+  const handleExport = async () => {
+    try {
+      const json = await exportAllData();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `project-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('数据已导出', 'success');
+    } catch (err) {
+      console.error('导出失败:', err);
+      showToast('导出失败', 'error');
+    }
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = importAllData(reader.result as string);
-      showToast(result.message, result.success ? 'success' : 'error');
-      if (result.success) setRefreshKey(k => k + 1);
+    reader.onload = async () => {
+      try {
+        const result = await importAllData(reader.result as string);
+        showToast(result.message, result.success ? 'success' : 'error');
+        if (result.success) setRefreshKey(k => k + 1);
+      } catch (err) {
+        console.error('导入失败:', err);
+        showToast('导入失败', 'error');
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
   };
 
-  // 修复：使用 useEffect 监听全局点击来清除确认删除状态，替代脆弱的 onBlur + setTimeout
+  // 全局点击清除确认删除状态
   useEffect(() => {
     if (confirmDelete === null) return;
     const handler = (e: MouseEvent) => {
-      // 如果点击目标是删除按钮本身，不做清除（由 onClick 处理）
       if ((e.target as HTMLElement).closest(`[data-delete-id="${confirmDelete}"]`)) return;
       setConfirmDelete(null);
     };
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, [confirmDelete]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
+        加载中...
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -142,7 +181,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 工具栏：添加项目 + 导入导出 */}
+      {/* 工具栏 */}
       <div className={shared.toolbar}>
         <h2 className={shared.pageTitle} style={{ margin: 0 }}>项目总览</h2>
         <div className={shared.toolbarActions}>
@@ -169,7 +208,6 @@ export default function Dashboard() {
               key={p.id}
               className={shared.projectCard}
               onClick={(e) => {
-                // 如果点击了操作按钮就不要跳转
                 if ((e.target as HTMLElement).closest('button')) return;
                 navigate(`/project/${p.id}`);
               }}

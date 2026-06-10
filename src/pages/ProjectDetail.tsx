@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getReports, deleteReport } from '../api/storage';
+import { getProject, getReports, deleteReport } from '../api/db';
 import { Project, WeeklyReport } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -10,31 +10,46 @@ const STATUS_CLASS: Record<string, string> = {
   '存在风险': shared.tagDanger,
 };
 
-const RISK_CLASS: Record<string, string> = {
-  '高': shared.tagDanger,
-  '中': shared.tagWarning,
-  '低': shared.tagNormal,
-};
-
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'list' | 'trend' | 'client'>('list');
   const [confirmDeleteReport, setConfirmDeleteReport] = useState<string | null>(null);
 
-  const loadReports = () => {
+  const loadReports = async () => {
     if (!id) return;
-    setReports(getReports(id));
+    try {
+      const reps = await getReports(id);
+      setReports(reps);
+    } catch (err) {
+      console.error('加载周报失败:', err);
+    }
   };
 
   useEffect(() => {
     if (!id) return;
-    const p = getProject(id);
-    if (!p) { navigate('/'); return; }
-    setProject(p);
-    loadReports();
+    let cancelled = false;
+    async function load() {
+      try {
+        const p = await getProject(id!);
+        if (!cancelled) {
+          if (!p) { navigate('/'); return; }
+          setProject(p);
+          const reps = await getReports(id!);
+          if (!cancelled) setReports(reps);
+        }
+      } catch (err) {
+        console.error('加载项目失败:', err);
+        if (!cancelled) navigate('/');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   }, [id, navigate]);
 
   // 全局点击清除确认删除状态
@@ -48,10 +63,27 @@ export default function ProjectDetail() {
     return () => document.removeEventListener('click', handler);
   }, [confirmDeleteReport]);
 
+  const handleDeleteReport = async (reportId: string) => {
+    try {
+      await deleteReport(reportId);
+      setConfirmDeleteReport(null);
+      await loadReports();
+    } catch (err) {
+      console.error('删除周报失败:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
+        加载中...
+      </div>
+    );
+  }
+
   if (!project) return null;
 
   const statusCls = STATUS_CLASS[project.status] || shared.tagNormal;
-  // 计算放在 return 之前，避免 JSX 内部出现裸 const 语句
   const latestReport = reports.length > 0
     ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
     : null;
@@ -139,9 +171,7 @@ export default function ProjectDetail() {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (confirmDeleteReport === r.id) {
-                      deleteReport(r.id);
-                      setConfirmDeleteReport(null);
-                      loadReports();
+                      handleDeleteReport(r.id);
                     } else {
                       setConfirmDeleteReport(r.id);
                     }

@@ -3,9 +3,18 @@ import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
 export default function Layout() {
-  const { isLoggedIn, doLogout } = useAuth();
+  const { isLoggedIn, username, loading, doLogout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // 初始化加载中
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p style={{ color: '#999' }}>加载中...</p>
+      </div>
+    );
+  }
 
   // 认证守卫：未登录用户只能访问 /login，其他路径均重定向到 /login
   if (!isLoggedIn) {
@@ -44,7 +53,7 @@ export default function Layout() {
           <span className={shared.weekLabel}>本周: {fmt(monday)} - {fmt(friday)}</span>
         </div>
         <div className={shared.headerRight}>
-          <span className={shared.textSmall} style={{ color: '#666' }}>管理员</span>
+          <span className={shared.textSmall} style={{ color: '#666' }}>{username}</span>
           <button
             className={shared.btnLogout}
             onClick={() => { doLogout(); navigate('/login'); }}

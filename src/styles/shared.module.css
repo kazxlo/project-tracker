@@ -685,6 +685,7 @@
   border-radius: 8px;
   outline: none;
   box-sizing: border-box;
+  margin-bottom: 12px;
 }
 
 .loginInput:focus { border-color: #378ADD; }

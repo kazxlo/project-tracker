@@ -1,4 +1,4 @@
-import { getProjects, getAllReports } from '../api/storage';
+import { getProjects, getAllReports } from '../api/db';
 import { Project, WeeklyReport } from '../types';
 import { useState, useEffect } from 'react';
 import shared from '../styles/shared.module.css';
@@ -6,17 +6,39 @@ import shared from '../styles/shared.module.css';
 export default function Trends() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setProjects(getProjects());
-    // 修复 Bug: getReports('') → getAllReports()
-    setAllReports(getAllReports());
+    let cancelled = false;
+    async function load() {
+      try {
+        const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
+        if (!cancelled) {
+          setProjects(projs);
+          setAllReports(reps);
+        }
+      } catch (err) {
+        console.error('加载趋势数据失败:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const reportsByProject: Record<string, WeeklyReport[]> = {};
   projects.forEach(p => {
     reportsByProject[p.id] = allReports.filter(r => r.projectId === p.id);
   });
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
+        加载中...
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -35,7 +57,6 @@ export default function Trends() {
                 <div className={shared.emptyState} style={{ padding: 30, fontSize: 13 }}>暂无数据</div>
               ) : (
                 <div className={shared.barChartAreaSm}>
-                  {/* 修复：显式按 weekStart 升序排列，确保图表从旧到新 */}
                   {[...reports].sort((a, b) => a.weekStart.localeCompare(b.weekStart)).slice(0, 12).map((r, idx) => {
                     const h = Math.max(8, r.completedItems.length * 28);
                     return (
