@@ -1,0 +1,1066 @@
+/* ====== Layout ====== */
+.pageWrap {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.header {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.navbar {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 32px;
+  display: flex;
+}
+
+.main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+/* ====== Brand ====== */
+.brand {
+  text-decoration: none;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.weekLabel {
+  font-size: 12px;
+  color: #999;
+}
+
+/* ====== Nav Tabs ====== */
+.navTab {
+  padding: 10px 20px;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.navTabActive {
+  color: #333;
+  font-weight: 500;
+  border-bottom: 2px solid #378ADD;
+}
+
+.navTabInactive {
+  color: #999;
+  font-weight: 400;
+  border-bottom: 2px solid transparent;
+}
+
+/* ====== Cards ====== */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 16px;
+}
+
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.projectCard {
+  composes: card;
+  padding: 20px 24px;
+  cursor: pointer;
+  position: relative;
+}
+
+.projectCard:hover .projectActions {
+  opacity: 1;
+}
+
+.projectName {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.projectStats {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 12px;
+}
+
+.projectActions {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+}
+
+.actionBtn {
+  background: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #999;
+}
+
+.actionBtn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.actionBtnDanger:hover {
+  background: #FCEBEB;
+  color: #E24B4A;
+  border-color: #E24B4A;
+}
+
+/* ====== Buttons ====== */
+.btnPrimary {
+  background: #378ADD;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btnPrimary:hover { background: #2d6fc0; }
+.btnPrimary:disabled { background: #a0c8ee; cursor: not-allowed; }
+
+.btnPrimaryLg {
+  composes: btnPrimary;
+  padding: 10px 32px;
+  font-size: 14px;
+}
+
+.btnOutline {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #666;
+}
+
+.btnOutline:hover { background: #f8f8f8; }
+
+.btnLink {
+  background: none;
+  border: none;
+  color: #378ADD;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btnLink:hover { text-decoration: underline; }
+
+.btnDashed {
+  background: none;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #378ADD;
+}
+
+.btnDashed:hover { border-color: #378ADD; background: #f5faff; }
+
+.btnDashedDanger {
+  composes: btnDashed;
+  color: #D85A30;
+}
+
+.btnDashedDanger:hover { border-color: #D85A30; background: #fef5f2; }
+
+.btnLogout {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #666;
+}
+
+.btnLogout:hover { background: #f0f0f0; }
+
+.btnToolbar {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #666;
+}
+
+.btnToolbar:hover { background: #f0f0f0; }
+
+/* ====== Form ====== */
+.formInput {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.formInput:focus { outline: none; border-color: #378ADD; }
+
+.formSelect {
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.formSelect:focus { outline: none; border-color: #378ADD; }
+
+.formLabel {
+  font-size: 13px;
+  color: #666;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.formTextarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.formTextarea:focus { outline: none; border-color: #378ADD; }
+
+.formGroup {
+  flex: 1;
+}
+
+.formRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ====== Badges / Status ====== */
+.badge {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.tagNormal { background: #EAF3DE; color: #3B6D11; }
+.tagWarning { background: #FAEEDA; color: #854F0B; }
+.tagDanger { background: #FCEBEB; color: #A32D2D; }
+
+/* ====== Typography ====== */
+.pageTitle {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0 0 24px 0;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 16px 0;
+}
+
+.textMuted { font-size: 12px; color: #999; }
+.textSmall { font-size: 13px; }
+
+.linkText {
+  font-size: 13px;
+  color: #378ADD;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.linkText:hover { text-decoration: underline; }
+
+.backLink {
+  composes: linkText;
+  margin-bottom: 16px;
+}
+
+/* ====== KPI / Stats ====== */
+.statValue {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #999;
+}
+
+.kpiBox {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.kpiVal {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.kpiLbl {
+  font-size: 12px;
+  color: #999;
+}
+
+/* ====== Summary Panel ====== */
+.summaryPanel {
+  composes: card;
+  padding: 20px 24px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.summaryItem {
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+.summaryValue {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* ====== Tabs ====== */
+.tabBar {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 8px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tabActive {
+  color: #333;
+  font-weight: 500;
+  border-bottom: 2px solid #378ADD;
+}
+
+.tabInactive {
+  color: #999;
+  font-weight: 400;
+  border-bottom: 2px solid transparent;
+}
+
+.tabInactive:hover { color: #555; }
+
+/* ====== Report List ====== */
+.reportList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reportRow {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px 20px;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reportRowTitle {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.reportRowStats {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* ====== Project Detail ====== */
+.projectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.projectTitle {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.projectInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpiRow {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* ====== Trend Chart ====== */
+.barChartArea {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 200px;
+  padding-top: 20px;
+}
+
+.barChartAreaSm {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 160px;
+  padding-top: 10px;
+}
+
+.barCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.barValue {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.barBody {
+  width: 40px;
+  border-radius: 6px 6px 0 0;
+}
+
+.barBodySm {
+  width: 36px;
+  border-radius: 4px 4px 0 0;
+}
+
+.barLabel {
+  font-size: 10px;
+  color: #999;
+  margin-top: 6px;
+  transform: rotate(-45deg);
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ====== Trend Analysis Cards ====== */
+.trendCard {
+  composes: card;
+  padding: 24px;
+}
+
+.trendHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.trendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.trendTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.trendMeta {
+  font-size: 12px;
+  color: #999;
+}
+
+.trendList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ====== Report Editor ====== */
+.editorWrap {
+  max-width: 780px;
+}
+
+.editorFooter {
+  margin-top: 32px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.inlineRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.completedItemBlock {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.orderNum {
+  font-size: 13px;
+  color: #999;
+  min-width: 20px;
+}
+
+.delBtn {
+  background: none;
+  border: none;
+  color: #E24B4A;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.delBtn:hover { color: #c41a1a; }
+
+/* ====== Client View ====== */
+.clientWrap {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px;
+  border: 1px solid #e0e0e0;
+  max-width: 800px;
+}
+
+.clientTitle {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.clientDate {
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.clientSection {
+  margin-bottom: 24px;
+}
+
+.clientH3 {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.clientItem {
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.clientItemBorder {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.clientItemFlex {
+  font-size: 13px;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ====== Login ====== */
+.loginPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+}
+
+.loginBox {
+  background: #fff;
+  border-radius: 12px;
+  padding: 40px 48px;
+  width: 360px;
+  border: 1px solid #e0e0e0;
+}
+
+.loginTitle {
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.loginSub {
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.loginInput {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.loginInput:focus { border-color: #378ADD; }
+
+.loginBtn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 10px 0;
+  background: #378ADD;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.loginBtn:hover { background: #2d6fc0; }
+
+.loginError {
+  color: #E24B4A;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* ====== Empty State ====== */
+.emptyState {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* ====== Toolbar ====== */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.toolbarActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ====== Modal ====== */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 32px;
+  min-width: 420px;
+  max-width: 520px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  line-height: 1;
+}
+
+.modalClose:hover { color: #333; }
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* ====== Color Picker ====== */
+.colorGrid {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.colorSwatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.colorSwatch:hover {
+  border-color: #999;
+}
+
+.colorSwatchActive {
+  border-color: #333;
+}
+
+/* ====== Confirm Dialog ====== */
+.confirmText {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+/* ====== File Input ====== */
+.fileInput {
+  display: none;
+}
+
+/* ====== Toast ====== */
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 2000;
+  animation: toastIn 0.3s ease;
+}
+
+.toastSuccess { background: #3B6D11; }
+.toastError { background: #E24B4A; }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ====== Plan Confirm ====== */
+.planConfirmRow {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.checkLabel input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #378ADD;
+  cursor: pointer;
+}
+
+/* ====== Risk Block ====== */
+.riskBlock {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+/* ====== Drill-down summary ====== */
+.drillOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.drillPanel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 28px;
+  min-width: 480px;
+  max-width: 680px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+.drillHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.drillTitle {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.drillClose {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  line-height: 1;
+}
+
+.drillClose:hover { color: #333; }
+
+.drillGroup {
+  margin-bottom: 16px;
+}
+
+.drillGroupTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drillGroupDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.drillItem {
+  font-size: 12px;
+  color: #666;
+  padding: 3px 0 3px 16px;
+}
+
+.drillOwner {
+  color: #999;
+  margin-left: 4px;
+}
+
+.summaryClickable {
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.summaryClickable:hover {
+  transform: scale(1.05);
+}
+
+/* ====== Progress Slider ====== */
+.progressRow {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.progressInput {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressInput input[type="range"] {
+  flex: 1;
+  height: 6px;
+  accent-color: #378ADD;
+}
+
+.progressValue {
+  font-size: 18px;
+  font-weight: 500;
+  color: #378ADD;
+  min-width: 45px;
+  text-align: right;
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 16px;
+    height: 48px;
+  }
+
+  .headerLeft {
+    gap: 8px;
+  }
+
+  .navbar {
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+
+  .main {
+    padding: 16px;
+    max-width: 100%;
+  }
+
+  .projectGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpiRow {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .kpiBox {
+    flex: 1 1 45%;
+    min-width: 140px;
+  }
+
+  .trendList {
+    gap: 16px;
+  }
+
+  .formRow {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .modal {
+    min-width: auto;
+    max-width: 90vw;
+    padding: 20px;
+  }
+
+  .editorWrap {
+    max-width: 100%;
+  }
+
+  .clientWrap {
+    padding: 20px 16px;
+    max-width: 100%;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
