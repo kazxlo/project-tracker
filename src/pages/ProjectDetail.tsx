@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getReports, deleteReport } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
-import { Project, WeeklyReport } from '../types';
+import { Project, WeeklyReport, Risk } from '../types';
 import shared from '../styles/shared.module.css';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -21,6 +21,9 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'list' | 'trend' | 'client'>('list');
   const [confirmDeleteReport, setConfirmDeleteReport] = useState<string | null>(null);
+
+  // 风险下钻弹窗
+  const [riskDrillDown, setRiskDrillDown] = useState<'active' | 'resolved' | null>(null);
 
   const loadReports = async () => {
     if (!id) return;
@@ -112,9 +115,10 @@ export default function ProjectDetail() {
           { label: '当前进度', val: latestReport?.progress ? `${latestReport.progress}%` : '--', color: project.color },
           { label: '累计周报', val: reports.length },
           { label: '完成事项', val: reports.reduce((s, r) => s + r.completedItems.length, 0) },
-          { label: '当前风险', val: (() => { const s = new Set<string>(); reports.forEach(r => r.risks.forEach(rk => { if (rk.description.trim()) s.add(rk.description.trim()); })); return s.size; })() },
+          { label: '当前风险', val: (() => { const s = new Map<string, Risk>(); reports.forEach(r => r.risks.forEach(rk => { const k = rk.description.trim(); if (k && rk.status !== '已解决' && !s.has(k)) s.set(k, rk); })); return s.size; })(), clickable: true, drill: 'active' as const },
+          { label: '已处理风险', val: (() => { const s = new Map<string, Risk>(); reports.forEach(r => r.risks.forEach(rk => { const k = rk.description.trim(); if (k && rk.status === '已解决' && !s.has(k)) s.set(k, rk); })); return s.size; })(), clickable: true, drill: 'resolved' as const },
         ].map((m, i) => (
-          <div key={i} className={shared.kpiBox}>
+          <div key={i} className={shared.kpiBox} style={m.clickable ? { cursor: 'pointer' } : undefined} onClick={() => { if (m.drill) setRiskDrillDown(m.drill); }}>
             <div className={shared.kpiVal} style={'color' in m ? { color: (m as { color?: string }).color } : undefined}>{m.val}</div>
             <div className={shared.kpiLbl}>{m.label}</div>
           </div>
@@ -221,6 +225,52 @@ export default function ProjectDetail() {
 
       {tab === 'client' && (
         <ClientViewPanel project={project} reports={reports} />
+      )}
+
+      {/* 风险下钻弹窗 */}
+      {riskDrillDown && (
+        <div className={shared.drillOverlay} onClick={() => setRiskDrillDown(null)}>
+          <div className={shared.drillPanel} onClick={e => e.stopPropagation()}>
+            <div className={shared.drillHeader}>
+              <h3 className={shared.drillTitle}>
+                {riskDrillDown === 'active' ? '当前风险详情' : '已处理风险详情'}
+              </h3>
+              <button className={shared.drillClose} onClick={() => setRiskDrillDown(null)}>×</button>
+            </div>
+            {(() => {
+              const seen = new Map<string, { risk: Risk; weekLabel: string }>();
+              reports.forEach(r => {
+                r.risks.forEach(rk => {
+                  const k = rk.description.trim();
+                  if (!k || seen.has(k)) return;
+                  const isActive = rk.status !== '已解决';
+                  if ((riskDrillDown === 'active' && isActive) || (riskDrillDown === 'resolved' && !isActive)) {
+                    seen.set(k, { risk: rk, weekLabel: r.weekLabel });
+                  }
+                });
+              });
+              const items = Array.from(seen.values());
+              if (items.length === 0) {
+                return <div className={shared.drillItem} style={{ color: '#999', textAlign: 'center', padding: 24 }}>暂无数据</div>;
+              }
+              return items.map((item, j) => (
+                <div key={j} className={shared.drillItem} style={{ padding: '8px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#3B6D11' }}>{item.risk.level}</span>
+                    <span style={{ fontWeight: 500, fontSize: 13 }}>{item.risk.description}</span>
+                  </div>
+                  {item.risk.suggestion && (
+                    <div style={{ fontSize: 12, color: '#666', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
+                  )}
+                  {riskDrillDown === 'resolved' && item.risk.resolvedAt && (
+                    <div style={{ fontSize: 12, color: '#639922', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
+                  )}
+                  <div style={{ fontSize: 11, color: '#999', paddingLeft: 48 }}>来源：{item.weekLabel}</div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -11,6 +11,12 @@ interface PlanConfirmItem {
   reason: string;
 }
 
+/** 上一周风险确认项 */
+interface RiskConfirmItem {
+  risk: Risk;
+  stillRisk: boolean;   // 是否仍属于风险
+}
+
 export default function ReportEdit() {
   const { id: projectId, reportId } = useParams<{ id: string; reportId: string }>();
   const navigate = useNavigate();
@@ -42,6 +48,9 @@ export default function ReportEdit() {
 
   // 上一周计划完成确认（仅新建时）
   const [planConfirm, setPlanConfirm] = useState<PlanConfirmItem[]>([]);
+
+  // 上一周风险确认（仅新建时）
+  const [riskConfirm, setRiskConfirm] = useState<RiskConfirmItem[]>([]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -90,6 +99,14 @@ export default function ReportEdit() {
             setRisks(prev.risks.length > 0
               ? prev.risks.map(r => ({ ...r, id: 'r_' + Date.now() + '_' + r.order, status: r.status === '已解决' ? '持续关注' as const : r.status }))
               : []);
+
+            // 上周风险确认（仅带入未解决的）
+            if (prev.risks.length > 0) {
+              setRiskConfirm(prev.risks.map(r => ({
+                risk: { ...r, id: 'rc_' + Date.now() + '_' + r.order },
+                stillRisk: r.status !== '已解决',
+              })));
+            }
 
             if (prev.plannedItems.length > 0) {
               setPlanConfirm(prev.plannedItems.map(p => ({
@@ -152,6 +169,34 @@ export default function ReportEdit() {
 
   const updateItemField = (list: ReportItem[], setter: (v: ReportItem[]) => void, id: string, field: string, value: string) => {
     setter(list.map(i => i.id === id ? { ...i, [field]: value } : i));
+  };
+
+  // 风险确认：切换是否仍属于风险
+  const toggleRiskStillRisk = (id: string) => {
+    setRiskConfirm(prev => prev.map(rc => rc.risk.id === id ? { ...rc, stillRisk: !rc.stillRisk } : rc));
+  };
+
+  const confirmRisks = () => {
+    // 仍属于风险的项目带入本周风险
+    const stillRisks = riskConfirm.filter(rc => rc.stillRisk).map((rc, idx) => ({
+      ...rc.risk,
+      id: 'r_cf_' + Date.now() + '_' + idx,
+      order: risks.length + idx + 1,
+      status: rc.risk.status === '已解决' ? '持续关注' as const : rc.risk.status,
+    }));
+    setRisks(prev => [...stillRisks, ...prev]);
+
+    // 已不属于风险的项目：加入本周风险列表，标记为已解决并记录处理时间
+    const resolvedRisks = riskConfirm.filter(rc => !rc.stillRisk).map((rc, idx) => ({
+      ...rc.risk,
+      id: 'r_res_' + Date.now() + '_' + idx,
+      order: risks.length + stillRisks.length + idx + 1,
+      status: '已解决' as const,
+      resolvedAt: new Date().toISOString(),
+    }));
+    setRisks(prev => [...prev, ...resolvedRisks]);
+
+    setRiskConfirm([]);
   };
 
   // --- 风险操作 ---
@@ -288,6 +333,42 @@ export default function ReportEdit() {
         </div>
       )}
 
+      {/* 上一周风险确认区（仅新建时且有上一周风险） */}
+      {!isEdit && riskConfirm.length > 0 && (
+        <div className={shared.section} style={{ border: '1px solid #D85A30', background: '#fff8f6' }}>
+          <h3 className={shared.sectionTitle} style={{ color: '#D85A30' }}>
+            上一周风险确认
+          </h3>
+          <p className={shared.textSmall} style={{ color: '#666', marginBottom: 12 }}>
+            请确认上一周的风险事项是否仍属于风险。已不属于风险的将标记为"已解决"并记录处理时间。
+          </p>
+          {riskConfirm.map(rc => (
+            <div key={rc.risk.id} className={shared.planConfirmRow}>
+              <label className={shared.checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={rc.stillRisk}
+                  onChange={() => toggleRiskStillRisk(rc.risk.id)}
+                />
+                <span style={{ marginLeft: 8, fontSize: 13, textDecoration: rc.stillRisk ? 'none' : 'line-through', color: rc.stillRisk ? '#333' : '#999' }}>
+                  [{rc.risk.level}] {rc.risk.description || '(空描述)'}
+                </span>
+              </label>
+              {!rc.stillRisk && (
+                <span style={{ fontSize: 12, color: '#639922', marginLeft: 12 }}>✓ 将标记为已解决</span>
+              )}
+            </div>
+          ))}
+          <button
+            className={shared.btnDashedDanger}
+            onClick={confirmRisks}
+            style={{ marginTop: 12 }}
+          >
+            ✓ 确认风险状态并继续
+          </button>
+        </div>
+      )}
+
       <Section title="建设目标">
         <textarea
           className={shared.formTextarea}
@@ -379,9 +460,16 @@ export default function ReportEdit() {
               />
               <button className={shared.delBtn} onClick={() => removeItem(planned, setPlanned, item.id)}>×</button>
             </div>
-            {item.reason && (
-              <div style={{ paddingLeft: 24, marginBottom: 4, fontSize: 12, color: '#D85A30' }}>
-                📎 上周未完成原因：{item.reason}
+            {item.reason !== undefined && (
+              <div style={{ paddingLeft: 24, marginBottom: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ color: '#D85A30', whiteSpace: 'nowrap' }}>📎 上周未完成原因：</span>
+                <input
+                  className={shared.formInput}
+                  value={item.reason}
+                  onChange={e => updateItemField(planned, setPlanned, item.id, 'reason', e.target.value)}
+                  placeholder="未完成原因..."
+                  style={{ flex: 1, fontSize: 12, color: '#D85A30' }}
+                />
               </div>
             )}
           </div>

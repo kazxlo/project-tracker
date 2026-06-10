@@ -28,6 +28,7 @@ export interface Risk {
   suggestion: string;    // 解决建议
   level: '高' | '中' | '低';
   status: '待处理' | '已解决' | '持续关注';
+  resolvedAt?: string;   // 确认不属于风险的处理时间
 }
 
 /** 周报 */

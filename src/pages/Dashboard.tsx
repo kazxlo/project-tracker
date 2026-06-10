@@ -327,7 +327,7 @@ export default function Dashboard() {
             {[
               { key: 'completed', val: totalCompleted, label: '累计完成事项', color: '#378ADD' },
               { key: 'planned', val: remainingPlanned, label: '剩余计划事项', color: '#639922' },
-              { key: 'risks', val: totalRisks, label: '累计风险项(去重)', color: '#D85A30' },
+              { key: 'risks', val: totalRisks, label: '累计风险项', color: '#D85A30' },
               { key: 'members', val: projects.length, label: '协作成员', color: '#7F77DD' },
             ].map((item, i) => (
               <div
@@ -351,7 +351,7 @@ export default function Dashboard() {
               <h3 className={shared.drillTitle}>
                 {drillDown === 'completed' ? '累计完成事项详情' :
                  drillDown === 'planned' ? '剩余计划事项详情' :
-                 drillDown === 'risks' ? '累计风险项详情(去重)' : '协作成员列表'}
+                 drillDown === 'risks' ? '累计风险项详情' : '协作成员列表'}
               </h3>
               <button className={shared.drillClose} onClick={() => setDrillDown(null)}>×</button>
             </div>
