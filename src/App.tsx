@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
@@ -12,7 +12,7 @@ import AdminUsers from './pages/AdminUsers';
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <HashRouter>
         <AuthProvider>
           <Routes>
             <Route element={<Layout />}>
@@ -27,7 +27,7 @@ export default function App() {
             </Route>
           </Routes>
         </AuthProvider>
-      </BrowserRouter>
+      </HashRouter>
     </ErrorBoundary>
   );
 }

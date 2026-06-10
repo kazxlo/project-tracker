@@ -2,6 +2,7 @@
   "name": "weekly-tracker-2026",
   "private": true,
   "version": "1.0.0",
+  "homepage": "https://kazxlo.github.io/project-tracker",
   "type": "module",
   "scripts": {
     "dev": "vite",
