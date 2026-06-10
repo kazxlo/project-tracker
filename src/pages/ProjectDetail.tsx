@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getReports, deleteReport } from '../api/db';
+import { useAuth } from '../hooks/useAuth';
 import { Project, WeeklyReport } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -12,6 +13,8 @@ const STATUS_CLASS: Record<string, string> = {
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
@@ -165,20 +168,22 @@ export default function ProjectDetail() {
                 >
                   查看详情 ↗
                 </span>
-                <button
-                  data-delete-report={r.id}
-                  className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirmDeleteReport === r.id) {
-                      handleDeleteReport(r.id);
-                    } else {
-                      setConfirmDeleteReport(r.id);
-                    }
-                  }}
-                >
-                  {confirmDeleteReport === r.id ? '确认删除？' : '删除'}
-                </button>
+                {isAdmin && (
+                  <button
+                    data-delete-report={r.id}
+                    className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirmDeleteReport === r.id) {
+                        handleDeleteReport(r.id);
+                      } else {
+                        setConfirmDeleteReport(r.id);
+                      }
+                    }}
+                  >
+                    {confirmDeleteReport === r.id ? '确认删除？' : '删除'}
+                  </button>
+                )}
               </div>
             </div>
           ))}

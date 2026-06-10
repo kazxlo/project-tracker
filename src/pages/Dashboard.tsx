@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData } from '../api/db';
+import { useAuth } from '../hooks/useAuth';
 import { Project } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -24,6 +25,8 @@ export default function Dashboard() {
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -185,16 +188,22 @@ export default function Dashboard() {
       <div className={shared.toolbar}>
         <h2 className={shared.pageTitle} style={{ margin: 0 }}>项目总览</h2>
         <div className={shared.toolbarActions}>
-          <button className={shared.btnToolbar} onClick={openCreateModal}>+ 添加项目</button>
+          {isAdmin && (
+            <button className={shared.btnToolbar} onClick={openCreateModal}>+ 添加项目</button>
+          )}
           <button className={shared.btnToolbar} onClick={handleExport}>导出数据</button>
-          <button className={shared.btnToolbar} onClick={() => fileInputRef.current?.click()}>导入数据</button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            className={shared.fileInput}
-            onChange={handleImport}
-          />
+          {isAdmin && (
+            <>
+              <button className={shared.btnToolbar} onClick={() => fileInputRef.current?.click()}>导入数据</button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                className={shared.fileInput}
+                onChange={handleImport}
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -237,28 +246,30 @@ export default function Dashboard() {
                   <span className={`${shared.badge} ${tagCls}`}>{p.status}</span>
                   <span className={shared.textMuted}>负责人: {p.owner}</span>
                 </div>
-                <div className={shared.projectActions}>
-                  <button
-                    className={shared.actionBtn}
-                    onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
-                  >
-                    编辑
-                  </button>
-                  <button
-                    data-delete-id={p.id}
-                    className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirmDelete === p.id) {
-                        handleDeleteProject(p.id);
-                      } else {
-                        setConfirmDelete(p.id);
-                      }
-                    }}
-                  >
-                    {confirmDelete === p.id ? '确认删除？' : '删除'}
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className={shared.projectActions}>
+                    <button
+                      className={shared.actionBtn}
+                      onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
+                    >
+                      编辑
+                    </button>
+                    <button
+                      data-delete-id={p.id}
+                      className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirmDelete === p.id) {
+                          handleDeleteProject(p.id);
+                        } else {
+                          setConfirmDelete(p.id);
+                        }
+                      }}
+                    >
+                      {confirmDelete === p.id ? '确认删除？' : '删除'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );

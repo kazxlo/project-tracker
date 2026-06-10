@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
 export default function Layout() {
-  const { isLoggedIn, username, loading, doLogout } = useAuth();
+  const { isLoggedIn, username, role, loading, doLogout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,6 +35,9 @@ export default function Layout() {
     { path: '/', label: '项目总览' },
     { path: '/trends', label: '趋势分析' },
   ];
+  if (role === 'admin') {
+    tabs.push({ path: '/admin/users', label: '用户管理' });
+  }
 
   const today = new Date();
   const monday = new Date(today);
@@ -53,7 +56,12 @@ export default function Layout() {
           <span className={shared.weekLabel}>本周: {fmt(monday)} - {fmt(friday)}</span>
         </div>
         <div className={shared.headerRight}>
-          <span className={shared.textSmall} style={{ color: '#666' }}>{username}</span>
+          <span className={shared.textSmall} style={{ color: '#666' }}>
+            {username}
+            {role === 'admin' && (
+              <span style={{ fontSize: 11, color: '#378ADD', marginLeft: 4 }}>(管理员)</span>
+            )}
+          </span>
           <button
             className={shared.btnLogout}
             onClick={() => { doLogout(); navigate('/login'); }}
