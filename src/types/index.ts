@@ -16,6 +16,8 @@ export interface ReportItem {
   progress?: string;    // 项目进展
   acceptance?: string;  // 验收资料进展
   detail?: string;      // 保留兼容旧数据
+  reason?: string;      // 未完成原因（仅计划事项）
+  carriedForward?: boolean; // 是否已从上周带入并确认完成（标记后不再计入剩余）
 }
 
 /** 风险提示 */

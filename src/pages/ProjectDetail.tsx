@@ -112,7 +112,7 @@ export default function ProjectDetail() {
           { label: '当前进度', val: latestReport?.progress ? `${latestReport.progress}%` : '--', color: project.color },
           { label: '累计周报', val: reports.length },
           { label: '完成事项', val: reports.reduce((s, r) => s + r.completedItems.length, 0) },
-          { label: '当前风险', val: reports.reduce((s, r) => s + r.risks.length, 0) },
+          { label: '当前风险', val: (() => { const s = new Set<string>(); reports.forEach(r => r.risks.forEach(rk => { if (rk.description.trim()) s.add(rk.description.trim()); })); return s.size; })() },
         ].map((m, i) => (
           <div key={i} className={shared.kpiBox}>
             <div className={shared.kpiVal} style={'color' in m ? { color: (m as { color?: string }).color } : undefined}>{m.val}</div>

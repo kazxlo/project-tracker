@@ -125,9 +125,20 @@ export default function ReportEdit() {
       ...pc.item,
       id: 'c_pl_' + Date.now() + '_' + idx,
       order: completed.length + idx + 1,
+      carriedForward: true, // 标记为从上周带入的已完成事项
     }));
     setCompleted(prev => [...prev, ...doneItems]);
-    setPlanConfirm(prev => prev.filter(pc => !pc.done));
+
+    // 未完成的计划事项带入本周计划，附上未完成原因
+    const undoneItems = planConfirm.filter(pc => !pc.done).map((pc, idx) => ({
+      ...pc.item,
+      id: 'p_undone_' + Date.now() + '_' + idx,
+      order: planned.length + idx + 1,
+      reason: pc.reason || '', // 保留未完成原因
+    }));
+    setPlanned(prev => [...undoneItems, ...prev]);
+
+    setPlanConfirm([]);
   };
 
   // --- 事项操作 ---
@@ -242,7 +253,7 @@ export default function ReportEdit() {
             上一周计划事项完成确认
           </h3>
           <p className={shared.textSmall} style={{ color: '#666', marginBottom: 12 }}>
-            请确认上一周计划的事项哪些已完成（将自动纳入本周完成事项），未完成的请说明原因。
+            请确认上一周计划的事项哪些已完成（将自动纳入本周完成事项），未完成的将自动带入本周计划事项并附上未完成原因。
           </p>
           {planConfirm.map(pc => (
             <div key={pc.item.id} className={shared.planConfirmRow}>
@@ -271,9 +282,8 @@ export default function ReportEdit() {
             className={shared.btnDashed}
             onClick={confirmCompletedPlans}
             style={{ marginTop: 12 }}
-            disabled={!planConfirm.some(pc => pc.done)}
           >
-            ✓ 将已完成项移入本周完成事项
+            ✓ 确认并继续填写周报
           </button>
         </div>
       )}
@@ -357,16 +367,23 @@ export default function ReportEdit() {
       {/* 下周工作计划 */}
       <Section title="下周工作计划">
         {planned.map((item) => (
-          <div key={item.id} className={shared.inlineRow}>
-            <span className={shared.orderNum}>{item.order}.</span>
-            <input
-              className={shared.formInput}
-              value={item.title}
-              onChange={e => updateItemField(planned, setPlanned, item.id, 'title', e.target.value)}
-              placeholder={`计划事项 ${item.order}`}
-              style={{ flex: 1 }}
-            />
-            <button className={shared.delBtn} onClick={() => removeItem(planned, setPlanned, item.id)}>×</button>
+          <div key={item.id}>
+            <div className={shared.inlineRow}>
+              <span className={shared.orderNum}>{item.order}.</span>
+              <input
+                className={shared.formInput}
+                value={item.title}
+                onChange={e => updateItemField(planned, setPlanned, item.id, 'title', e.target.value)}
+                placeholder={`计划事项 ${item.order}`}
+                style={{ flex: 1 }}
+              />
+              <button className={shared.delBtn} onClick={() => removeItem(planned, setPlanned, item.id)}>×</button>
+            </div>
+            {item.reason && (
+              <div style={{ paddingLeft: 24, marginBottom: 4, fontSize: 12, color: '#D85A30' }}>
+                📎 上周未完成原因：{item.reason}
+              </div>
+            )}
           </div>
         ))}
         <button className={shared.btnDashed} onClick={() => addItem(planned, setPlanned, 'p')} style={{ marginTop: 4 }}>

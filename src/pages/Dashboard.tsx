@@ -68,17 +68,53 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, [refreshKey]);
 
+  // 剩余计划事项：所有plannedItems中未被后续周报completedItems覆盖的
+  // 逻辑：每个项目的最新plannedItems即为剩余计划事项
+  const remainingPlanned = projects.reduce((total, p) => {
+    const prpts = allReports.filter(r => r.projectId === p.id);
+    if (prpts.length === 0) return total;
+    // 按时间排序，取最新一期周报的plannedItems作为剩余计划
+    const latest = prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
+    // 过滤掉reason标记为已完成（已被后续周报确认完成移入completed的）
+    const remaining = latest.plannedItems.filter(pi => !pi.carriedForward);
+    return total + remaining.length;
+  }, 0);
+
+  // 累计风险项（去重：同一项目下description相同只计一次）
+  const totalRisks = projects.reduce((total, p) => {
+    const prpts = allReports.filter(r => r.projectId === p.id);
+    const seen = new Set<string>();
+    let count = 0;
+    prpts.forEach(r => {
+      r.risks.forEach(rk => {
+        const key = rk.description.trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          count++;
+        }
+      });
+    });
+    return total + count;
+  }, 0);
+
   const totalCompleted = allReports.reduce((s, r) => s + r.completedItems.length, 0);
-  const totalPlanned = allReports.reduce((s, r) => s + r.plannedItems.length, 0);
-  const totalRisks = allReports.reduce((s, r) => s + r.risks.length, 0);
 
   const getProjectStats = (projectId: string) => {
     const prpts = allReports.filter(r => r.projectId === projectId);
     const latestReport = prpts.length > 0 ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b) : null;
+    // 风险去重：同一description只计一次
+    const riskSeen = new Set<string>();
+    const uniqueRisks = prpts.reduce((count, r) => {
+      r.risks.forEach(rk => {
+        const key = rk.description.trim();
+        if (key) riskSeen.add(key);
+      });
+      return count;
+    }, 0);
     return {
       count: prpts.length,
       progress: latestReport?.progress || 0,
-      risks: prpts.reduce((s, r) => s + r.risks.length, 0),
+      risks: riskSeen.size,
     };
   };
 
@@ -283,15 +319,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 本周汇总 */}
+      {/* 整体汇总 */}
       {projects.length > 0 && (
         <div className={shared.summaryPanel}>
-          <h3 className={shared.sectionTitle}>本周汇总</h3>
+          <h3 className={shared.sectionTitle}>整体汇总</h3>
           <div className={shared.summaryGrid}>
             {[
               { key: 'completed', val: totalCompleted, label: '累计完成事项', color: '#378ADD' },
-              { key: 'planned', val: totalPlanned, label: '累计计划事项', color: '#639922' },
-              { key: 'risks', val: totalRisks, label: '累计风险项', color: '#D85A30' },
+              { key: 'planned', val: remainingPlanned, label: '剩余计划事项', color: '#639922' },
+              { key: 'risks', val: totalRisks, label: '累计风险项(去重)', color: '#D85A30' },
               { key: 'members', val: projects.length, label: '协作成员', color: '#7F77DD' },
             ].map((item, i) => (
               <div
@@ -314,8 +350,8 @@ export default function Dashboard() {
             <div className={shared.drillHeader}>
               <h3 className={shared.drillTitle}>
                 {drillDown === 'completed' ? '累计完成事项详情' :
-                 drillDown === 'planned' ? '累计计划事项详情' :
-                 drillDown === 'risks' ? '累计风险项详情' : '协作成员列表'}
+                 drillDown === 'planned' ? '剩余计划事项详情' :
+                 drillDown === 'risks' ? '累计风险项详情(去重)' : '协作成员列表'}
               </h3>
               <button className={shared.drillClose} onClick={() => setDrillDown(null)}>×</button>
             </div>
@@ -339,9 +375,25 @@ export default function Dashboard() {
                 if (drillDown === 'completed') {
                   prpts.forEach(r => r.completedItems.forEach(ci => items.push(ci.title)));
                 } else if (drillDown === 'planned') {
-                  prpts.forEach(r => r.plannedItems.forEach(pi => items.push(pi.title)));
+                  // 剩余计划事项：取最新一期周报的plannedItems
+                  if (prpts.length > 0) {
+                    const latest = prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
+                    latest.plannedItems.filter(pi => !pi.carriedForward).forEach(pi => {
+                      items.push(pi.title + (pi.reason ? `（未完成原因：${pi.reason}）` : ''));
+                    });
+                  }
                 } else {
-                  prpts.forEach(r => r.risks.forEach(rk => items.push(`[${rk.level}] ${rk.description}${rk.suggestion ? ' → ' + rk.suggestion : ''}`)));
+                  // 风险去重
+                  const seen = new Set<string>();
+                  prpts.forEach(r => {
+                    r.risks.forEach(rk => {
+                      const key = rk.description.trim();
+                      if (key && !seen.has(key)) {
+                        seen.add(key);
+                        items.push(`[${rk.level}] ${rk.description}${rk.suggestion ? ' → ' + rk.suggestion : ''}`);
+                      }
+                    });
+                  });
                 }
                 if (items.length === 0) return null;
                 return (
@@ -360,7 +412,7 @@ export default function Dashboard() {
             )}
             {drillDown !== 'members' && (
               <div className={shared.drillItem} style={{ color: '#999', textAlign: 'center', marginTop: 12 }}>
-                — 共 {drillDown === 'completed' ? totalCompleted : drillDown === 'planned' ? totalPlanned : totalRisks} 项 —
+                — 共 {drillDown === 'completed' ? totalCompleted : drillDown === 'planned' ? remainingPlanned : totalRisks} 项 —
               </div>
             )}
           </div>
