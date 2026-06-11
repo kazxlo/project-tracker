@@ -59,7 +59,7 @@ export default function Trends() {
         const latest = reportsInWeek.length > 0
           ? reportsInWeek.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
           : null;
-        row[p.name] = latest ? latest.progress : null;
+        row[p.name] = latest ? latest.progress : 0;
       });
       return row;
     });
