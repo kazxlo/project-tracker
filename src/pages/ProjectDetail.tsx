@@ -15,6 +15,7 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { role } = useAuth();
   const isAdmin = role === 'admin';
+  const isPublic = role === 'public';
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
@@ -141,14 +142,16 @@ export default function ProjectDetail() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button
-          className={shared.btnPrimary}
-          onClick={() => navigate(`/project/${id}/report/new`)}
-        >
-          + 新建周报
-        </button>
-      </div>
+      {!isPublic && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <button
+            className={shared.btnPrimary}
+            onClick={() => navigate(`/project/${id}/report/new`)}
+          >
+            + 新建周报
+          </button>
+        </div>
+      )}
 
       {tab === 'list' && (
         <div className={shared.reportList}>

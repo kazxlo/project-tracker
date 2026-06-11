@@ -37,6 +37,10 @@ export default function AdminUsers() {
     }
     const user = users.find(u => u.id === targetUserId);
     if (!user) return;
+    if (user.role === 'public') {
+      showToast('不能修改公共访问账号的角色', 'error');
+      return;
+    }
     const newRole = user.role === 'admin' ? 'member' : 'admin';
     try {
       await updateProfileRole(targetUserId, newRole);
@@ -96,11 +100,11 @@ export default function AdminUsers() {
                       fontSize: 12,
                       padding: '2px 10px',
                       borderRadius: 4,
-                      background: u.role === 'admin' ? '#EAF3DE' : '#f0f0f0',
-                      color: u.role === 'admin' ? '#3B6D11' : '#666',
+                      background: u.role === 'admin' ? '#EAF3DE' : u.role === 'public' ? '#FFF3E0' : '#f0f0f0',
+                      color: u.role === 'admin' ? '#3B6D11' : u.role === 'public' ? '#E65100' : '#666',
                     }}
                   >
-                    {u.role === 'admin' ? '管理员' : '普通成员'}
+                    {u.role === 'admin' ? '管理员' : u.role === 'public' ? '公共访问' : '普通成员'}
                   </span>
                 </td>
                 <td style={{ padding: '12px', fontSize: 13, color: '#666' }}>
@@ -110,11 +114,11 @@ export default function AdminUsers() {
                   <button
                     className={shared.btnToolbar}
                     onClick={() => handleToggleRole(u.id)}
-                    disabled={u.id === userId}
-                    title={u.id === userId ? '不能修改自己的角色' : ''}
-                    style={u.id === userId ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                    disabled={u.id === userId || u.role === 'public'}
+                    title={u.id === userId ? '不能修改自己的角色' : u.role === 'public' ? '公共访问账号角色不可修改' : ''}
+                    style={u.id === userId || u.role === 'public' ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
                   >
-                    {u.role === 'admin' ? '取消管理员' : '设为管理员'}
+                    {u.role === 'admin' ? '取消管理员' : u.role === 'public' ? '—' : '设为管理员'}
                   </button>
                 </td>
               </tr>

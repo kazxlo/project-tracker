@@ -1,0 +1,215 @@
+/**
+ * PDF 导出工具 — 生成本周汇总报告并通过浏览器打印为 PDF
+ */
+import type { Project, WeeklyReport, Risk } from '../types';
+
+interface ProjectReport {
+  project: Project;
+  latestReport: WeeklyReport | null;
+}
+
+export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyReport[]) {
+  // 1. 收集各项目最新一期周报
+  const projectReports: ProjectReport[] = projects.map(p => {
+    const prpts = allReports.filter(r => r.projectId === p.id);
+    const latest = prpts.length > 0
+      ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
+      : null;
+    return { project: p, latestReport: latest };
+  });
+
+  // 2. 收集所有未处理风险（待处理 + 持续关注，去重）
+  const allUnresolvedRisks: { projectName: string; color: string; risk: Risk }[] = [];
+  const seenRisk = new Set<string>();
+  projectReports.forEach(({ project, latestReport }) => {
+    if (!latestReport) return;
+    latestReport.risks.forEach(rk => {
+      if (rk.status === '已解决') return;
+      const key = rk.description.trim();
+      if (key && !seenRisk.has(key)) {
+        seenRisk.add(key);
+        allUnresolvedRisks.push({ projectName: project.name, color: project.color, risk: rk });
+      }
+    });
+  });
+
+  const today = new Date();
+  const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const fmtTime = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+  const levelBadge = (level: string) => {
+    const colors: Record<string, string> = {
+      '高': 'background:#FDE8E8;color:#A32D2D;',
+      '中': 'background:#FAEEDA;color:#854F0B;',
+      '低': 'background:#EAF3DE;color:#3B6D11;',
+    };
+    return `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;${colors[level] || ''}">${level}</span>`;
+  };
+
+  const statusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      '待处理': 'background:#FDE8E8;color:#A32D2D;',
+      '持续关注': 'background:#FAEEDA;color:#854F0B;',
+    };
+    return `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;margin-left:6px;${colors[status] || ''}">${status}</span>`;
+  };
+
+  // 3. 构建 HTML
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>项目周报汇总</title>
+<style>
+  @page { margin: 15mm 12mm; size: A4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif; font-size: 12px; color: #333; line-height: 1.7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  
+  .header { text-align: center; padding: 16px 0 12px; border-bottom: 3px double #378ADD; margin-bottom: 18px; }
+  .header h1 { font-size: 20px; color: #1a3a5c; letter-spacing: 2px; margin-bottom: 4px; }
+  .header .sub { font-size: 12px; color: #888; }
+  
+  .section-title { font-size: 15px; font-weight: 700; color: #1a3a5c; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #378ADD; display: flex; align-items: center; gap: 8px; }
+  .section-title .icon { font-size: 16px; }
+  
+  .risk-card { padding: 8px 12px; margin-bottom: 6px; border-left: 4px solid #D85A30; background: #FFFBF5; border-radius: 0 4px 4px 0; page-break-inside: avoid; }
+  .risk-card .project-tag { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #fff; margin-left: 8px; }
+  .risk-desc { font-weight: 500; }
+  .risk-suggestion { font-size: 11px; color: #888; margin-top: 2px; padding-left: 4px; }
+  
+  .project-section { margin-bottom: 16px; page-break-inside: avoid; }
+  .project-header { display: flex; align-items: center; gap: 10px; padding: 8px 0 6px; margin-bottom: 8px; border-bottom: 1px solid #e0e0e0; }
+  .project-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .project-name { font-size: 14px; font-weight: 700; }
+  .project-meta { font-size: 11px; color: #888; }
+  .project-progress { margin-left: auto; font-size: 16px; font-weight: 700; }
+  
+  .sub-title { font-size: 12px; font-weight: 600; color: #555; margin: 8px 0 4px; padding-left: 4px; border-left: 3px solid #378ADD; }
+  .text-block { padding: 4px 12px; color: #555; font-size: 12px; }
+  .item-list { padding: 2px 0; }
+  .item { padding: 3px 12px; font-size: 12px; display: flex; }
+  .item-num { color: #aaa; margin-right: 6px; min-width: 20px; }
+  .item-title { flex: 1; }
+  .item-detail { font-size: 11px; color: #999; }
+  
+  .risk-item { padding: 4px 12px; margin: 2px 0; background: #FFFBF5; border-left: 3px solid #f0c040; border-radius: 0 4px 4px 0; font-size: 12px; }
+  .risk-item .rk-desc { font-weight: 500; }
+  .risk-item .rk-sugg { font-size: 11px; color: #888; margin-top: 1px; }
+  
+  .empty { padding: 8px 12px; color: #bbb; font-size: 12px; font-style: italic; }
+  
+  .footer { text-align: center; padding: 16px 0 0; margin-top: 20px; border-top: 1px solid #e0e0e0; font-size: 10px; color: #bbb; }
+  
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .risk-card, .risk-item { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 项目跟踪管理系统 · 本周工作汇总</h1>
+  <div class="sub">${fmtDate(today)} ${fmtTime(today)} · 共 ${projects.length} 个项目，${allUnresolvedRisks.length} 项未处理风险</div>
+</div>
+
+<!-- 未处理风险汇总 -->
+<div class="section-title"><span class="icon">⚠️</span> 未处理风险汇总 <span style="font-size:11px;color:#D85A30;font-weight:400;">（待处理 + 持续关注，去重共 ${allUnresolvedRisks.length} 项）</span></div>
+${allUnresolvedRisks.length === 0
+  ? '<div class="empty">🎉 当前所有项目无未处理风险，继续保持！</div>'
+  : allUnresolvedRisks.map(({ projectName, color, risk }) => `
+<div class="risk-card">
+  <span class="risk-desc">${levelBadge(risk.level)} ${risk.description}</span>
+  <span class="project-tag" style="background:${color};">${projectName}</span>
+  ${statusBadge(risk.status)}
+  ${risk.suggestion ? `<div class="risk-suggestion">💡 ${risk.suggestion}</div>` : ''}
+</div>`).join('')}
+
+<!-- 分隔线 -->
+<div style="border-top:1px dashed #ddd;margin:16px 0;"></div>
+
+<!-- 各项目详细内容 -->
+${projectReports.map(({ project, latestReport }) => `
+<div class="project-section">
+  <div class="project-header">
+    <span class="project-dot" style="background:${project.color};"></span>
+    <span class="project-name">${project.name}</span>
+    <span class="project-meta">负责人：${project.owner} · 状态：${project.status}</span>
+    <span class="project-progress" style="color:${project.color};">${latestReport?.progress ?? 0}%</span>
+  </div>
+
+  ${!latestReport ? '<div class="empty">该项目暂无周报数据</div>' : `
+    <div class="sub-title">📌 建设目标</div>
+    <div class="text-block">${latestReport.goals || '暂无'}</div>
+
+    <div class="sub-title">🔥 重点内容</div>
+    <div class="text-block">${latestReport.highlights || '暂无'}</div>
+
+    <div class="sub-title">✅ 本周完成事项（${latestReport.completedItems.length}项）</div>
+    ${latestReport.completedItems.length === 0
+      ? '<div class="empty">暂无记录</div>'
+      : `<div class="item-list">${latestReport.completedItems.map((item, i) => `
+        <div class="item" style="${i < latestReport.completedItems.length - 1 ? 'border-bottom:1px solid #f5f5f5;' : ''}">
+          <span class="item-num">${item.order}.</span>
+          <div>
+            <div class="item-title">${item.title}</div>
+            ${item.progress ? `<div class="item-detail">进展：${item.progress}</div>` : ''}
+            ${item.acceptance ? `<div class="item-detail">验收：${item.acceptance}</div>` : ''}
+            ${item.detail ? `<div class="item-detail">${item.detail}</div>` : ''}
+          </div>
+        </div>`).join('')}</div>`
+    }
+
+    <div class="sub-title">📅 下周工作计划（${latestReport.plannedItems.length}项）</div>
+    ${latestReport.plannedItems.length === 0
+      ? '<div class="empty">暂无计划</div>'
+      : `<div class="item-list">${latestReport.plannedItems.map((item, i) => `
+        <div class="item" style="${i < latestReport.plannedItems.length - 1 ? 'border-bottom:1px solid #f5f5f5;' : ''}">
+          <span class="item-num">${item.order}.</span>
+          <div>
+            <div class="item-title">${item.title}</div>
+            ${item.reason ? `<div class="item-detail" style="color:#D85A30;">📎 未完成原因：${item.reason}</div>` : ''}
+          </div>
+        </div>`).join('')}</div>`
+    }
+
+    <div class="sub-title">⚡ 风险提示（${latestReport.risks.length}项）</div>
+    ${latestReport.risks.length === 0
+      ? '<div class="empty">本周无风险项</div>'
+      : latestReport.risks.map(rk => `
+        <div class="risk-item">
+          <span class="rk-desc">${levelBadge(rk.level)} ${rk.description}</span>
+          ${statusBadge(rk.status)}
+          ${rk.suggestion ? `<div class="rk-sugg">💡 ${rk.suggestion}</div>` : ''}
+        </div>`).join('')}
+  `}
+</div>
+`).join('')}
+
+<div class="footer">
+  本报告由项目跟踪管理系统自动生成 · ${fmtDate(today)} ${fmtTime(today)}
+</div>
+
+</body>
+</html>`;
+
+  // 4. 打开新窗口并触发打印
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
+  if (!printWindow) {
+    alert('请允许弹出窗口以导出 PDF');
+    return;
+  }
+  printWindow.document.write(html);
+  printWindow.document.close();
+  // 等待资源加载后打印
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.print();
+    }, 300);
+  };
+  // 如果 onload 不触发（某些浏览器），直接调用
+  setTimeout(() => {
+    printWindow.print();
+  }, 500);
+}

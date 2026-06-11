@@ -2,10 +2,13 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
+const PUBLIC_BLOCKED = ['/report/new', '/admin/users'];
+
 export default function Layout() {
   const { isLoggedIn, username, role, loading, doLogout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isPublic = role === 'public';
 
   // 初始化加载中
   if (loading) {
@@ -29,6 +32,15 @@ export default function Layout() {
   if (location.pathname === '/login') {
     navigate('/', { replace: true });
     return null;
+  }
+
+  // public 用户访问新建/管理页面时重定向回首页
+  if (isPublic) {
+    const isBlocked = PUBLIC_BLOCKED.some(p => location.pathname.includes(p));
+    if (isBlocked) {
+      navigate('/', { replace: true });
+      return null;
+    }
   }
 
   const tabs = [
@@ -60,6 +72,9 @@ export default function Layout() {
             {username}
             {role === 'admin' && (
               <span style={{ fontSize: 11, color: '#378ADD', marginLeft: 4 }}>(管理员)</span>
+            )}
+            {role === 'public' && (
+              <span style={{ fontSize: 11, color: '#999', marginLeft: 4 }}>(公共访问)</span>
             )}
           </span>
           <button

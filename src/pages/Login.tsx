@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
+const PUBLIC_EMAIL = 'public@123.com';
+
 export default function Login() {
   const [isRegister, setIsRegister] = useState(false);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
@@ -31,7 +33,7 @@ export default function Login() {
           setLoading(false);
           return;
         }
-        const errMsg = await doRegister(email, password, displayName.trim());
+        const errMsg = await doRegister(username, password, displayName.trim());
         if (errMsg) {
           setError(errMsg);
         } else {
@@ -39,8 +41,9 @@ export default function Login() {
           navigate('/');
         }
       } else {
-        // 登录
-        const ok = await doLogin(email, password);
+        // 登录：公共账号特殊处理
+        const loginEmail = username === 'public' ? PUBLIC_EMAIL : username;
+        const ok = await doLogin(loginEmail, password);
         if (ok) {
           navigate('/');
         } else {
@@ -74,10 +77,10 @@ export default function Login() {
             />
           )}
           <input
-            type="email"
-            value={email}
-            onChange={e => { setEmail(e.target.value); setError(''); }}
-            placeholder="邮箱地址"
+            type={isRegister ? 'email' : 'text'}
+            value={username}
+            onChange={e => { setUsername(e.target.value); setError(''); }}
+            placeholder={isRegister ? '邮箱地址' : '用户名 / 邮箱地址'}
             className={shared.loginInput}
             autoFocus={!isRegister}
             disabled={loading}

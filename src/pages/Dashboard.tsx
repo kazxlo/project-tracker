@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
+import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { Project } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -27,6 +28,7 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { role } = useAuth();
   const isAdmin = role === 'admin';
+  const isPublic = role === 'public';
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -227,7 +229,14 @@ export default function Dashboard() {
           {isAdmin && (
             <button className={shared.btnToolbar} onClick={openCreateModal}>+ 添加项目</button>
           )}
-          <button className={shared.btnToolbar} onClick={handleExport}>导出数据</button>
+          {!isPublic && (
+            <button className={shared.btnToolbar} onClick={() => exportWeeklySummaryPDF(projects, allReports)}>
+              📄 导出PDF
+            </button>
+          )}
+          {isAdmin && (
+            <button className={shared.btnToolbar} onClick={handleExport}>导出数据</button>
+          )}
           {isAdmin && (
             <>
               <button className={shared.btnToolbar} onClick={() => fileInputRef.current?.click()}>导入数据</button>
