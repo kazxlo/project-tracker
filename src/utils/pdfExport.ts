@@ -37,6 +37,20 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
   const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const fmtTime = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
+  // 找到最新一期周报的日期范围作为PDF标题
+  let dateRangeTitle = '';
+  if (allReports.length > 0) {
+    const latestReport = allReports.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
+    const fmtChinese = (dateStr: string) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`;
+    };
+    dateRangeTitle = `${fmtChinese(latestReport.weekStart)}-${fmtChinese(latestReport.weekEnd)}`;
+  } else {
+    dateRangeTitle = fmtDate(today);
+  }
+
   const levelBadge = (level: string) => {
     const colors: Record<string, string> = {
       '高': 'background:#FDE8E8;color:#A32D2D;',
@@ -110,8 +124,8 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
 <body>
 
 <div class="header">
-  <h1>📋 项目跟踪管理系统 · 本周工作汇总</h1>
-  <div class="sub">${fmtDate(today)} ${fmtTime(today)} · 共 ${projects.length} 个项目，${allUnresolvedRisks.length} 项未处理风险</div>
+  <h1>📋 项目跟踪管理系统 · 本周工作汇总（${dateRangeTitle}）</h1>
+  <div class="sub">共 ${projects.length} 个项目，${allUnresolvedRisks.length} 项未处理风险</div>
 </div>
 
 <!-- 未处理风险汇总 -->

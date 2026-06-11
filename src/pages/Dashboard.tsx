@@ -18,7 +18,7 @@ const COLOR_PALETTE = [
 ];
 
 function emptyProject(): Project {
-  return { id: '', name: '', owner: '', startDate: '', status: '正常推进', color: COLOR_PALETTE[0] };
+  return { id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0, status: '正常推进', color: COLOR_PALETTE[0] };
 }
 
 export default function Dashboard() {
@@ -99,7 +99,20 @@ export default function Dashboard() {
     return total + count;
   }, 0);
 
-  const totalCompleted = allReports.reduce((s, r) => s + r.completedItems.length, 0);
+  // 累计完成事项（去重：同一项目下 title 相同只计一次）
+  const totalCompleted = projects.reduce((total, p) => {
+    const prpts = allReports.filter(r => r.projectId === p.id);
+    const seen = new Set<string>();
+    prpts.forEach(r => {
+      r.completedItems.forEach(ci => {
+        const key = ci.title.trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+        }
+      });
+    });
+    return total + seen.size;
+  }, 0);
 
   const getProjectStats = (projectId: string) => {
     const prpts = allReports.filter(r => r.projectId === projectId);
@@ -132,11 +145,25 @@ export default function Dashboard() {
   };
 
   const handleSaveProject = async () => {
-    const project = editForm.id
-      ? editForm
-      : { ...editForm, id: 'p_' + Date.now() };
+    // 编辑已有项目时，检测截止时间是否延期（新截止日期晚于旧截止日期才记录）
+    let project = editForm;
+    if (editForm.id && projectModal.editing) {
+      const oldProject = projectModal.editing;
+      if (project.deadline && oldProject.deadline && project.deadline !== oldProject.deadline && project.deadline > oldProject.deadline) {
+        // 截止时间延后，记录延期
+        project = {
+          ...project,
+          deadlineExtensions: (project.deadlineExtensions || 0) + 1,
+          lastDeadline: oldProject.deadline,
+        };
+        setEditForm(project); // 同步状态
+      }
+    }
+    const finalProject = project.id
+      ? project
+      : { ...project, id: 'p_' + Date.now() };
     try {
-      await saveProject(project);
+      await saveProject(finalProject);
       setProjectModal({ open: false, editing: null });
       setRefreshKey(k => k + 1);
       showToast(editForm.id ? '项目已保存' : '项目已创建', 'success');
@@ -251,6 +278,47 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* 项目逾期提醒 */}
+      {(() => {
+        const overdue = projects.filter(p => {
+          if (!p.deadline || p.deadline.trim() === '') return false;
+          const today = new Date().toISOString().split('T')[0];
+          if (p.deadline >= today) return false;
+          const stats = getProjectStats(p.id);
+          return stats.progress < 100;
+        });
+        if (overdue.length === 0) return null;
+        return (
+          <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {overdue.map(p => {
+              const deadlineDate = p.deadline!;
+              const d = new Date(deadlineDate + 'T00:00:00');
+              const deadlineStr = `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`;
+              const extInfo = p.deadlineExtensions && p.deadlineExtensions > 0
+                ? `（已延期${p.deadlineExtensions}次，上一次截止时间为${p.lastDeadline ? (() => { const ld = new Date(p.lastDeadline + 'T00:00:00'); return `${ld.getFullYear()}年${String(ld.getMonth() + 1).padStart(2, '0')}月${String(ld.getDate()).padStart(2, '0')}日`; })() : deadlineStr}）`
+                : '';
+              return (
+                <div key={p.id} style={{
+                  background: '#FFF3E0',
+                  border: '1px solid #FF9800',
+                  borderRadius: 8,
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 13,
+                }}>
+                  <span style={{ fontSize: 16 }}>⚠️</span>
+                  <span style={{ flex: 1, color: '#E65100' }}>
+                    <strong>{p.name}</strong> 项目已超过预估截止时间（{deadlineStr}），请核实并控制交付质量。{extInfo}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* 项目卡片网格 */}
       <div className={shared.projectGrid}>
@@ -382,7 +450,14 @@ export default function Dashboard() {
                 const prpts = allReports.filter(r => r.projectId === p.id);
                 const items: string[] = [];
                 if (drillDown === 'completed') {
-                  prpts.forEach(r => r.completedItems.forEach(ci => items.push(ci.title)));
+                  const seen = new Set<string>();
+                  prpts.forEach(r => r.completedItems.forEach(ci => {
+                    const key = ci.title.trim();
+                    if (key && !seen.has(key)) {
+                      seen.add(key);
+                      items.push(ci.title);
+                    }
+                  }));
                 } else if (drillDown === 'planned') {
                   // 剩余计划事项：取最新一期周报的plannedItems
                   if (prpts.length > 0) {
@@ -465,6 +540,32 @@ export default function Dashboard() {
                     value={editForm.startDate}
                     onChange={e => setEditForm({ ...editForm, startDate: e.target.value })}
                   />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div className={shared.formGroup}>
+                  <label className={shared.formLabel}>预估截止时间</label>
+                  <input
+                    className={shared.formInput}
+                    type="date"
+                    value={editForm.deadline || ''}
+                    onChange={e => setEditForm({ ...editForm, deadline: e.target.value })}
+                  />
+                </div>
+                <div className={shared.formGroup}>
+                  {editForm.deadlineExtensions && editForm.deadlineExtensions > 0 ? (
+                    <div style={{ fontSize: 12, color: '#D85A30', paddingTop: 20 }}>
+                      ⚠ 已延期{editForm.deadlineExtensions}次
+                      {editForm.lastDeadline ? `，上一次截止时间：${(() => {
+                        const ld = new Date(editForm.lastDeadline + 'T00:00:00');
+                        return `${ld.getFullYear()}年${String(ld.getMonth() + 1).padStart(2, '0')}月${String(ld.getDate()).padStart(2, '0')}日`;
+                      })()}` : ''}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: '#999', paddingTop: 20 }}>
+                      设定后若逾期且进度未达100%将提示
+                    </div>
+                  )}
                 </div>
               </div>
               <div>

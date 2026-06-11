@@ -4,6 +4,9 @@ export interface Project {
   name: string;
   owner: string;
   startDate: string;
+  deadline?: string;           // 预计截止时间（YYYY-MM-DD）
+  deadlineExtensions?: number;  // 已延期次数
+  lastDeadline?: string;        // 上一次截止时间（YYYY-MM-DD）
   status: '正常推进' | '需关注' | '存在风险';
   color: string;
 }

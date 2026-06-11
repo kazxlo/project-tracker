@@ -94,10 +94,24 @@ export default function ReportEdit() {
           if (!cancelled) {
             setWeekStart(start);
             setWeekEnd(end);
-            setWeekLabel(generateWeekLabel(start));
           }
 
           const prev = await getLatestReport(projectId!);
+          if (!cancelled) {
+            // 期数递增：从上一期的 weekLabel 解析数字 +1
+            let nextWeekLabel = '';
+            if (prev) {
+              const match = prev.weekLabel.match(/第(\d+)周/);
+              if (match) {
+                nextWeekLabel = `第${parseInt(match[1], 10) + 1}周`;
+              }
+            }
+            if (!nextWeekLabel) {
+              nextWeekLabel = generateWeekLabel(start);
+            }
+            setWeekLabel(nextWeekLabel);
+          }
+
           if (!cancelled && prev) {
             setGoals(prev.goals || prev.summary || '');
             setHighlights(prev.highlights || '');

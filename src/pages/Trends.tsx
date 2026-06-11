@@ -1,12 +1,19 @@
 import { getProjects, getAllReports } from '../api/db';
 import { Project, WeeklyReport } from '../types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  BarChart, Bar, ResponsiveContainer,
+} from 'recharts';
 import shared from '../styles/shared.module.css';
+
+type TabKey = 'progress' | 'health';
 
 export default function Trends() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<TabKey>('progress');
 
   useEffect(() => {
     let cancelled = false;
@@ -27,10 +34,98 @@ export default function Trends() {
     return () => { cancelled = true; };
   }, []);
 
-  const reportsByProject: Record<string, WeeklyReport[]> = {};
-  projects.forEach(p => {
-    reportsByProject[p.id] = allReports.filter(r => r.projectId === p.id);
-  });
+  // ---- 数据处理 ----
+
+  // 收集所有唯一的周次标签（按时间排序）
+  const sortedWeekLabels = useMemo(() => {
+    const set = new Set<string>();
+    allReports.forEach(r => set.add(r.weekLabel));
+    return [...set].sort((a, b) => {
+      const na = parseInt((a.match(/\d+/) || ['0'])[0], 10);
+      const nb = parseInt((b.match(/\d+/) || ['0'])[0], 10);
+      return na - nb;
+    });
+  }, [allReports]);
+
+  // 进度趋势数据：每个周次标签 → 各项目进度
+  const progressData = useMemo(() => {
+    return sortedWeekLabels.map(label => {
+      const row: Record<string, string | number> = { week: label };
+      projects.forEach(p => {
+        const reportsInWeek = allReports.filter(
+          r => r.projectId === p.id && r.weekLabel === label
+        );
+        // 同一周多次提交取最新的
+        const latest = reportsInWeek.length > 0
+          ? reportsInWeek.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
+          : null;
+        row[p.name] = latest ? latest.progress : null;
+      });
+      return row;
+    });
+  }, [sortedWeekLabels, projects, allReports]);
+
+  // 活跃风险数量趋势数据：每个周次 → 各项目活跃风险数（待处理+持续关注，去重）
+  const activeRiskData = useMemo(() => {
+    return sortedWeekLabels.map(label => {
+      const row: Record<string, string | number> = { week: label };
+      projects.forEach(p => {
+        const reportsInWeek = allReports.filter(
+          r => r.projectId === p.id && r.weekLabel === label
+        );
+        const seen = new Set<string>();
+        reportsInWeek.forEach(r => {
+          r.risks.forEach(rk => {
+            if (rk.status === '已解决') return;
+            const key = rk.description.trim();
+            if (key) seen.add(key);
+          });
+        });
+        row[p.name] = seen.size;
+      });
+      return row;
+    });
+  }, [sortedWeekLabels, projects, allReports]);
+
+  // 风险等级分布（堆叠）：每个项目一列，堆叠 高/中/低（去重）
+  const riskLevelData = useMemo(() => {
+    return projects.map(p => {
+      const prpts = allReports.filter(r => r.projectId === p.id);
+      const seenHigh = new Set<string>();
+      const seenMid = new Set<string>();
+      const seenLow = new Set<string>();
+      prpts.forEach(r => {
+        r.risks.forEach(rk => {
+          const key = rk.description.trim();
+          if (!key) return;
+          if (rk.level === '高') seenHigh.add(key);
+          else if (rk.level === '中') seenMid.add(key);
+          else seenLow.add(key);
+        });
+      });
+      return {
+        name: p.name,
+        高: seenHigh.size,
+        中: seenMid.size,
+        低: seenLow.size,
+        color: p.color,
+      };
+    });
+  }, [projects, allReports]);
+
+  // 最新进度汇总表格
+  const latestProgressTable = useMemo(() => {
+    return projects.map(p => {
+      const prpts = allReports.filter(r => r.projectId === p.id);
+      const latest = prpts.length > 0
+        ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
+        : null;
+      return { project: p, latest };
+    });
+  }, [projects, allReports]);
+
+  // 风险等级颜色
+  const levelColors = { '高': '#D85A30', '中': '#FAAD14', '低': '#639922' };
 
   if (loading) {
     return (
@@ -40,56 +135,186 @@ export default function Trends() {
     );
   }
 
-  return (
-    <div>
-      <h2 className={shared.pageTitle}>趋势分析</h2>
-      <div className={shared.trendList}>
-        {projects.map(p => {
-          const reports = reportsByProject[p.id] || [];
-          return (
-            <div key={p.id} className={shared.trendCard}>
-              <div className={shared.trendHeader}>
-                <div className={shared.trendDot} style={{ background: p.color }}/>
-                <h3 className={shared.trendTitle}>{p.name}</h3>
-                <span className={shared.trendMeta}>— 周报{reports.length}期</span>
-              </div>
-              {reports.length === 0 ? (
-                <div className={shared.emptyState} style={{ padding: 30, fontSize: 13 }}>暂无数据</div>
-              ) : (
-                <div className={shared.barChartAreaSm}>
-                  {[...reports].sort((a, b) => a.weekStart.localeCompare(b.weekStart)).slice(0, 12).map((r, idx) => {
-                    const h = Math.max(8, r.completedItems.length * 28);
-                    return (
-                      <div key={r.id} className={shared.barCol}>
-                        <div className={shared.barValue} style={{ fontSize: 11, color: p.color }}>
-                          {r.completedItems.length}
-                        </div>
-                        <div
-                          className={shared.barBodySm}
-                          style={{
-                            height: h,
-                            background: p.color,
-                            opacity: 0.3 + (idx / Math.max(reports.length, 1)) * 0.7,
-                          }}
-                        />
-                        <div className={shared.barLabel} style={{ width: 50 }}>
-                          {r.weekLabel}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {projects.length === 0 && (
+  if (projects.length === 0) {
+    return (
+      <div>
+        <h2 className={shared.pageTitle}>趋势分析</h2>
         <div className={shared.emptyState} style={{ padding: 60 }}>
           <p style={{ fontSize: 15, marginBottom: 8 }}>暂无项目</p>
           <p className={shared.textSmall}>请先在仪表盘中添加项目</p>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className={shared.pageTitle}>趋势分析</h2>
+
+      {/* Tab 切换 */}
+      <div className={shared.tabBar}>
+        <div
+          className={`${shared.tab} ${tab === 'progress' ? shared.tabActive : shared.tabInactive}`}
+          onClick={() => setTab('progress')}
+        >
+          📈 项目进度趋势
+        </div>
+        <div
+          className={`${shared.tab} ${tab === 'health' ? shared.tabActive : shared.tabInactive}`}
+          onClick={() => setTab('health')}
+        >
+          🏥 项目健康趋势
+        </div>
+      </div>
+
+      {/* ===== Tab 1: 项目进度趋势 ===== */}
+      {tab === 'progress' && (
+        <>
+          <div className={shared.section}>
+            <h3 className={shared.sectionTitle}>各项目完成进度对比（%）</h3>
+            {progressData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={progressData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="week" fontSize={12} />
+                  <YAxis domain={[0, 100]} fontSize={12} tickFormatter={v => `${v}%`} />
+                  <Tooltip
+                    formatter={(value) => [`${value}%`, '']}
+                    labelFormatter={(label) => `周次：${label}`}
+                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  {projects.map(p => (
+                    <Line
+                      key={p.id}
+                      type="monotone"
+                      dataKey={p.name}
+                      stroke={p.color}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                      connectNulls
+                      name={p.name}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className={shared.emptyState}>暂无周报数据</div>
+            )}
+          </div>
+
+          {/* 最新进度汇总表格 */}
+          <div className={shared.section}>
+            <h3 className={shared.sectionTitle}>最新一期进度汇总</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #e0e0e0' }}>
+                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>项目</th>
+                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>负责人</th>
+                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>最新周次</th>
+                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>完成进度</th>
+                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>周报期数</th>
+                </tr>
+              </thead>
+              <tbody>
+                {latestProgressTable.map(({ project, latest }) => {
+                  const prpts = allReports.filter(r => r.projectId === project.id);
+                  return (
+                    <tr key={project.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                      <td style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 3, background: project.color, display: 'inline-block' }} />
+                        <span style={{ fontWeight: 500 }}>{project.name}</span>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: '#666' }}>{project.owner}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#666' }}>
+                        {latest ? latest.weekLabel : '—'}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        <span style={{
+                          fontWeight: 500,
+                          color: project.color,
+                          fontSize: 15,
+                        }}>
+                          {latest ? `${latest.progress}%` : '—'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#666' }}>
+                        {prpts.length}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* ===== Tab 2: 项目健康趋势 ===== */}
+      {tab === 'health' && (
+        <>
+          {/* 图表A：活跃风险数量趋势 */}
+          <div className={shared.section}>
+            <h3 className={shared.sectionTitle}>活跃风险数量趋势（待处理 + 持续关注）</h3>
+            {activeRiskData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={activeRiskData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="week" fontSize={12} />
+                  <YAxis allowDecimals={false} fontSize={12} />
+                  <Tooltip
+                    formatter={(value) => [`${value} 项`, '']}
+                    labelFormatter={(label) => `周次：${label}`}
+                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  {projects.map(p => (
+                    <Line
+                      key={p.id}
+                      type="monotone"
+                      dataKey={p.name}
+                      stroke={p.color}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                      connectNulls
+                      name={p.name}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className={shared.emptyState}>暂无风险数据</div>
+            )}
+          </div>
+
+          {/* 图表B：风险等级分布（堆叠柱状图） */}
+          <div className={shared.section}>
+            <h3 className={shared.sectionTitle}>累计风险等级分布（去重后）</h3>
+            {riskLevelData.some(d => d.高 + d.中 + d.低 > 0) ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={riskLevelData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis allowDecimals={false} fontSize={12} />
+                  <Tooltip
+                    formatter={(value, name) => [`${value} 项`, name]}
+                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  <Bar dataKey="高" stackId="a" fill={levelColors['高']} name="高风险" />
+                  <Bar dataKey="中" stackId="a" fill={levelColors['中']} name="中风险" />
+                  <Bar dataKey="低" stackId="a" fill={levelColors['低']} name="低风险" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className={shared.emptyState} style={{ padding: 30, fontSize: 13 }}>
+                🎉 所有项目均无风险记录
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
