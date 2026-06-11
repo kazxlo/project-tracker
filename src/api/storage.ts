@@ -1,7 +1,6 @@
 import { Project, WeeklyReport, AppData } from '../types';
 
 const STORAGE_KEY = 'projectM_data';
-const DEFAULT_PASSWORD = 'project2024';
 
 function loadData(): AppData {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -72,8 +71,11 @@ export function getAllReports(): WeeklyReport[] {
     .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
 }
 
-export function login(password: string): boolean {
-  return password === DEFAULT_PASSWORD;
+/** 旧版登录验证 — 已废弃，请使用 Supabase Auth */
+export function login(_password: string): boolean {
+  // 此函数已废弃，请使用 src/hooks/useAuth.tsx 中的 Supabase Auth
+  console.warn('storage.login() 已废弃，请使用 Supabase Auth API');
+  return false;
 }
 
 export function isLoggedIn(): boolean {

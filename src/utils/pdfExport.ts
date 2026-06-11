@@ -8,6 +8,16 @@ interface ProjectReport {
   latestReport: WeeklyReport | null;
 }
 
+/** HTML 转义，防止 PDF 导出时的 XSS 注入攻击 */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyReport[]) {
   // 1. 收集各项目最新一期周报
   const projectReports: ProjectReport[] = projects.map(p => {
@@ -46,9 +56,9 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
       const d = new Date(dateStr + 'T00:00:00');
       return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`;
     };
-    dateRangeTitle = `${fmtChinese(latestReport.weekStart)}-${fmtChinese(latestReport.weekEnd)}`;
+    dateRangeTitle = escapeHtml(`${fmtChinese(latestReport.weekStart)}-${fmtChinese(latestReport.weekEnd)}`);
   } else {
-    dateRangeTitle = fmtDate(today);
+    dateRangeTitle = escapeHtml(fmtDate(today));
   }
 
   const levelBadge = (level: string) => {
@@ -57,7 +67,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
       '中': 'background:#FAEEDA;color:#854F0B;',
       '低': 'background:#EAF3DE;color:#3B6D11;',
     };
-    return `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;${colors[level] || ''}">${level}</span>`;
+    return `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;${colors[level] || ''}">${escapeHtml(level)}</span>`;
   };
 
   const statusBadge = (status: string) => {
@@ -65,10 +75,10 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
       '待处理': 'background:#FDE8E8;color:#A32D2D;',
       '持续关注': 'background:#FAEEDA;color:#854F0B;',
     };
-    return `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;margin-left:6px;${colors[status] || ''}">${status}</span>`;
+    return `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;margin-left:6px;${colors[status] || ''}">${escapeHtml(status)}</span>`;
   };
 
-  // 3. 构建 HTML
+  // 3. 构建 HTML（所有用户输入均经过 escapeHtml 转义）
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -134,10 +144,10 @@ ${allUnresolvedRisks.length === 0
   ? '<div class="empty">🎉 当前所有项目无未处理风险，继续保持！</div>'
   : allUnresolvedRisks.map(({ projectName, color, risk }) => `
 <div class="risk-card">
-  <span class="risk-desc">${levelBadge(risk.level)} ${risk.description}</span>
-  <span class="project-tag" style="background:${color};">${projectName}</span>
+  <span class="risk-desc">${levelBadge(risk.level)} ${escapeHtml(risk.description)}</span>
+  <span class="project-tag" style="background:${escapeHtml(color)};">${escapeHtml(projectName)}</span>
   ${statusBadge(risk.status)}
-  ${risk.suggestion ? `<div class="risk-suggestion">💡 ${risk.suggestion}</div>` : ''}
+  ${risk.suggestion ? `<div class="risk-suggestion">💡 ${escapeHtml(risk.suggestion)}</div>` : ''}
 </div>`).join('')}
 
 <!-- 分隔线 -->
@@ -147,18 +157,18 @@ ${allUnresolvedRisks.length === 0
 ${projectReports.map(({ project, latestReport }) => `
 <div class="project-section">
   <div class="project-header">
-    <span class="project-dot" style="background:${project.color};"></span>
-    <span class="project-name">${project.name}</span>
-    <span class="project-meta">负责人：${project.owner} · 状态：${project.status}</span>
-    <span class="project-progress" style="color:${project.color};">${latestReport?.progress ?? 0}%</span>
+    <span class="project-dot" style="background:${escapeHtml(project.color)};"></span>
+    <span class="project-name">${escapeHtml(project.name)}</span>
+    <span class="project-meta">负责人：${escapeHtml(project.owner)} · 状态：${escapeHtml(project.status)}</span>
+    <span class="project-progress" style="color:${escapeHtml(project.color)};">${latestReport?.progress ?? 0}%</span>
   </div>
 
   ${!latestReport ? '<div class="empty">该项目暂无周报数据</div>' : `
     <div class="sub-title">📌 建设目标</div>
-    <div class="text-block">${latestReport.goals || '暂无'}</div>
+    <div class="text-block">${escapeHtml(latestReport.goals || '暂无')}</div>
 
     <div class="sub-title">🔥 重点内容</div>
-    <div class="text-block">${latestReport.highlights || '暂无'}</div>
+    <div class="text-block">${escapeHtml(latestReport.highlights || '暂无')}</div>
 
     <div class="sub-title">✅ 本周完成事项（${latestReport.completedItems.length}项）</div>
     ${latestReport.completedItems.length === 0
@@ -167,10 +177,10 @@ ${projectReports.map(({ project, latestReport }) => `
         <div class="item" style="${i < latestReport.completedItems.length - 1 ? 'border-bottom:1px solid #f5f5f5;' : ''}">
           <span class="item-num">${item.order}.</span>
           <div>
-            <div class="item-title">${item.title}</div>
-            ${item.progress ? `<div class="item-detail">进展：${item.progress}</div>` : ''}
-            ${item.acceptance ? `<div class="item-detail">验收：${item.acceptance}</div>` : ''}
-            ${item.detail ? `<div class="item-detail">${item.detail}</div>` : ''}
+            <div class="item-title">${escapeHtml(item.title)}</div>
+            ${item.progress ? `<div class="item-detail">进展：${escapeHtml(item.progress)}</div>` : ''}
+            ${item.acceptance ? `<div class="item-detail">验收：${escapeHtml(item.acceptance)}</div>` : ''}
+            ${item.detail ? `<div class="item-detail">${escapeHtml(item.detail)}</div>` : ''}
           </div>
         </div>`).join('')}</div>`
     }
@@ -182,8 +192,8 @@ ${projectReports.map(({ project, latestReport }) => `
         <div class="item" style="${i < latestReport.plannedItems.length - 1 ? 'border-bottom:1px solid #f5f5f5;' : ''}">
           <span class="item-num">${item.order}.</span>
           <div>
-            <div class="item-title">${item.title}</div>
-            ${item.reason ? `<div class="item-detail" style="color:#D85A30;">📎 未完成原因：${item.reason}</div>` : ''}
+            <div class="item-title">${escapeHtml(item.title)}</div>
+            ${item.reason ? `<div class="item-detail" style="color:#D85A30;">📎 未完成原因：${escapeHtml(item.reason)}</div>` : ''}
           </div>
         </div>`).join('')}</div>`
     }
@@ -193,16 +203,16 @@ ${projectReports.map(({ project, latestReport }) => `
       ? '<div class="empty">本周无风险项</div>'
       : latestReport.risks.map(rk => `
         <div class="risk-item">
-          <span class="rk-desc">${levelBadge(rk.level)} ${rk.description}</span>
+          <span class="rk-desc">${levelBadge(rk.level)} ${escapeHtml(rk.description)}</span>
           ${statusBadge(rk.status)}
-          ${rk.suggestion ? `<div class="rk-sugg">💡 ${rk.suggestion}</div>` : ''}
+          ${rk.suggestion ? `<div class="rk-sugg">💡 ${escapeHtml(rk.suggestion)}</div>` : ''}
         </div>`).join('')}
   `}
 </div>
 `).join('')}
 
 <div class="footer">
-  本报告由项目跟踪管理系统自动生成 · ${fmtDate(today)} ${fmtTime(today)}
+  本报告由项目跟踪管理系统自动生成 · ${escapeHtml(fmtDate(today))} ${escapeHtml(fmtTime(today))}
 </div>
 
 </body>

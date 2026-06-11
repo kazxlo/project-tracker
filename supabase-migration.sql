@@ -36,9 +36,11 @@ CREATE POLICY "projects_update" ON projects FOR UPDATE TO authenticated
 CREATE POLICY "projects_delete" ON projects FOR DELETE TO authenticated 
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
--- weekly_reports: 所有人可读/写，仅 admin 可删
+-- weekly_reports: 所有人可读，仅 admin/member 可写，仅 admin 可删
 CREATE POLICY "reports_select" ON weekly_reports FOR SELECT TO authenticated USING (true);
-CREATE POLICY "reports_insert" ON weekly_reports FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "reports_update" ON weekly_reports FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "reports_insert" ON weekly_reports FOR INSERT TO authenticated 
+  WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'member')));
+CREATE POLICY "reports_update" ON weekly_reports FOR UPDATE TO authenticated 
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'member')));
 CREATE POLICY "reports_delete" ON weekly_reports FOR DELETE TO authenticated 
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
