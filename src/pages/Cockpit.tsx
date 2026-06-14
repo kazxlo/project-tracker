@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getProjects, getAllReports } from '../api/db';
+import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { useAuth } from '../hooks/useAuth';
 import { Project } from '../types';
 import styles from '../styles/cockpit.module.css';
@@ -37,6 +38,7 @@ export default function Cockpit() {
   const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
   const { username, role, doLogout } = useAuth();
   const isAdmin = role === 'admin';
+  const isPublic = role === 'public';
   const navigate = useNavigate();
 
   // 加载数据
@@ -244,6 +246,11 @@ export default function Cockpit() {
             {username}
             {isAdmin && <span className={styles.userRole}>(管理员)</span>}
           </span>
+          {!isPublic && (
+            <button className={styles.pdfBtn} onClick={() => exportWeeklySummaryPDF(projects, allReports)}>
+              📄 导出PDF
+            </button>
+          )}
           <button className={styles.logoutBtn} onClick={() => { doLogout(); navigate('/login'); }}>
             退出
           </button>
