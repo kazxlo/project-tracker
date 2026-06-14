@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
-const PUBLIC_BLOCKED = ['/report/new', '/admin/users', '/cockpit'];
+const PUBLIC_BLOCKED = ['/report/new', '/admin/users', '/dashboard'];
 
 export default function Layout() {
   const { isLoggedIn, username, role, loading, doLogout } = useAuth();
@@ -43,16 +43,14 @@ export default function Layout() {
     }
   }
 
-  const isCockpit = location.pathname === '/cockpit';
+  const isCockpit = location.pathname === '/';
 
   const tabs = [
-    { path: '/', label: '项目总览' },
+    { path: '/', label: '驾驶舱' },
     { path: '/trends', label: '趋势分析' },
   ];
-  if (!isPublic) {
-    tabs.push({ path: '/cockpit', label: '驾驶舱' });
-  }
   if (role === 'admin') {
+    tabs.push({ path: '/dashboard', label: '项目总览' });
     tabs.push({ path: '/admin/users', label: '用户管理' });
   }
 

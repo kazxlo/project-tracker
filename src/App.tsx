@@ -18,12 +18,12 @@ export default function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Cockpit />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/project/:id/report/new" element={<ReportEdit />} />
               <Route path="/project/:id/report/:reportId" element={<ReportEdit />} />
               <Route path="/trends" element={<Trends />} />
-              <Route path="/cockpit" element={<Cockpit />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
