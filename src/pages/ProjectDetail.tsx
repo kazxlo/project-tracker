@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getReports, deleteReport } from '../api/db';
+import { getProject, getReports, deleteReport, updateRiskStatus } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
 import { Project, WeeklyReport, Risk } from '../types';
 import shared from '../styles/shared.module.css';
@@ -15,7 +15,9 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { role } = useAuth();
   const isAdmin = role === 'admin';
+  const isMember = role === 'member';
   const isPublic = role === 'public';
+  const canEdit = isAdmin || isMember;
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
@@ -25,6 +27,7 @@ export default function ProjectDetail() {
 
   // 风险下钻弹窗
   const [riskDrillDown, setRiskDrillDown] = useState<'active' | 'resolved' | null>(null);
+  const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
 
   const loadReports = async () => {
     if (!id) return;
@@ -77,6 +80,19 @@ export default function ProjectDetail() {
       await loadReports();
     } catch (err) {
       console.error('删除周报失败:', err);
+    }
+  };
+
+  const handleRiskStatusChange = async (description: string, newStatus: string) => {
+    if (!id) return;
+    setSavingRiskKey(description);
+    try {
+      await updateRiskStatus(id, description, newStatus as '待处理' | '已解决' | '持续关注');
+      await loadReports();
+    } catch (err) {
+      console.error('更新风险状态失败:', err);
+    } finally {
+      setSavingRiskKey(null);
     }
   };
 
@@ -273,6 +289,25 @@ export default function ProjectDetail() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#3B6D11' }}>{item.risk.level}</span>
                     <span style={{ fontWeight: 500, fontSize: 13 }}>{item.risk.description}</span>
+                    {canEdit ? (
+                      <select
+                        className={shared.statusSelectSm}
+                        value={item.risk.status}
+                        disabled={savingRiskKey === item.risk.description}
+                        onChange={(e) => handleRiskStatusChange(item.risk.description, e.target.value)}
+                      >
+                        <option value="待处理">⏳ 待处理</option>
+                        <option value="持续关注">👁 持续关注</option>
+                        <option value="已解决">✓ 已解决</option>
+                      </select>
+                    ) : (
+                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f0f0', color: '#666' }}>
+                        {item.risk.status}
+                      </span>
+                    )}
+                    {savingRiskKey === item.risk.description && (
+                      <span style={{ fontSize: 11, color: '#999' }}>保存中…</span>
+                    )}
                   </div>
                   {item.risk.suggestion && (
                     <div style={{ fontSize: 12, color: '#666', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>

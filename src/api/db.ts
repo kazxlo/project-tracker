@@ -150,6 +150,33 @@ export async function deleteReport(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * 更新风险状态：找到指定项目中最新一期包含该风险描述的周报，更新其状态
+ * 仅 admin/member 可调用（调用方需自行校验权限）
+ */
+export async function updateRiskStatus(
+  projectId: string,
+  riskDescription: string,
+  newStatus: Risk['status']
+): Promise<void> {
+  const reports = await getReports(projectId); // 已按 week_start DESC 排序
+  for (const report of reports) {
+    const idx = report.risks.findIndex(
+      r => r.description.trim() === riskDescription.trim()
+    );
+    if (idx === -1) continue;
+
+    const risk = { ...report.risks[idx] };
+    risk.status = newStatus;
+    if (newStatus === '已解决') {
+      risk.resolvedAt = new Date().toISOString();
+    }
+    report.risks[idx] = risk;
+    await saveReport(report);
+    return; // 只更新最新一期含该风险的周报
+  }
+}
+
 export async function getAllReports(): Promise<WeeklyReport[]> {
   const { data, error } = await supabase
     .from('weekly_reports')

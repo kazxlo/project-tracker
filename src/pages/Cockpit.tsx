@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getProjects, getAllReports } from '../api/db';
+import { getProjects, getAllReports, updateRiskStatus } from '../api/db';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { useAuth } from '../hooks/useAuth';
 import { Project } from '../types';
@@ -36,28 +36,32 @@ export default function Cockpit() {
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
   const [loading, setLoading] = useState(true);
   const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
+  const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
   const { username, role, doLogout } = useAuth();
   const isAdmin = role === 'admin';
+  const isMember = role === 'member';
   const isPublic = role === 'public';
+  const canEdit = isAdmin || isMember;
   const navigate = useNavigate();
 
   // 加载数据
+  const loadData = async () => {
+    try {
+      const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
+      setProjects(projs);
+      setAllReports(reps);
+    } catch {
+      // 静默处理
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      try {
-        const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
-        if (!cancelled) {
-          setProjects(projs);
-          setAllReports(reps);
-        }
-      } catch {
-        // 静默处理
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    async function init() {
+      await loadData();
+      if (!cancelled) setLoading(false);
     }
-    load();
+    init();
     return () => { cancelled = true; };
   }, []);
 
@@ -160,7 +164,7 @@ export default function Cockpit() {
     const cumulativeRiskSet = new Set<string>();
     const cumulativeRiskDetails: {
       level: string; description: string; suggestion: string;
-      projectName: string; projectColor: string;
+      projectName: string; projectColor: string; projectId: string;
       weekLabel: string; weekStart: string; status: string;
     }[] = [];
     projects.forEach(p => {
@@ -177,6 +181,7 @@ export default function Cockpit() {
             suggestion: rk.suggestion || '',
             projectName: p.name,
             projectColor: p.color,
+            projectId: p.id,
             weekLabel: rpt.weekLabel,
             weekStart: rpt.weekStart,
             status: rk.status,
@@ -220,6 +225,20 @@ export default function Cockpit() {
   const highRisks = useMemo(() => {
     return kpiData.cumulativeRiskDetails.filter(r => r.level === '高');
   }, [kpiData.cumulativeRiskDetails]);
+
+  // 风险状态变更
+  const handleRiskStatusChange = async (projectId: string, description: string, newStatus: string) => {
+    const key = `${projectId}::${description}`;
+    setSavingRiskKey(key);
+    try {
+      await updateRiskStatus(projectId, description, newStatus as '待处理' | '已解决' | '持续关注');
+      await loadData();
+    } catch (err) {
+      console.error('更新风险状态失败:', err);
+    } finally {
+      setSavingRiskKey(null);
+    }
+  };
 
   if (loading) {
     return <div className={styles.loading}>加载中...</div>;
@@ -381,6 +400,7 @@ export default function Cockpit() {
                     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
                   })()
                 : '';
+              const savingKey = `${risk.projectId}::${risk.description}`;
               return (
                 <div key={i} className={styles.riskItem}>
                   <span
@@ -400,9 +420,23 @@ export default function Cockpit() {
                         {risk.projectName}
                       </span>
                       <span className={styles.riskWeekTag}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
-                      <span className={styles.riskStatusTag}>
-                        {risk.status === '待处理' ? '⏳ 待处理' : risk.status === '持续关注' ? '👁 持续关注' : risk.status}
-                      </span>
+                      {canEdit ? (
+                        <select
+                          className={styles.statusSelect}
+                          value={risk.status}
+                          disabled={savingRiskKey === savingKey}
+                          onChange={(e) => handleRiskStatusChange(risk.projectId, risk.description, e.target.value)}
+                        >
+                          <option value="待处理">⏳ 待处理</option>
+                          <option value="持续关注">👁 持续关注</option>
+                          <option value="已解决">✓ 已解决</option>
+                        </select>
+                      ) : (
+                        <span className={styles.riskStatusTag}>
+                          {risk.status === '待处理' ? '⏳ 待处理' : risk.status === '持续关注' ? '👁 持续关注' : risk.status}
+                        </span>
+                      )}
+                      {savingRiskKey === savingKey && <span className={styles.savingHint}>保存中…</span>}
                     </div>
                   </div>
                 </div>
@@ -434,6 +468,7 @@ export default function Cockpit() {
                         return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
                       })()
                     : '';
+                  const savingKey = `${risk.projectId}::${risk.description}`;
                   return (
                     <div key={i} className={styles.drillRiskItem}>
                       <span className={`${styles.riskLevelBadge} ${RISK_LEVEL_CLASS[risk.level] || styles.riskLevelLow}`}>
@@ -446,9 +481,23 @@ export default function Cockpit() {
                             {risk.projectName}
                           </span>
                           <span style={{ color: '#5a6e82', fontSize: 12 }}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
-                          <span style={{ color: risk.status === '待处理' ? '#D85A30' : '#5a6e82', fontSize: 12 }}>
-                            {risk.status === '待处理' ? '待处理' : '持续关注'}
-                          </span>
+                          {canEdit ? (
+                            <select
+                              className={styles.statusSelect}
+                              value={risk.status}
+                              disabled={savingRiskKey === savingKey}
+                              onChange={(e) => handleRiskStatusChange(risk.projectId, risk.description, e.target.value)}
+                            >
+                              <option value="待处理">⏳ 待处理</option>
+                              <option value="持续关注">👁 持续关注</option>
+                              <option value="已解决">✓ 已解决</option>
+                            </select>
+                          ) : (
+                            <span style={{ color: risk.status === '待处理' ? '#D85A30' : '#5a6e82', fontSize: 12 }}>
+                              {risk.status === '待处理' ? '待处理' : '持续关注'}
+                            </span>
+                          )}
+                          {savingRiskKey === savingKey && <span className={styles.savingHint}>保存中…</span>}
                         </div>
                         {risk.suggestion && (
                           <div className={styles.drillRiskSuggestion}>💡 {risk.suggestion}</div>

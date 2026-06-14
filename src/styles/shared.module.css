@@ -935,6 +935,35 @@
   margin-bottom: 8px;
 }
 
+/* 风险状态下拉（项目详情浅色主题） */
+.statusSelectSm {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #555;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  white-space: nowrap;
+}
+
+.statusSelectSm:hover {
+  border-color: #378ADD;
+}
+
+.statusSelectSm:focus {
+  border-color: #378ADD;
+  box-shadow: 0 0 0 2px rgba(55, 138, 221, 0.12);
+}
+
+.statusSelectSm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ====== Drill-down summary ====== */
 .drillOverlay {
   position: fixed;

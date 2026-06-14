@@ -439,6 +439,39 @@
   white-space: nowrap;
 }
 
+/* 风险状态下拉（驾驶舱深色主题） */
+.statusSelect {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(232, 237, 242, 0.04);
+  border: 1px solid rgba(232, 237, 242, 0.12);
+  color: #a0b0c0;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.statusSelect:hover {
+  border-color: rgba(232, 237, 242, 0.25);
+}
+
+.statusSelect:focus {
+  border-color: rgba(55, 138, 221, 0.5);
+}
+
+.statusSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.savingHint {
+  font-size: 10px;
+  color: #378ADD;
+  white-space: nowrap;
+}
+
 /* KPI 可点击 */
 .kpiClickable {
   cursor: pointer;
