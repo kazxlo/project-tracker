@@ -185,7 +185,7 @@ export default function Cockpit() {
     cumulativeRiskDetails.sort((a, b) => (LEVEL_ORDER[a.level] ?? 9) - (LEVEL_ORDER[b.level] ?? 9));
 
     // 剩余计划（各项目最新一期计划事项中未标记 carriedForward）
-    const planDetails: { title: string; projectName: string; projectColor: string }[] = [];
+    const planDetails: { title: string; projectName: string; projectColor: string; weekLabel: string; weekStart: string }[] = [];
     let remainingPlans = 0;
     projects.forEach(p => {
       const prpts = allReports.filter(r => r.projectId === p.id);
@@ -193,7 +193,13 @@ export default function Cockpit() {
       const latest = prpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
       latest.plannedItems.filter(pi => !pi.carriedForward).forEach(pi => {
         remainingPlans++;
-        planDetails.push({ title: pi.title, projectName: p.name, projectColor: p.color });
+        planDetails.push({
+          title: pi.title,
+          projectName: p.name,
+          projectColor: p.color,
+          weekLabel: latest.weekLabel,
+          weekStart: latest.weekStart,
+        });
       });
     });
 
@@ -452,14 +458,23 @@ export default function Cockpit() {
               ) : (
                 kpiData.planDetails.map((plan, i) => {
                   const { r, g, b } = hexToRgb(plan.projectColor);
+                  const weekDate = plan.weekStart
+                    ? (() => {
+                        const d = new Date(plan.weekStart + 'T00:00:00');
+                        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+                      })()
+                    : '';
                   return (
                     <div key={i} className={styles.drillRiskItem}>
                       <span className={styles.drillPlanNum}>{i + 1}</span>
                       <div className={styles.drillRiskBody}>
                         <div className={styles.drillRiskDesc}>{plan.title}</div>
-                        <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: plan.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
-                          {plan.projectName}
-                        </span>
+                        <div className={styles.drillRiskMeta}>
+                          <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: plan.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
+                            {plan.projectName}
+                          </span>
+                          <span style={{ color: '#5a6e82', fontSize: 12 }}>{plan.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
+                        </div>
                       </div>
                     </div>
                   );
