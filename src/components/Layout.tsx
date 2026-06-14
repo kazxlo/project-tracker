@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
-const PUBLIC_BLOCKED = ['/report/new', '/admin/users', '/dashboard'];
+const PUBLIC_BLOCKED = ['/report/new', '/admin'];
 
 export default function Layout() {
   const { isLoggedIn, username, role, loading, doLogout } = useAuth();
@@ -50,8 +50,7 @@ export default function Layout() {
     { path: '/trends', label: '趋势分析' },
   ];
   if (role === 'admin') {
-    tabs.push({ path: '/dashboard', label: '项目总览' });
-    tabs.push({ path: '/admin/users', label: '用户管理' });
+    tabs.push({ path: '/admin', label: '管理中心' });
   }
 
   const today = new Date();

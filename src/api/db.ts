@@ -15,6 +15,7 @@ function mapProject(row: any): Project {
     lastDeadline: row.last_deadline || undefined,
     status: row.status,
     color: row.color,
+    viewerIds: row.viewer_ids || undefined,
   };
 }
 
@@ -71,6 +72,7 @@ export async function saveProject(project: Project): Promise<void> {
     last_deadline: project.lastDeadline || null,
     status: project.status,
     color: project.color,
+    viewer_ids: (project.viewerIds && project.viewerIds.length > 0) ? project.viewerIds : null,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

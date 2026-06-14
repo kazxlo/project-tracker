@@ -239,8 +239,7 @@ export default function Cockpit() {
           <nav className={styles.topNav}>
             <span className={`${styles.topNavItem} ${styles.topNavActive}`}>驾驶舱</span>
             <Link to="/trends" className={styles.topNavLink}>趋势分析</Link>
-            {isAdmin && <Link to="/dashboard" className={styles.topNavLink}>项目总览</Link>}
-            {isAdmin && <Link to="/admin/users" className={styles.topNavLink}>用户管理</Link>}
+            {isAdmin && <Link to="/admin" className={styles.topNavLink}>管理中心</Link>}
           </nav>
           <span className={styles.userInfo}>
             {username}

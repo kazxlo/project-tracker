@@ -9,6 +9,7 @@ export interface Project {
   lastDeadline?: string;        // 上一次截止时间（YYYY-MM-DD）
   status: '正常推进' | '需关注' | '存在风险';
   color: string;
+  viewerIds?: string[];          // 可见用户ID列表，NULL/空=所有人可见
 }
 
 /** 事项（完成/计划） */
