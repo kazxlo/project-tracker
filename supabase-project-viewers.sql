@@ -14,7 +14,7 @@ DROP POLICY IF EXISTS "reports_select" ON weekly_reports;
 CREATE POLICY "projects_select" ON projects FOR SELECT TO authenticated 
   USING (
     viewer_ids IS NULL 
-    OR auth.uid() = ANY(viewer_ids) 
+    OR auth.uid()::text = ANY(viewer_ids) 
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
@@ -26,7 +26,7 @@ CREATE POLICY "reports_select" ON weekly_reports FOR SELECT TO authenticated
       WHERE projects.id = weekly_reports.project_id 
       AND (
         projects.viewer_ids IS NULL 
-        OR auth.uid() = ANY(projects.viewer_ids)
+        OR auth.uid()::text = ANY(projects.viewer_ids)
         OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
       )
     )
