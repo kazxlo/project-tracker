@@ -33,6 +33,7 @@ export default function Cockpit() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
   const [loading, setLoading] = useState(true);
+  const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
   const navigate = useNavigate();
 
   // 加载数据
@@ -138,8 +139,8 @@ export default function Cockpit() {
     });
   }, [projects, allReports]);
 
-  // KPI 指标
-  const kpis = useMemo(() => {
+  // KPI 指标 + 下钻详情
+  const kpiData = useMemo(() => {
     const totalProjects = projects.length;
     const overallProgress =
       totalProjects > 0
@@ -148,68 +149,66 @@ export default function Cockpit() {
           )
         : 0;
 
-    // 活跃风险（跨项目去重）
-    const activeRiskSet = new Set<string>();
-    projectStats.forEach(s => {
-      s.activeRisks.forEach(r => {
-        const key = r.description.trim();
-        if (key) activeRiskSet.add(key);
-      });
-    });
-    const activeRiskCount = activeRiskSet.size;
-
-    // 剩余计划
-    const remainingPlans = projectStats.reduce((total, s) => {
-      const prpts = allReports.filter(r => r.projectId === s.project.id);
-      if (prpts.length === 0) return total;
-      const latest = prpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
-      return total + latest.plannedItems.filter(pi => !pi.carriedForward).length;
-    }, 0);
-
     const overdueCount = projectStats.filter(s => s.isOverdue).length;
 
-    return [
-      { value: totalProjects, label: '在建项目', color: '#378ADD' },
-      { value: `${overallProgress}%`, label: '整体进度', color: '#639922' },
-      { value: activeRiskCount, label: '活跃风险', color: '#D85A30' },
-      { value: remainingPlans, label: '剩余计划', color: '#7F77DD' },
-      { value: overdueCount, label: '已逾期', color: '#D85A30' },
-    ];
-  }, [projects, projectStats, allReports]);
-
-  // 活跃风险快照（跨项目，去重，按等级排序）
-  const riskSnapshot = useMemo(() => {
-    const seen = new Set<string>();
-    const risks: {
-      level: string;
-      description: string;
-      suggestion: string;
-      projectName: string;
-      projectColor: string;
+    // 当前累计风险：所有周报中状态≠已解决的风险，跨项目去重
+    const cumulativeRiskSet = new Set<string>();
+    const cumulativeRiskDetails: {
+      level: string; description: string; suggestion: string;
+      projectName: string; projectColor: string;
+      weekLabel: string; weekStart: string; status: string;
     }[] = [];
+    projects.forEach(p => {
+      const prpts = allReports.filter(r => r.projectId === p.id);
+      prpts.forEach(rpt => {
+        rpt.risks.forEach(rk => {
+          if (rk.status === '已解决') return;
+          const key = `${p.id}::${rk.description.trim()}`;
+          if (!rk.description.trim() || cumulativeRiskSet.has(key)) return;
+          cumulativeRiskSet.add(key);
+          cumulativeRiskDetails.push({
+            level: rk.level,
+            description: rk.description,
+            suggestion: rk.suggestion || '',
+            projectName: p.name,
+            projectColor: p.color,
+            weekLabel: rpt.weekLabel,
+            weekStart: rpt.weekStart,
+            status: rk.status,
+          });
+        });
+      });
+    });
+    cumulativeRiskDetails.sort((a, b) => (LEVEL_ORDER[a.level] ?? 9) - (LEVEL_ORDER[b.level] ?? 9));
 
+    // 剩余计划（各项目最新一期计划事项中未标记 carriedForward）
+    const planDetails: { title: string; projectName: string; projectColor: string }[] = [];
+    let remainingPlans = 0;
     projects.forEach(p => {
       const prpts = allReports.filter(r => r.projectId === p.id);
       if (prpts.length === 0) return;
       const latest = prpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
-      latest.risks.forEach(rk => {
-        if (rk.status === '已解决') return;
-        const key = `${p.id}::${rk.description.trim()}`;
-        if (seen.has(key)) return;
-        seen.add(key);
-        risks.push({
-          level: rk.level,
-          description: rk.description,
-          suggestion: rk.suggestion || '',
-          projectName: p.name,
-          projectColor: p.color,
-        });
+      latest.plannedItems.filter(pi => !pi.carriedForward).forEach(pi => {
+        remainingPlans++;
+        planDetails.push({ title: pi.title, projectName: p.name, projectColor: p.color });
       });
     });
 
-    risks.sort((a, b) => (LEVEL_ORDER[a.level] ?? 9) - (LEVEL_ORDER[b.level] ?? 9));
-    return risks;
-  }, [projects, allReports]);
+    const kpis = [
+      { key: 'projects', value: totalProjects, label: '在建项目', color: '#378ADD', clickable: false },
+      { key: 'progress', value: `${overallProgress}%`, label: '整体进度', color: '#639922', clickable: false },
+      { key: 'risks', value: cumulativeRiskSet.size, label: '当前累计风险', color: '#D85A30', clickable: true },
+      { key: 'plans', value: remainingPlans, label: '剩余计划', color: '#7F77DD', clickable: true },
+      { key: 'overdue', value: overdueCount, label: '已逾期', color: '#D85A30', clickable: false },
+    ];
+
+    return { kpis, cumulativeRiskDetails, planDetails };
+  }, [projects, projectStats, allReports]);
+
+  // 高风险快照（仅高等级，用于页面下方展示）
+  const highRisks = useMemo(() => {
+    return kpiData.cumulativeRiskDetails.filter(r => r.level === '高');
+  }, [kpiData.cumulativeRiskDetails]);
 
   if (loading) {
     return <div className={styles.loading}>加载中...</div>;
@@ -227,8 +226,15 @@ export default function Cockpit() {
 
       {/* 顶部 KPI 横条 */}
       <section className={styles.kpiRow}>
-        {kpis.map((kpi, i) => (
-          <div key={i} className={styles.kpiCard}>
+        {kpiData.kpis.map((kpi, i) => (
+          <div
+            key={i}
+            className={`${styles.kpiCard} ${kpi.clickable ? styles.kpiClickable : ''}`}
+            onClick={() => {
+              if (kpi.clickable && kpi.key === 'risks') setDrillDown('risks');
+              if (kpi.clickable && kpi.key === 'plans') setDrillDown('plans');
+            }}
+          >
             <div className={styles.kpiValue} style={{ color: kpi.color }}>
               {kpi.value}
             </div>
@@ -327,16 +333,22 @@ export default function Cockpit() {
         </section>
       )}
 
-      {/* 活跃风险快照 */}
-      {riskSnapshot.length > 0 && (
+      {/* 高风险快照（仅展示高等级未处理风险） */}
+      {highRisks.length > 0 && (
         <section className={styles.riskSection}>
           <div className={styles.riskHeader}>
-            <h2 className={styles.riskTitle}>⚡ 活跃风险快照</h2>
-            <span className={styles.riskCount}>共 {riskSnapshot.length} 项</span>
+            <h2 className={styles.riskTitle}>⚡ 高风险项</h2>
+            <span className={styles.riskCount}>共 {highRisks.length} 项</span>
           </div>
           <div className={styles.riskList}>
-            {riskSnapshot.map((risk, i) => {
+            {highRisks.map((risk, i) => {
               const { r, g, b } = hexToRgb(risk.projectColor);
+              const weekDate = risk.weekStart
+                ? (() => {
+                    const d = new Date(risk.weekStart + 'T00:00:00');
+                    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+                  })()
+                : '';
               return (
                 <div key={i} className={styles.riskItem}>
                   <span
@@ -349,21 +361,93 @@ export default function Cockpit() {
                     {risk.suggestion && (
                       <div className={styles.riskSuggestion}>💡 {risk.suggestion}</div>
                     )}
+                    <div className={styles.riskMeta}>
+                      <span className={styles.riskProjectTag}
+                        style={{ background: `rgba(${r},${g},${b},0.08)`, color: risk.projectColor }}
+                      >
+                        {risk.projectName}
+                      </span>
+                      <span className={styles.riskWeekTag}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
+                      <span className={styles.riskStatusTag}>
+                        {risk.status === '待处理' ? '⏳ 待处理' : risk.status === '持续关注' ? '👁 持续关注' : risk.status}
+                      </span>
+                    </div>
                   </div>
-                  <span
-                    className={styles.riskProjectTag}
-                    style={{
-                      background: `rgba(${r},${g},${b},0.08)`,
-                      color: risk.projectColor,
-                    }}
-                  >
-                    {risk.projectName}
-                  </span>
                 </div>
               );
             })}
           </div>
         </section>
+      )}
+
+      {/* 下钻弹窗 */}
+      {drillDown && (
+        <div className={styles.drillOverlay} onClick={() => setDrillDown(null)}>
+          <div className={styles.drillPanel} onClick={e => e.stopPropagation()}>
+            <div className={styles.drillHeader}>
+              <h3 className={styles.drillTitle}>
+                {drillDown === 'risks' ? '当前累计风险详情' : '剩余计划详情'}
+              </h3>
+              <button className={styles.drillClose} onClick={() => setDrillDown(null)}>×</button>
+            </div>
+            {drillDown === 'risks' ? (
+              kpiData.cumulativeRiskDetails.length === 0 ? (
+                <div className={styles.drillEmpty}>暂无未处理的风险</div>
+              ) : (
+                kpiData.cumulativeRiskDetails.map((risk, i) => {
+                  const { r, g, b } = hexToRgb(risk.projectColor);
+                  const weekDate = risk.weekStart
+                    ? (() => {
+                        const d = new Date(risk.weekStart + 'T00:00:00');
+                        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+                      })()
+                    : '';
+                  return (
+                    <div key={i} className={styles.drillRiskItem}>
+                      <span className={`${styles.riskLevelBadge} ${RISK_LEVEL_CLASS[risk.level] || styles.riskLevelLow}`}>
+                        {risk.level}
+                      </span>
+                      <div className={styles.drillRiskBody}>
+                        <div className={styles.drillRiskDesc}>{risk.description}</div>
+                        <div className={styles.drillRiskMeta}>
+                          <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: risk.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
+                            {risk.projectName}
+                          </span>
+                          <span style={{ color: '#5a6e82', fontSize: 12 }}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
+                          <span style={{ color: risk.status === '待处理' ? '#D85A30' : '#5a6e82', fontSize: 12 }}>
+                            {risk.status === '待处理' ? '待处理' : '持续关注'}
+                          </span>
+                        </div>
+                        {risk.suggestion && (
+                          <div className={styles.drillRiskSuggestion}>💡 {risk.suggestion}</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )
+            ) : (
+              kpiData.planDetails.length === 0 ? (
+                <div className={styles.drillEmpty}>暂无剩余计划</div>
+              ) : (
+                kpiData.planDetails.map((plan, i) => {
+                  const { r, g, b } = hexToRgb(plan.projectColor);
+                  return (
+                    <div key={i} className={styles.drillRiskItem}>
+                      <span className={styles.drillPlanNum}>{i + 1}</span>
+                      <div className={styles.drillRiskBody}>
+                        <div className={styles.drillRiskDesc}>{plan.title}</div>
+                        <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: plan.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
+                          {plan.projectName}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )
+            )}
+          </div>
+        </div>
       )}
 
       {/* 底部时间戳：最新一份周报的更新时间 */}

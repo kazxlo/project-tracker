@@ -320,6 +320,144 @@
   margin-top: 2px;
 }
 
+/* 风险元的行（项目标签 + 周次 + 状态） */
+.riskMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.riskWeekTag {
+  font-size: 11px;
+  color: #5a6e82;
+  white-space: nowrap;
+}
+
+.riskStatusTag {
+  font-size: 11px;
+  color: #5a6e82;
+  white-space: nowrap;
+}
+
+/* KPI 可点击 */
+.kpiClickable {
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.kpiClickable:hover {
+  border-color: rgba(127, 119, 221, 0.35);
+  background: rgba(127, 119, 221, 0.08);
+}
+
+/* ===== 下钻弹窗 ===== */
+.drillOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.drillPanel {
+  background: #131f2e;
+  border: 1px solid rgba(232, 237, 242, 0.1);
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.drillHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(232, 237, 242, 0.08);
+}
+
+.drillTitle {
+  font-size: 17px;
+  font-weight: 600;
+  color: #e8edf2;
+  margin: 0;
+}
+
+.drillClose {
+  background: none;
+  border: none;
+  color: #5a6e82;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.drillClose:hover {
+  color: #e8edf2;
+}
+
+.drillEmpty {
+  text-align: center;
+  padding: 32px;
+  color: #5a6e82;
+  font-size: 14px;
+}
+
+.drillRiskItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(232, 237, 242, 0.05);
+}
+
+.drillRiskItem:last-child {
+  border-bottom: none;
+}
+
+.drillRiskBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.drillRiskDesc {
+  font-size: 14px;
+  color: #d5dce5;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.drillRiskMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.drillRiskSuggestion {
+  font-size: 12px;
+  color: #5a6e82;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.drillPlanNum {
+  font-size: 12px;
+  color: #5a6e82;
+  min-width: 20px;
+  text-align: right;
+  padding-top: 2px;
+}
+
 /* ===== 底部 ===== */
 .footer {
   text-align: center;
