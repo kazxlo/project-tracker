@@ -70,7 +70,7 @@ export default function Cockpit() {
     return () => { cancelled = true; };
   }, [refreshKey]);
 
-  // 计算当前周
+  // 计算当前周（基于最新周报的 weekLabel 推算）
   const weekInfo = useMemo(() => {
     const today = new Date();
     const monday = new Date(today);
@@ -80,16 +80,34 @@ export default function Cockpit() {
     const fmt = (d: Date) =>
       `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 
-    // 计算周数（从年初算起）
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const weekNumber = Math.ceil(
-      ((monday.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7
-    );
+    // 从所有周报中找最新一期，解析其 weekLabel 获取周数基准
+    let latestWeekNum = 1;
+    let latestMonday: Date | null = null;
+
+    if (allReports.length > 0) {
+      // 找出最新一期周报
+      const latest = allReports.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
+      const match = latest.weekLabel.match(/第(\d+)周/);
+      if (match) {
+        latestWeekNum = parseInt(match[1]);
+      }
+      if (latest.weekStart) {
+        latestMonday = new Date(latest.weekStart + 'T00:00:00');
+      }
+    }
+
+    // 基于最新周报推算当前周数
+    let currentWeekNum = latestWeekNum;
+    if (latestMonday) {
+      const weeksDiff = Math.floor((monday.getTime() - latestMonday.getTime()) / (7 * 86400000));
+      currentWeekNum = latestWeekNum + weeksDiff;
+    }
+
     return {
-      label: `第${weekNumber}周`,
+      label: `第${Math.max(1, currentWeekNum)}周`,
       range: `${fmt(monday)} - ${fmt(friday)}`,
     };
-  }, [refreshKey]);
+  }, [allReports, refreshKey]);
 
   // 各项目统计
   const projectStats = useMemo(() => {
