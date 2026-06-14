@@ -119,6 +119,7 @@ export default function Cockpit() {
       const riskSeen = new Set<string>();
       const allRisks = prpts.reduce<string[]>((acc, r) => {
         r.risks.forEach(rk => {
+          if (rk.status === '已解决') return;
           const key = rk.description.trim();
           if (key && !riskSeen.has(key)) {
             riskSeen.add(key);
