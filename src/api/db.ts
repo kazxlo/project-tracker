@@ -124,6 +124,7 @@ export async function getLatestReport(projectId: string): Promise<WeeklyReport |
 }
 
 export async function saveReport(report: WeeklyReport): Promise<void> {
+  const now = new Date().toISOString();
   const { error } = await supabase.from('weekly_reports').upsert({
     id: report.id,
     project_id: report.projectId,
@@ -136,7 +137,8 @@ export async function saveReport(report: WeeklyReport): Promise<void> {
     completed_items: report.completedItems,
     planned_items: report.plannedItems,
     risks: report.risks,
-    updated_at: new Date().toISOString(),
+    created_at: report.createdAt || now,
+    updated_at: now,
   });
   if (error) throw error;
 }

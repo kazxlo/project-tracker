@@ -158,7 +158,15 @@ export default function ProjectDetail() {
           {reports.length === 0 && (
             <div className={shared.emptyState}>暂无周报，点击上方按钮创建</div>
           )}
-          {reports.map(r => (
+          {reports.map(r => {
+            const updatedTime = r.updatedAt
+              ? (() => {
+                  const d = new Date(r.updatedAt);
+                  const pad = (n: number) => String(n).padStart(2, '0');
+                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                })()
+              : null;
+            return (
             <div key={r.id} className={shared.reportRow}>
               <div>
                 <div className={shared.reportRowTitle}>
@@ -166,6 +174,9 @@ export default function ProjectDetail() {
                 </div>
                 <div className={shared.reportRowStats}>
                   完成{r.completedItems.length}项 · 计划{r.plannedItems.length}项 · 风险{r.risks.length}项
+                  {updatedTime && (
+                    <span style={{ marginLeft: 12, fontSize: 11, color: '#aaa' }}>最后修改 {updatedTime}</span>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -193,7 +204,8 @@ export default function ProjectDetail() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

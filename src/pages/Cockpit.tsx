@@ -33,17 +33,7 @@ export default function Cockpit() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [lastRefreshTime, setLastRefreshTime] = useState('');
   const navigate = useNavigate();
-
-  // 自动刷新：60s
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRefreshKey(k => k + 1);
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   // 加载数据
   useEffect(() => {
@@ -54,11 +44,6 @@ export default function Cockpit() {
         if (!cancelled) {
           setProjects(projs);
           setAllReports(reps);
-          const now = new Date();
-          setLastRefreshTime(
-            `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ` +
-            `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
-          );
         }
       } catch {
         // 静默处理
@@ -68,7 +53,7 @@ export default function Cockpit() {
     }
     load();
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, []);
 
   // 计算当前周（基于最新周报的 weekLabel 推算）
   const weekInfo = useMemo(() => {
@@ -107,7 +92,7 @@ export default function Cockpit() {
       label: `第${Math.max(1, currentWeekNum)}周`,
       range: `${fmt(monday)} - ${fmt(friday)}`,
     };
-  }, [allReports, refreshKey]);
+  }, [allReports]);
 
   // 各项目统计
   const projectStats = useMemo(() => {
@@ -381,9 +366,16 @@ export default function Cockpit() {
         </section>
       )}
 
-      {/* 底部时间戳 */}
+      {/* 底部时间戳：最新一份周报的更新时间 */}
       <footer className={styles.footer}>
-        数据更新时间: {lastRefreshTime} · 每 60 秒自动刷新
+        {(() => {
+          if (allReports.length === 0) return '暂无周报数据';
+          const latest = allReports.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
+          if (!latest.updatedAt) return '暂无更新时间';
+          const d = new Date(latest.updatedAt);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          return `数据更新于 ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        })()}
       </footer>
     </div>
   );
