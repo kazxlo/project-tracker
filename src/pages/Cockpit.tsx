@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getProjects, getAllReports } from '../api/db';
+import { useAuth } from '../hooks/useAuth';
 import { Project } from '../types';
 import styles from '../styles/cockpit.module.css';
 
@@ -34,6 +35,8 @@ export default function Cockpit() {
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
   const [loading, setLoading] = useState(true);
   const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
+  const { username, role, doLogout } = useAuth();
+  const isAdmin = role === 'admin';
   const navigate = useNavigate();
 
   // 加载数据
@@ -216,12 +219,29 @@ export default function Cockpit() {
 
   return (
     <div className={styles.cockpit}>
-      {/* 头部 */}
+      {/* 头部：标题 + 导航 + 用户 */}
       <header className={styles.header}>
-        <h1 className={styles.headerTitle}>项目跟踪管理系统</h1>
-        <span className={styles.headerWeek}>
-          {weekInfo.label} · {weekInfo.range}
-        </span>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.headerTitle}>项目跟踪管理系统</h1>
+          <span className={styles.headerWeek}>
+            {weekInfo.label} · {weekInfo.range}
+          </span>
+        </div>
+        <div className={styles.headerRight}>
+          <nav className={styles.topNav}>
+            <span className={`${styles.topNavItem} ${styles.topNavActive}`}>驾驶舱</span>
+            <Link to="/trends" className={styles.topNavLink}>趋势分析</Link>
+            {isAdmin && <Link to="/dashboard" className={styles.topNavLink}>项目总览</Link>}
+            {isAdmin && <Link to="/admin/users" className={styles.topNavLink}>用户管理</Link>}
+          </nav>
+          <span className={styles.userInfo}>
+            {username}
+            {isAdmin && <span className={styles.userRole}>(管理员)</span>}
+          </span>
+          <button className={styles.logoutBtn} onClick={() => { doLogout(); navigate('/login'); }}>
+            退出
+          </button>
+        </div>
       </header>
 
       {/* 顶部 KPI 横条 */}
