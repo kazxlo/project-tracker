@@ -248,7 +248,7 @@ export default function Cockpit() {
           </span>
           {!isPublic && (
             <button className={styles.pdfBtn} onClick={() => exportWeeklySummaryPDF(projects, allReports)}>
-              📄 导出PDF
+              导出PDF
             </button>
           )}
           <button className={styles.logoutBtn} onClick={() => { doLogout(); navigate('/login'); }}>
