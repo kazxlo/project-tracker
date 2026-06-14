@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
-const PUBLIC_BLOCKED = ['/report/new', '/admin/users'];
+const PUBLIC_BLOCKED = ['/report/new', '/admin/users', '/cockpit'];
 
 export default function Layout() {
   const { isLoggedIn, username, role, loading, doLogout } = useAuth();
@@ -43,10 +43,15 @@ export default function Layout() {
     }
   }
 
+  const isCockpit = location.pathname === '/cockpit';
+
   const tabs = [
     { path: '/', label: '项目总览' },
     { path: '/trends', label: '趋势分析' },
   ];
+  if (!isPublic) {
+    tabs.push({ path: '/cockpit', label: '驾驶舱' });
+  }
   if (role === 'admin') {
     tabs.push({ path: '/admin/users', label: '用户管理' });
   }
@@ -57,6 +62,11 @@ export default function Layout() {
   const friday = new Date(monday);
   friday.setDate(monday.getDate() + 4);
   const fmt = (d: Date) => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+
+  // 驾驶舱全屏模式：隐藏 Header 和 Navbar
+  if (isCockpit) {
+    return <Outlet />;
+  }
 
   return (
     <div className={shared.pageWrap}>

@@ -1,0 +1,384 @@
+/* ===== 领导驾驶舱 — 深色指挥中心风格 ===== */
+
+/* 全屏容器 */
+.cockpit {
+  min-height: 100vh;
+  background: #0f1923;
+  color: #e8edf2;
+  padding: 32px 40px 24px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-y: auto;
+}
+
+/* 头部 */
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(232, 237, 242, 0.08);
+}
+
+.headerTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e8edf2;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.headerWeek {
+  font-size: 14px;
+  color: #5a6e82;
+  letter-spacing: 0.3px;
+}
+
+/* ===== KPI 横条 ===== */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.kpiCard {
+  background: rgba(127, 119, 221, 0.04);
+  border: 1px solid rgba(127, 119, 221, 0.1);
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.kpiCard:hover {
+  border-color: rgba(127, 119, 221, 0.25);
+}
+
+.kpiValue {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 6px;
+}
+
+.kpiLabel {
+  font-size: 13px;
+  color: #5a6e82;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* ===== 项目快照网格 ===== */
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.projectCard {
+  border-radius: 14px;
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.projectCard:hover {
+  /* 悬停时加深底色和边框 */
+  filter: brightness(1.1);
+}
+
+.projectCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.projectDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.projectName {
+  font-size: 17px;
+  font-weight: 600;
+  color: #e8edf2;
+  display: flex;
+  align-items: center;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.statusNormal {
+  background: rgba(99, 153, 34, 0.15);
+  color: #7CB342;
+  border: 1px solid rgba(99, 153, 34, 0.2);
+}
+
+.statusWarning {
+  background: rgba(250, 173, 20, 0.15);
+  color: #F5B642;
+  border: 1px solid rgba(250, 173, 20, 0.2);
+}
+
+.statusDanger {
+  background: rgba(216, 90, 48, 0.18);
+  color: #F0704A;
+  border: 1px solid rgba(216, 90, 48, 0.25);
+}
+
+.projectMeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: #5a6e82;
+  margin-bottom: 14px;
+}
+
+/* 进度条 */
+.progressSection {
+  margin-bottom: 12px;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.progressPercent {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.progressBar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+/* 卡片底部统计 */
+.projectStats {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: #5a6e82;
+}
+
+.projectStatItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.projectStatValue {
+  font-weight: 600;
+  color: #c0c8d4;
+}
+
+/* 逾期标记 */
+.overdueBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(216, 90, 48, 0.15);
+  color: #F0704A;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(216, 90, 48, 0.25);
+  margin-left: 8px;
+}
+
+/* ===== 活跃风险快照 ===== */
+.riskSection {
+  margin-bottom: 24px;
+}
+
+.riskHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.riskTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e8edf2;
+  margin: 0;
+}
+
+.riskCount {
+  font-size: 13px;
+  color: #5a6e82;
+}
+
+.riskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.riskItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s;
+}
+
+.riskItem:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.riskLevelBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+
+.riskLevelHigh {
+  background: rgba(216, 90, 48, 0.2);
+  color: #F0704A;
+  border: 1px solid rgba(216, 90, 48, 0.3);
+}
+
+.riskLevelMid {
+  background: rgba(250, 173, 20, 0.18);
+  color: #F5B642;
+  border: 1px solid rgba(250, 173, 20, 0.25);
+}
+
+.riskLevelLow {
+  background: rgba(153, 153, 153, 0.12);
+  color: #a0aab4;
+  border: 1px solid rgba(153, 153, 153, 0.18);
+}
+
+.riskBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.riskDescription {
+  font-size: 14px;
+  color: #d5dce5;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.riskSuggestion {
+  font-size: 12px;
+  color: #5a6e82;
+  line-height: 1.5;
+}
+
+.riskProjectTag {
+  font-size: 11px;
+  color: #5a6e82;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ===== 底部 ===== */
+.footer {
+  text-align: center;
+  padding: 16px 0 8px;
+  font-size: 12px;
+  color: #3d4f63;
+  border-top: 1px solid rgba(232, 237, 242, 0.05);
+}
+
+/* 空状态 */
+.emptyState {
+  text-align: center;
+  padding: 80px 40px;
+  color: #5a6e82;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #7a8a9a;
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  color: #5a6e82;
+  font-size: 14px;
+  background: #0f1923;
+}
+
+/* 响应式：小屏时 KPI 和卡片自动收窄 */
+@media (max-width: 1200px) {
+  .kpiRow {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .kpiValue {
+    font-size: 36px;
+  }
+  .cockpit {
+    padding: 24px 24px 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .projectGrid {
+    grid-template-columns: 1fr;
+  }
+  .kpiValue {
+    font-size: 32px;
+  }
+  .cockpit {
+    padding: 16px;
+  }
+}

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 import ReportEdit from './pages/ReportEdit';
 import Trends from './pages/Trends';
+import Cockpit from './pages/Cockpit';
 import AdminUsers from './pages/AdminUsers';
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
               <Route path="/project/:id/report/new" element={<ReportEdit />} />
               <Route path="/project/:id/report/:reportId" element={<ReportEdit />} />
               <Route path="/trends" element={<Trends />} />
+              <Route path="/cockpit" element={<Cockpit />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
