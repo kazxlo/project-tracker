@@ -12,7 +12,7 @@ const STATUS_CLASS: Record<string, string> = {
   '存在风险': shared.tagDanger,
 };
 
-type TabKey = 'children' | 'reports' | 'summary';
+type TabKey = 'children' | 'summary';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -251,7 +251,7 @@ export default function ProjectDetail() {
           {[
             { label: '子项目数', val: childProjects.length, color: project.color },
             { label: '综合进度', val: childProjects.length > 0 ? `${Math.round(childProjects.reduce((s, c) => s + getChildStats(c.id).progress, 0) / childProjects.length)}%` : '--', color: project.color },
-            { label: '累计周报', val: childProjects.reduce((s, c) => s + getChildStats(c.id).reportCount, 0) + reports.length },
+            { label: '累计周报', val: childProjects.reduce((s, c) => s + getChildStats(c.id).reportCount, 0) },
             { label: '当前风险', val: (() => {
               const rs = new Set<string>();
               childProjects.forEach(c => {
@@ -259,14 +259,11 @@ export default function ProjectDetail() {
                   if (rk.status !== '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
                 }));
               });
-              allReports.filter(r => r.projectId === project.id).forEach(r => r.risks.forEach(rk => {
-                if (rk.status !== '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
-              }));
               return rs.size;
             })(), clickable: true, drill: 'active' as const },
             { label: '已处理风险', val: (() => {
               const rs = new Set<string>();
-              [...childProjects, project].forEach(p => {
+              childProjects.forEach(p => {
                 allReports.filter(r => r.projectId === p.id).forEach(r => r.risks.forEach(rk => {
                   if (rk.status === '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
                 }));
@@ -285,7 +282,6 @@ export default function ProjectDetail() {
         <div className={shared.tabBar}>
           {[
             { key: 'children' as TabKey, label: '子项目概览' },
-            { key: 'reports' as TabKey, label: '采购周报' },
             { key: 'summary' as TabKey, label: '汇总视图' },
           ].map(t => (
             <span
@@ -329,80 +325,15 @@ export default function ProjectDetail() {
           </>
         )}
 
-        {/* Tab: 采购周报 */}
-        {tab === 'reports' && (
-          <>
-            {!isPublic && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-                <button className={shared.btnPrimary} onClick={() => navigate(`/project/${id}/report/new`)}>
-                  + 新建周报
-                </button>
-              </div>
-            )}
-            <div className={shared.reportList}>
-              {reports.length === 0 && (
-                <div className={shared.emptyState}>暂无周报，点击上方按钮创建</div>
-              )}
-              {reports.map(r => {
-                const updatedTime = r.updatedAt
-                  ? (() => {
-                      const d = new Date(r.updatedAt);
-                      const pad = (n: number) => String(n).padStart(2, '0');
-                      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                    })()
-                  : null;
-                return (
-                  <div key={r.id} className={shared.reportRow}>
-                    <div>
-                      <div className={shared.reportRowTitle}>
-                        {r.weekLabel} ({r.weekStart} - {r.weekEnd})
-                      </div>
-                      <div className={shared.reportRowStats}>
-                        完成{r.completedItems.length}项 · 计划{r.plannedItems.length}项 · 风险{r.risks.length}项
-                        {updatedTime && (
-                          <span style={{ marginLeft: 12, fontSize: 11, color: '#aaa' }}>最后修改 {updatedTime}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className={shared.linkText} onClick={() => navigate(`/project/${id}/report/${r.id}`)}>
-                        查看详情 ↗
-                      </span>
-                      {isAdmin && (
-                        <button
-                          data-delete-report={r.id}
-                          className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirmDeleteReport === r.id) {
-                              handleDeleteReport(r.id);
-                            } else {
-                              setConfirmDeleteReport(r.id);
-                            }
-                          }}
-                        >
-                          {confirmDeleteReport === r.id ? '确认删除？' : '删除'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
         {/* Tab: 汇总视图 */}
         {tab === 'summary' && (
           <SummaryView
             project={project}
-            reports={reports}
             childProjects={childProjects}
             allReports={allReports}
             getChildStats={getChildStats}
             canEdit={canEdit}
-            savingRiskKey={savingRiskKey}
-            handleRiskStatusChange={handleRiskStatusChange}
+            onRefresh={loadData}
           />
         )}
 
@@ -418,7 +349,7 @@ export default function ProjectDetail() {
               </div>
               {(() => {
                 const seen = new Map<string, { risk: Risk; weekLabel: string; projectName: string }>();
-                const targets = [...childProjects, project];
+                const targets = [...childProjects];
                 targets.forEach(p => {
                   allReports.filter(r => r.projectId === p.id).forEach(r => {
                     r.risks.forEach(rk => {
@@ -841,69 +772,97 @@ function emptyChildProject(): Project {
 /** 汇总视图面板 */
 function SummaryView({
   project,
-  reports,
   childProjects,
   allReports,
   getChildStats,
   canEdit,
-  savingRiskKey,
-  handleRiskStatusChange,
+  onRefresh,
 }: {
   project: Project;
-  reports: WeeklyReport[];
   childProjects: Project[];
   allReports: WeeklyReport[];
   getChildStats: (id: string) => { reportCount: number; progress: number; riskCount: number };
   canEdit: boolean;
-  savingRiskKey: string | null;
-  handleRiskStatusChange: (desc: string, status: string) => void;
+  onRefresh: () => void;
 }) {
-  const latest = reports.length > 0
-    ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-    : null;
+  const [editingGoals, setEditingGoals] = useState(false);
+  const [goalsText, setGoalsText] = useState(project.description || '');
+  const [savingGoals, setSavingGoals] = useState(false);
+
+  const handleSaveGoals = async () => {
+    setSavingGoals(true);
+    try {
+      await saveProject({ ...project, description: goalsText.trim() });
+      await onRefresh();
+      setEditingGoals(false);
+    } catch (err) {
+      console.error('保存建设目标失败:', err);
+    } finally {
+      setSavingGoals(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setGoalsText(project.description || '');
+    setEditingGoals(false);
+  };
 
   return (
     <div>
-      {/* 采购管理 建设目标 + 本周工作 */}
       <div className={shared.clientWrap} style={{ maxWidth: '100%' }}>
         <div className={shared.summaryViewHeader}>
-          <h2 className={shared.summaryViewTitle}>{project.name} — 信息化工作周报</h2>
-          {latest && (
-            <p className={shared.summaryViewDate}>
-              {latest.weekLabel}（{latest.weekStart} - {latest.weekEnd}）
-            </p>
+          <h2 className={shared.summaryViewTitle}>{project.name} — 项目汇总视图</h2>
+        </div>
+
+        {/* 建设目标（父项目自身属性，可编辑） */}
+        <div className={shared.summarySection}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <h3 className={shared.summarySectionTitle} style={{ margin: 0 }}>建设目标</h3>
+            {canEdit && !editingGoals && (
+              <button
+                type="button"
+                className={shared.actionBtn}
+                onClick={() => {
+                  setGoalsText(project.description || '');
+                  setEditingGoals(true);
+                }}
+              >
+                编辑
+              </button>
+            )}
+          </div>
+          {editingGoals ? (
+            <div>
+              <textarea
+                className={shared.formTextarea}
+                rows={4}
+                value={goalsText}
+                onChange={e => setGoalsText(e.target.value)}
+                placeholder="输入采购管理建设目标…"
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className={shared.btnPrimary}
+                  onClick={handleSaveGoals}
+                  disabled={savingGoals}
+                >
+                  {savingGoals ? '保存中...' : '保存'}
+                </button>
+                <button
+                  type="button"
+                  className={shared.btnOutline}
+                  onClick={handleCancelEdit}
+                  disabled={savingGoals}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className={shared.summaryText}>{project.description || '暂无，点击上方编辑按钮添加建设目标'}</p>
           )}
-        </div>
-
-        <div className={shared.summarySection}>
-          <h3 className={shared.summarySectionTitle}>采购管理 建设目标</h3>
-          <p className={shared.summaryText}>{latest?.goals || '暂无'}</p>
-        </div>
-
-        <div className={shared.summarySection}>
-          <h3 className={shared.summarySectionTitle}>采购管理 本周重点工作</h3>
-          {latest?.completedItems.length === 0
-            ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无记录</p>
-            : latest?.completedItems.map((item, i) => (
-                <div key={item.id} className={`${shared.clientItem} ${i < (latest?.completedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
-                  <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
-                  <span style={{ fontWeight: 500 }}>{item.title}</span>
-                </div>
-              ))
-          }
-        </div>
-
-        <div className={shared.summarySection}>
-          <h3 className={shared.summarySectionTitle}>采购管理 下周工作计划</h3>
-          {latest?.plannedItems.length === 0
-            ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无计划</p>
-            : latest?.plannedItems.map((item, i) => (
-                <div key={item.id} className={`${shared.clientItem} ${i < (latest?.plannedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
-                  <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
-                  {item.title}
-                </div>
-              ))
-          }
         </div>
 
         {/* 各子项目最新状态 */}
@@ -961,7 +920,7 @@ function SummaryView({
           <h3 className={shared.summarySectionTitle}>综合风险提示</h3>
           {(() => {
             const riskMap = new Map<string, { risk: import('../types').Risk; projectName: string }>();
-            [...childProjects, project].forEach(p => {
+            childProjects.forEach(p => {
               allReports.filter(r => r.projectId === p.id).forEach(r => {
                 r.risks.forEach(rk => {
                   if (rk.status === '已解决') return;

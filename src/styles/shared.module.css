@@ -1184,6 +1184,18 @@
   opacity: 0.85;
 }
 
+.serviceTimelineRemaining {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 8px;
+  text-align: right;
+}
+
+.serviceTimelineRemainingExpired {
+  color: #D85A30;
+  font-weight: 500;
+}
+
 /* child card footer */
 .childProjectFooter {
   display: flex;
