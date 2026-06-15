@@ -31,9 +31,12 @@ export default function ProjectDetail() {
   const [confirmDeleteReport, setConfirmDeleteReport] = useState<string | null>(null);
   const [confirmDeleteChild, setConfirmDeleteChild] = useState<string | null>(null);
 
-  // 子项目编辑弹窗
-  const [childModal, setChildModal] = useState<{ open: boolean; editing: Project | null }>({ open: false, editing: null });
-  const [childEditForm, setChildEditForm] = useState<Project>(emptyChildProject());
+  // 子项目编辑弹窗（表单数据合并到一个状态，避免 setState 分离导致闪退）
+  const [childModal, setChildModal] = useState<{
+    open: boolean;
+    editing: Project | null;
+    form: Project;
+  }>({ open: false, editing: null, form: emptyChildProject() });
   const [childSaving, setChildSaving] = useState(false);
 
   // 风险下钻弹窗
@@ -152,24 +155,22 @@ export default function ProjectDetail() {
 
   // ===== 子项目编辑弹窗 =====
   const openChildCreateModal = () => {
-    setChildEditForm({ ...emptyChildProject(), parentId: id });
-    setChildModal({ open: true, editing: null });
+    setChildModal({ open: true, editing: null, form: { ...emptyChildProject(), parentId: id } });
   };
   const openChildEditModal = (p: Project) => {
-    setChildEditForm({ ...p });
-    setChildModal({ open: true, editing: p });
+    setChildModal({ open: true, editing: p, form: { ...p } });
   };
   const handleSaveChild = async () => {
-    if (!childEditForm.name.trim()) return;
+    if (!childModal.form.name.trim()) return;
     setChildSaving(true);
     try {
-      const finalChild = childEditForm.id
-        ? childEditForm
-        : { ...childEditForm, id: 'p_' + Date.now() };
+      const finalChild = childModal.form.id
+        ? childModal.form
+        : { ...childModal.form, id: 'p_' + Date.now() };
       await saveProject(finalChild);
-      setChildModal({ open: false, editing: null });
+      setChildModal({ open: false, editing: null, form: emptyChildProject() });
       await loadData();
-      showToast(childEditForm.id ? '子项目已保存' : '子项目已创建', 'success');
+      showToast(childModal.form.id ? '子项目已保存' : '子项目已创建', 'success');
     } catch (err) {
       console.error('保存子项目失败:', err);
       showToast('保存失败', 'error');
@@ -302,7 +303,7 @@ export default function ProjectDetail() {
           <>
             {isAdmin && (
               <div className={shared.childToolbar}>
-                <button className={shared.btnPrimary} onClick={openChildCreateModal}>
+                <button type="button" className={shared.btnPrimary} onClick={openChildCreateModal}>
                   + 添加子项目
                 </button>
               </div>
@@ -471,19 +472,19 @@ export default function ProjectDetail() {
 
         {/* 子项目编辑弹窗 */}
         {childModal.open && (
-          <div className={shared.modalOverlay} onClick={() => setChildModal({ open: false, editing: null })}>
+          <div className={shared.modalOverlay} onClick={() => setChildModal(prev => ({ ...prev, open: false }))}>
             <div className={shared.modal} onClick={e => e.stopPropagation()}>
               <div className={shared.modalHeader}>
-                <h3 className={shared.modalTitle}>{childEditForm.id ? '编辑子项目' : '添加子项目'}</h3>
-                <button className={shared.modalClose} onClick={() => setChildModal({ open: false, editing: null })}>×</button>
+                <h3 className={shared.modalTitle}>{childModal.form.id ? '编辑子项目' : '添加子项目'}</h3>
+                <button type="button" className={shared.modalClose} onClick={() => setChildModal(prev => ({ ...prev, open: false }))}>×</button>
               </div>
               <div className={shared.modalBody}>
                 <div>
                   <label className={shared.formLabel}>项目名称</label>
                   <input
                     className={shared.formInput}
-                    value={childEditForm.name}
-                    onChange={e => setChildEditForm({ ...childEditForm, name: e.target.value })}
+                    value={childModal.form.name}
+                    onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, name: e.target.value } }))}
                     placeholder="输入项目名称"
                     autoFocus
                   />
@@ -493,8 +494,8 @@ export default function ProjectDetail() {
                   <textarea
                     className={shared.formTextarea}
                     rows={2}
-                    value={childEditForm.description || ''}
-                    onChange={e => setChildEditForm({ ...childEditForm, description: e.target.value })}
+                    value={childModal.form.description || ''}
+                    onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, description: e.target.value } }))}
                     placeholder="简述服务内容（可选）"
                   />
                 </div>
@@ -503,8 +504,8 @@ export default function ProjectDetail() {
                     <label className={shared.formLabel}>负责人</label>
                     <input
                       className={shared.formInput}
-                      value={childEditForm.owner}
-                      onChange={e => setChildEditForm({ ...childEditForm, owner: e.target.value })}
+                      value={childModal.form.owner}
+                      onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, owner: e.target.value } }))}
                       placeholder="负责人姓名"
                     />
                   </div>
@@ -513,8 +514,8 @@ export default function ProjectDetail() {
                     <input
                       className={shared.formInput}
                       type="date"
-                      value={childEditForm.startDate}
-                      onChange={e => setChildEditForm({ ...childEditForm, startDate: e.target.value })}
+                      value={childModal.form.startDate}
+                      onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, startDate: e.target.value } }))}
                     />
                   </div>
                 </div>
@@ -524,8 +525,8 @@ export default function ProjectDetail() {
                     <input
                       className={shared.formInput}
                       type="date"
-                      value={childEditForm.deadline || ''}
-                      onChange={e => setChildEditForm({ ...childEditForm, deadline: e.target.value })}
+                      value={childModal.form.deadline || ''}
+                      onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, deadline: e.target.value } }))}
                     />
                   </div>
                   <div className={shared.formGroup}>
@@ -533,8 +534,8 @@ export default function ProjectDetail() {
                     <select
                       className={shared.formSelect}
                       style={{ width: '100%', padding: '8px 12px' }}
-                      value={childEditForm.status}
-                      onChange={e => setChildEditForm({ ...childEditForm, status: e.target.value as Project['status'] })}
+                      value={childModal.form.status}
+                      onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, status: e.target.value as Project['status'] } }))}
                     >
                       <option value="正常推进">正常推进</option>
                       <option value="需关注">需关注</option>
@@ -548,8 +549,8 @@ export default function ProjectDetail() {
                     <input
                       className={shared.formInput}
                       type="date"
-                      value={childEditForm.serviceStart || ''}
-                      onChange={e => setChildEditForm({ ...childEditForm, serviceStart: e.target.value })}
+                      value={childModal.form.serviceStart || ''}
+                      onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, serviceStart: e.target.value } }))}
                     />
                   </div>
                   <div className={shared.formGroup}>
@@ -557,8 +558,8 @@ export default function ProjectDetail() {
                     <input
                       className={shared.formInput}
                       type="date"
-                      value={childEditForm.serviceEnd || ''}
-                      onChange={e => setChildEditForm({ ...childEditForm, serviceEnd: e.target.value })}
+                      value={childModal.form.serviceEnd || ''}
+                      onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, serviceEnd: e.target.value } }))}
                     />
                   </div>
                 </div>
@@ -568,22 +569,23 @@ export default function ProjectDetail() {
                     {['#378ADD', '#639922', '#D85A30', '#7F77DD', '#3DA5A5', '#D4834A', '#B05E99', '#5B8DD6'].map(c => (
                       <div
                         key={c}
-                        className={`${shared.colorSwatch} ${childEditForm.color === c ? shared.colorSwatchActive : ''}`}
+                        className={`${shared.colorSwatch} ${childModal.form.color === c ? shared.colorSwatchActive : ''}`}
                         style={{ backgroundColor: c }}
-                        onClick={() => setChildEditForm({ ...childEditForm, color: c })}
+                        onClick={() => setChildModal(prev => ({ ...prev, form: { ...prev.form, color: c } }))}
                       />
                     ))}
                   </div>
                 </div>
               </div>
               <div className={shared.modalFooter}>
-                <button className={shared.btnOutline} onClick={() => setChildModal({ open: false, editing: null })}>取消</button>
+                <button type="button" className={shared.btnOutline} onClick={() => setChildModal(prev => ({ ...prev, open: false }))}>取消</button>
                 <button
+                  type="button"
                   className={shared.btnPrimaryLg}
                   onClick={handleSaveChild}
-                  disabled={!childEditForm.name.trim() || childSaving}
+                  disabled={!childModal.form.name.trim() || childSaving}
                 >
-                  {childSaving ? '保存中...' : childEditForm.id ? '保存' : '创建'}
+                  {childSaving ? '保存中...' : childModal.form.id ? '保存' : '创建'}
                 </button>
               </div>
             </div>
