@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getReports, deleteReport, updateRiskStatus } from '../api/db';
+import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
 import { Project, WeeklyReport, Risk } from '../types';
+import ChildProjectCard from '../components/ChildProjectCard';
 import shared from '../styles/shared.module.css';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -10,6 +11,8 @@ const STATUS_CLASS: Record<string, string> = {
   '需关注': shared.tagWarning,
   '存在风险': shared.tagDanger,
 };
+
+type TabKey = 'children' | 'reports' | 'summary';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,22 +23,51 @@ export default function ProjectDetail() {
   const canEdit = isAdmin || isMember;
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
+  const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'list' | 'trend' | 'client'>('list');
+  const [tab, setTab] = useState<'list' | 'trend' | 'client' | TabKey>('list');
   const [confirmDeleteReport, setConfirmDeleteReport] = useState<string | null>(null);
+  const [confirmDeleteChild, setConfirmDeleteChild] = useState<string | null>(null);
+
+  // 子项目编辑弹窗
+  const [childModal, setChildModal] = useState<{ open: boolean; editing: Project | null }>({ open: false, editing: null });
+  const [childEditForm, setChildEditForm] = useState<Project>(emptyChildProject());
+  const [childSaving, setChildSaving] = useState(false);
 
   // 风险下钻弹窗
   const [riskDrillDown, setRiskDrillDown] = useState<'active' | 'resolved' | null>(null);
   const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
 
-  const loadReports = async () => {
+  // Toast
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (msg: string, type: 'success' | 'error') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  // 子项目数据
+  const childProjects = allProjects.filter(p => p.parentId === id);
+  const hasChildren = childProjects.length > 0;
+  const isChild = project?.parentId != null;
+  const parentProject = isChild ? allProjects.find(p => p.id === project?.parentId) : null;
+
+  const loadData = async () => {
     if (!id) return;
     try {
-      const reps = await getReports(id);
+      const [p, projs, reps, allReps] = await Promise.all([
+        getProject(id),
+        getProjects(),
+        getReports(id),
+        getReportsWithChildren(id),
+      ]);
+      setProject(p || null);
+      setAllProjects(projs);
       setReports(reps);
+      setAllReports(allReps);
     } catch (err) {
-      console.error('加载周报失败:', err);
+      console.error('加载数据失败:', err);
     }
   };
 
@@ -43,43 +75,65 @@ export default function ProjectDetail() {
     if (!id) return;
     let cancelled = false;
     async function load() {
-      try {
-        const p = await getProject(id!);
-        if (!cancelled) {
-          if (!p) { navigate('/'); return; }
-          setProject(p);
-          const reps = await getReports(id!);
-          if (!cancelled) setReports(reps);
-        }
-      } catch (err) {
-        console.error('加载项目失败:', err);
-        if (!cancelled) navigate('/');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      await loadData();
+      if (!cancelled) setLoading(false);
     }
     load();
     return () => { cancelled = true; };
   }, [id, navigate]);
 
+  // 为有子项目的父项目加载所有子项目的周报
+  async function getReportsWithChildren(projectId: string): Promise<WeeklyReport[]> {
+    try {
+      return await getAllReports();
+    } catch {
+      return [];
+    }
+  }
+
   // 全局点击清除确认删除状态
   useEffect(() => {
-    if (confirmDeleteReport === null) return;
+    if (confirmDeleteReport === null && confirmDeleteChild === null) return;
     const handler = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest(`[data-delete-report="${confirmDeleteReport}"]`)) return;
-      setConfirmDeleteReport(null);
+      if (confirmDeleteReport !== null && !(e.target as HTMLElement).closest(`[data-delete-report="${confirmDeleteReport}"]`)) {
+        setConfirmDeleteReport(null);
+      }
+      if (confirmDeleteChild !== null && !(e.target as HTMLElement).closest(`[data-delete-id="child-${confirmDeleteChild}"]`)) {
+        setConfirmDeleteChild(null);
+      }
     };
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
-  }, [confirmDeleteReport]);
+  }, [confirmDeleteReport, confirmDeleteChild]);
 
   const handleDeleteReport = async (reportId: string) => {
     try {
       await deleteReport(reportId);
       setConfirmDeleteReport(null);
-      await loadReports();
+      await loadData();
+      showToast('周报已删除', 'success');
     } catch (err) {
       console.error('删除周报失败:', err);
+    }
+  };
+
+  const handleDeleteChild = async (childId: string) => {
+    try {
+      // 级联删除子项目及其周报
+      const childReports = allReports.filter(r => r.projectId === childId);
+      for (const r of childReports) {
+        await deleteReport(r.id);
+      }
+      const child = allProjects.find(p => p.id === childId);
+      if (child) {
+        await saveProject({ ...child, parentId: undefined });
+      }
+      setConfirmDeleteChild(null);
+      await loadData();
+      showToast('子项目已移除', 'success');
+    } catch (err) {
+      console.error('删除子项目失败:', err);
+      showToast('删除失败', 'error');
     }
   };
 
@@ -88,13 +142,48 @@ export default function ProjectDetail() {
     setSavingRiskKey(description);
     try {
       await updateRiskStatus(id, description, newStatus as '待处理' | '已解决' | '持续关注');
-      await loadReports();
+      await loadData();
     } catch (err) {
       console.error('更新风险状态失败:', err);
     } finally {
       setSavingRiskKey(null);
     }
   };
+
+  // ===== 子项目编辑弹窗 =====
+  const openChildCreateModal = () => {
+    setChildEditForm({ ...emptyChildProject(), parentId: id });
+    setChildModal({ open: true, editing: null });
+  };
+  const openChildEditModal = (p: Project) => {
+    setChildEditForm({ ...p });
+    setChildModal({ open: true, editing: p });
+  };
+  const handleSaveChild = async () => {
+    if (!childEditForm.name.trim()) return;
+    setChildSaving(true);
+    try {
+      const finalChild = childEditForm.id
+        ? childEditForm
+        : { ...childEditForm, id: 'p_' + Date.now() };
+      await saveProject(finalChild);
+      setChildModal({ open: false, editing: null });
+      await loadData();
+      showToast(childEditForm.id ? '子项目已保存' : '子项目已创建', 'success');
+    } catch (err) {
+      console.error('保存子项目失败:', err);
+      showToast('保存失败', 'error');
+    } finally {
+      setChildSaving(false);
+    }
+  };
+
+  // 确定默认tab
+  useEffect(() => {
+    if (!loading && hasChildren) {
+      setTab('children');
+    }
+  }, [loading, hasChildren]);
 
   if (loading) {
     return (
@@ -111,11 +200,418 @@ export default function ProjectDetail() {
     ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
     : null;
 
+  // 子项目统计
+  const getChildStats = (childId: string) => {
+    const crpts = allReports.filter(r => r.projectId === childId);
+    const clatest = crpts.length > 0 ? crpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b) : null;
+    const riskSeen = new Set<string>();
+    crpts.forEach(r => r.risks.forEach(rk => {
+      if (rk.status !== '已解决') {
+        const key = rk.description.trim();
+        if (key) riskSeen.add(key);
+      }
+    }));
+    return {
+      reportCount: crpts.length,
+      progress: clatest?.progress || 0,
+      riskCount: riskSeen.size,
+    };
+  };
+
+  // ====== 父项目布局 ======
+  if (hasChildren) {
+    return (
+      <div>
+        {toast && (
+          <div className={`${shared.toast} ${toast.type === 'success' ? shared.toastSuccess : shared.toastError}`}>
+            {toast.msg}
+          </div>
+        )}
+
+        {/* 返回链接 */}
+        <span className={shared.backLink} onClick={() => navigate('/')}>
+          ← 返回驾驶舱
+        </span>
+
+        {/* 项目头 */}
+        <div className={shared.projectHeader}>
+          <div className={shared.projectInfo}>
+            <h2 className={shared.projectTitle}>{project.name}</h2>
+            <span className={shared.textMuted}>
+              负责人: {project.owner} · 子项目 {childProjects.length} 个
+              {project.startDate && ` · 启动: ${project.startDate}`}
+            </span>
+          </div>
+          <span className={`${shared.badge} ${statusCls}`} style={{ padding: '4px 14px' }}>{project.status}</span>
+        </div>
+
+        {/* KPI 行 */}
+        <div className={shared.kpiRow}>
+          {[
+            { label: '子项目数', val: childProjects.length, color: project.color },
+            { label: '综合进度', val: childProjects.length > 0 ? `${Math.round(childProjects.reduce((s, c) => s + getChildStats(c.id).progress, 0) / childProjects.length)}%` : '--', color: project.color },
+            { label: '累计周报', val: childProjects.reduce((s, c) => s + getChildStats(c.id).reportCount, 0) + reports.length },
+            { label: '当前风险', val: (() => {
+              const rs = new Set<string>();
+              childProjects.forEach(c => {
+                allReports.filter(r => r.projectId === c.id).forEach(r => r.risks.forEach(rk => {
+                  if (rk.status !== '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
+                }));
+              });
+              allReports.filter(r => r.projectId === project.id).forEach(r => r.risks.forEach(rk => {
+                if (rk.status !== '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
+              }));
+              return rs.size;
+            })(), clickable: true, drill: 'active' as const },
+            { label: '已处理风险', val: (() => {
+              const rs = new Set<string>();
+              [...childProjects, project].forEach(p => {
+                allReports.filter(r => r.projectId === p.id).forEach(r => r.risks.forEach(rk => {
+                  if (rk.status === '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
+                }));
+              });
+              return rs.size;
+            })(), clickable: true, drill: 'resolved' as const },
+          ].map((m, i) => (
+            <div key={i} className={shared.kpiBox} style={m.clickable ? { cursor: 'pointer' } : undefined} onClick={() => { if (m.drill) setRiskDrillDown(m.drill); }}>
+              <div className={shared.kpiVal} style={'color' in m ? { color: (m as { color?: string }).color } : undefined}>{m.val}</div>
+              <div className={shared.kpiLbl}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div className={shared.tabBar}>
+          {[
+            { key: 'children' as TabKey, label: '子项目概览' },
+            { key: 'reports' as TabKey, label: '采购周报' },
+            { key: 'summary' as TabKey, label: '汇总视图' },
+          ].map(t => (
+            <span
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`${shared.tab} ${tab === t.key ? shared.tabActive : shared.tabInactive}`}
+            >
+              {t.label}
+            </span>
+          ))}
+        </div>
+
+        {/* Tab: 子项目概览 */}
+        {tab === 'children' && (
+          <>
+            {isAdmin && (
+              <div className={shared.childToolbar}>
+                <button className={shared.btnPrimary} onClick={openChildCreateModal}>
+                  + 添加子项目
+                </button>
+              </div>
+            )}
+            {childProjects.length === 0 ? (
+              <div className={shared.emptyState}>暂无子项目，点击上方按钮添加</div>
+            ) : (
+              <div className={shared.childGrid}>
+                {childProjects.map(c => (
+                  <ChildProjectCard
+                    key={c.id}
+                    project={c}
+                    stats={getChildStats(c.id)}
+                    onEdit={openChildEditModal}
+                    onDelete={handleDeleteChild}
+                    confirmDelete={confirmDeleteChild}
+                    setConfirmDelete={setConfirmDeleteChild}
+                    isAdmin={isAdmin}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Tab: 采购周报 */}
+        {tab === 'reports' && (
+          <>
+            {!isPublic && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+                <button className={shared.btnPrimary} onClick={() => navigate(`/project/${id}/report/new`)}>
+                  + 新建周报
+                </button>
+              </div>
+            )}
+            <div className={shared.reportList}>
+              {reports.length === 0 && (
+                <div className={shared.emptyState}>暂无周报，点击上方按钮创建</div>
+              )}
+              {reports.map(r => {
+                const updatedTime = r.updatedAt
+                  ? (() => {
+                      const d = new Date(r.updatedAt);
+                      const pad = (n: number) => String(n).padStart(2, '0');
+                      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    })()
+                  : null;
+                return (
+                  <div key={r.id} className={shared.reportRow}>
+                    <div>
+                      <div className={shared.reportRowTitle}>
+                        {r.weekLabel} ({r.weekStart} - {r.weekEnd})
+                      </div>
+                      <div className={shared.reportRowStats}>
+                        完成{r.completedItems.length}项 · 计划{r.plannedItems.length}项 · 风险{r.risks.length}项
+                        {updatedTime && (
+                          <span style={{ marginLeft: 12, fontSize: 11, color: '#aaa' }}>最后修改 {updatedTime}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className={shared.linkText} onClick={() => navigate(`/project/${id}/report/${r.id}`)}>
+                        查看详情 ↗
+                      </span>
+                      {isAdmin && (
+                        <button
+                          data-delete-report={r.id}
+                          className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirmDeleteReport === r.id) {
+                              handleDeleteReport(r.id);
+                            } else {
+                              setConfirmDeleteReport(r.id);
+                            }
+                          }}
+                        >
+                          {confirmDeleteReport === r.id ? '确认删除？' : '删除'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Tab: 汇总视图 */}
+        {tab === 'summary' && (
+          <SummaryView
+            project={project}
+            reports={reports}
+            childProjects={childProjects}
+            allReports={allReports}
+            getChildStats={getChildStats}
+            canEdit={canEdit}
+            savingRiskKey={savingRiskKey}
+            handleRiskStatusChange={handleRiskStatusChange}
+          />
+        )}
+
+        {/* 风险下钻弹窗 */}
+        {riskDrillDown && (
+          <div className={shared.drillOverlay} onClick={() => setRiskDrillDown(null)}>
+            <div className={shared.drillPanel} onClick={e => e.stopPropagation()}>
+              <div className={shared.drillHeader}>
+                <h3 className={shared.drillTitle}>
+                  {riskDrillDown === 'active' ? '当前风险详情' : '已处理风险详情'}
+                </h3>
+                <button className={shared.drillClose} onClick={() => setRiskDrillDown(null)}>×</button>
+              </div>
+              {(() => {
+                const seen = new Map<string, { risk: Risk; weekLabel: string; projectName: string }>();
+                const targets = [...childProjects, project];
+                targets.forEach(p => {
+                  allReports.filter(r => r.projectId === p.id).forEach(r => {
+                    r.risks.forEach(rk => {
+                      const k = rk.description.trim();
+                      if (!k || seen.has(k)) return;
+                      const isActive = rk.status !== '已解决';
+                      if ((riskDrillDown === 'active' && isActive) || (riskDrillDown === 'resolved' && !isActive)) {
+                        seen.set(k, { risk: rk, weekLabel: r.weekLabel, projectName: p.name });
+                      }
+                    });
+                  });
+                });
+                const items = Array.from(seen.values());
+                if (items.length === 0) {
+                  return <div className={shared.drillItem} style={{ color: '#999', textAlign: 'center', padding: 24 }}>暂无数据</div>;
+                }
+                return items.map((item, j) => (
+                  <div key={j} className={shared.drillItem} style={{ padding: '8px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#3B6D11' }}>{item.risk.level}</span>
+                      <span style={{ fontWeight: 500, fontSize: 13 }}>{item.risk.description}</span>
+                      <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f0f0', color: '#888' }}>{item.projectName}</span>
+                      {canEdit ? (
+                        <select
+                          className={shared.statusSelectSm}
+                          value={item.risk.status}
+                          disabled={savingRiskKey === item.risk.description}
+                          onChange={(e) => handleRiskStatusChange(item.risk.description, e.target.value)}
+                        >
+                          <option value="待处理">⏳ 待处理</option>
+                          <option value="持续关注">👁 持续关注</option>
+                          <option value="已解决">✓ 已解决</option>
+                        </select>
+                      ) : (
+                        <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f0f0', color: '#666' }}>{item.risk.status}</span>
+                      )}
+                    </div>
+                    {item.risk.suggestion && (
+                      <div style={{ fontSize: 12, color: '#666', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
+                    )}
+                    {riskDrillDown === 'resolved' && item.risk.resolvedAt && (
+                      <div style={{ fontSize: 12, color: '#639922', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
+                    )}
+                    <div style={{ fontSize: 11, color: '#999', paddingLeft: 48 }}>来源：{item.projectName} · {item.weekLabel}</div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* 子项目编辑弹窗 */}
+        {childModal.open && (
+          <div className={shared.modalOverlay} onClick={() => setChildModal({ open: false, editing: null })}>
+            <div className={shared.modal} onClick={e => e.stopPropagation()}>
+              <div className={shared.modalHeader}>
+                <h3 className={shared.modalTitle}>{childEditForm.id ? '编辑子项目' : '添加子项目'}</h3>
+                <button className={shared.modalClose} onClick={() => setChildModal({ open: false, editing: null })}>×</button>
+              </div>
+              <div className={shared.modalBody}>
+                <div>
+                  <label className={shared.formLabel}>项目名称</label>
+                  <input
+                    className={shared.formInput}
+                    value={childEditForm.name}
+                    onChange={e => setChildEditForm({ ...childEditForm, name: e.target.value })}
+                    placeholder="输入项目名称"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className={shared.formLabel}>服务内容</label>
+                  <textarea
+                    className={shared.formTextarea}
+                    rows={2}
+                    value={childEditForm.description || ''}
+                    onChange={e => setChildEditForm({ ...childEditForm, description: e.target.value })}
+                    placeholder="简述服务内容（可选）"
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div className={shared.formGroup}>
+                    <label className={shared.formLabel}>负责人</label>
+                    <input
+                      className={shared.formInput}
+                      value={childEditForm.owner}
+                      onChange={e => setChildEditForm({ ...childEditForm, owner: e.target.value })}
+                      placeholder="负责人姓名"
+                    />
+                  </div>
+                  <div className={shared.formGroup}>
+                    <label className={shared.formLabel}>启动日期</label>
+                    <input
+                      className={shared.formInput}
+                      type="date"
+                      value={childEditForm.startDate}
+                      onChange={e => setChildEditForm({ ...childEditForm, startDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div className={shared.formGroup}>
+                    <label className={shared.formLabel}>预估截止时间</label>
+                    <input
+                      className={shared.formInput}
+                      type="date"
+                      value={childEditForm.deadline || ''}
+                      onChange={e => setChildEditForm({ ...childEditForm, deadline: e.target.value })}
+                    />
+                  </div>
+                  <div className={shared.formGroup}>
+                    <label className={shared.formLabel}>状态</label>
+                    <select
+                      className={shared.formSelect}
+                      style={{ width: '100%', padding: '8px 12px' }}
+                      value={childEditForm.status}
+                      onChange={e => setChildEditForm({ ...childEditForm, status: e.target.value as Project['status'] })}
+                    >
+                      <option value="正常推进">正常推进</option>
+                      <option value="需关注">需关注</option>
+                      <option value="存在风险">存在风险</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div className={shared.formGroup}>
+                    <label className={shared.formLabel}>服务期开始</label>
+                    <input
+                      className={shared.formInput}
+                      type="date"
+                      value={childEditForm.serviceStart || ''}
+                      onChange={e => setChildEditForm({ ...childEditForm, serviceStart: e.target.value })}
+                    />
+                  </div>
+                  <div className={shared.formGroup}>
+                    <label className={shared.formLabel}>服务期结束</label>
+                    <input
+                      className={shared.formInput}
+                      type="date"
+                      value={childEditForm.serviceEnd || ''}
+                      onChange={e => setChildEditForm({ ...childEditForm, serviceEnd: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={shared.formLabel}>项目颜色</label>
+                  <div className={shared.colorGrid}>
+                    {['#378ADD', '#639922', '#D85A30', '#7F77DD', '#3DA5A5', '#D4834A', '#B05E99', '#5B8DD6'].map(c => (
+                      <div
+                        key={c}
+                        className={`${shared.colorSwatch} ${childEditForm.color === c ? shared.colorSwatchActive : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => setChildEditForm({ ...childEditForm, color: c })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className={shared.modalFooter}>
+                <button className={shared.btnOutline} onClick={() => setChildModal({ open: false, editing: null })}>取消</button>
+                <button
+                  className={shared.btnPrimaryLg}
+                  onClick={handleSaveChild}
+                  disabled={!childEditForm.name.trim() || childSaving}
+                >
+                  {childSaving ? '保存中...' : childEditForm.id ? '保存' : '创建'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ====== 普通项目布局（无子项目） ======
   return (
     <div>
-      <span className={shared.backLink} onClick={() => navigate('/')}>
-        ← 返回项目总览
-      </span>
+      {toast && (
+        <div className={`${shared.toast} ${toast.type === 'success' ? shared.toastSuccess : shared.toastError}`}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* 返回链接 */}
+      {isChild && parentProject ? (
+        <span className={shared.parentBackLink} onClick={() => navigate(`/project/${parentProject.id}`)}>
+          ← 返回 {parentProject.name}
+        </span>
+      ) : (
+        <span className={shared.backLink} onClick={() => navigate('/')}>
+          ← 返回驾驶舱
+        </span>
+      )}
 
       <div className={shared.projectHeader}>
         <div className={shared.projectInfo}>
@@ -123,6 +619,11 @@ export default function ProjectDetail() {
           <span className={shared.textMuted}>
             负责人: {project.owner} · 启动时间: {project.startDate}
           </span>
+          {(project.serviceStart || project.serviceEnd) && (
+            <div className={shared.textMuted} style={{ marginTop: 4 }}>
+              服务期: {project.serviceStart || '?'} — {project.serviceEnd || '?'}
+            </div>
+          )}
         </div>
         <span className={`${shared.badge} ${statusCls}`} style={{ padding: '4px 14px' }}>{project.status}</span>
       </div>
@@ -322,6 +823,180 @@ export default function ProjectDetail() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** 子项目表单初始值 */
+function emptyChildProject(): Project {
+  return {
+    id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0,
+    status: '正常推进', color: '#378ADD', parentId: undefined,
+    description: '', serviceStart: '', serviceEnd: '',
+  };
+}
+
+/** 汇总视图面板 */
+function SummaryView({
+  project,
+  reports,
+  childProjects,
+  allReports,
+  getChildStats,
+  canEdit,
+  savingRiskKey,
+  handleRiskStatusChange,
+}: {
+  project: Project;
+  reports: WeeklyReport[];
+  childProjects: Project[];
+  allReports: WeeklyReport[];
+  getChildStats: (id: string) => { reportCount: number; progress: number; riskCount: number };
+  canEdit: boolean;
+  savingRiskKey: string | null;
+  handleRiskStatusChange: (desc: string, status: string) => void;
+}) {
+  const latest = reports.length > 0
+    ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
+    : null;
+
+  return (
+    <div>
+      {/* 采购管理 建设目标 + 本周工作 */}
+      <div className={shared.clientWrap} style={{ maxWidth: '100%' }}>
+        <div className={shared.summaryViewHeader}>
+          <h2 className={shared.summaryViewTitle}>{project.name} — 信息化工作周报</h2>
+          {latest && (
+            <p className={shared.summaryViewDate}>
+              {latest.weekLabel}（{latest.weekStart} - {latest.weekEnd}）
+            </p>
+          )}
+        </div>
+
+        <div className={shared.summarySection}>
+          <h3 className={shared.summarySectionTitle}>采购管理 建设目标</h3>
+          <p className={shared.summaryText}>{latest?.goals || '暂无'}</p>
+        </div>
+
+        <div className={shared.summarySection}>
+          <h3 className={shared.summarySectionTitle}>采购管理 本周重点工作</h3>
+          {latest?.completedItems.length === 0
+            ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无记录</p>
+            : latest?.completedItems.map((item, i) => (
+                <div key={item.id} className={`${shared.clientItem} ${i < (latest?.completedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
+                  <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
+                  <span style={{ fontWeight: 500 }}>{item.title}</span>
+                </div>
+              ))
+          }
+        </div>
+
+        <div className={shared.summarySection}>
+          <h3 className={shared.summarySectionTitle}>采购管理 下周工作计划</h3>
+          {latest?.plannedItems.length === 0
+            ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无计划</p>
+            : latest?.plannedItems.map((item, i) => (
+                <div key={item.id} className={`${shared.clientItem} ${i < (latest?.plannedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
+                  <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
+                  {item.title}
+                </div>
+              ))
+          }
+        </div>
+
+        {/* 各子项目最新状态 */}
+        <div className={shared.summarySection}>
+          <h3 className={shared.summarySectionTitle}>各子项目最新状态</h3>
+          {childProjects.map(c => {
+            const stats = getChildStats(c.id);
+            const clatest = allReports
+              .filter(r => r.projectId === c.id)
+              .reduce<WeeklyReport | null>((a, b) => {
+                if (!a) return b;
+                return a.weekStart > b.weekStart ? a : b;
+              }, null);
+            return (
+              <div key={c.id} className={shared.summarySubProject}>
+                <div className={shared.summarySubProjectName}>
+                  <span className={shared.summarySubProjectDot} style={{ background: c.color }} />
+                  {c.name}
+                  <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#EAF3DE', color: '#3B6D11' }}>
+                    {c.status} · {stats.progress}%
+                  </span>
+                </div>
+                <div className={shared.summarySubProjectMeta}>
+                  负责人: {c.owner} · 周报 {stats.reportCount}期 · 风险 {stats.riskCount}项
+                </div>
+                {clatest && (
+                  <div className={shared.summarySubProjectItems}>
+                    {clatest.completedItems.length > 0 && (
+                      <div className={shared.summarySubProjectItem} style={{ color: '#555', fontWeight: 500, marginTop: 4 }}>本周完成:</div>
+                    )}
+                    {clatest.completedItems.slice(0, 3).map(ci => (
+                      <div key={ci.id} className={shared.summarySubProjectItem}>• {ci.title}</div>
+                    ))}
+                    {clatest.plannedItems.length > 0 && (
+                      <div className={shared.summarySubProjectItem} style={{ color: '#555', fontWeight: 500, marginTop: 4 }}>下周计划:</div>
+                    )}
+                    {clatest.plannedItems.slice(0, 3).map(pi => (
+                      <div key={pi.id} className={shared.summarySubProjectItem}>• {pi.title}</div>
+                    ))}
+                    {clatest.risks.filter(rk => rk.status !== '已解决').length > 0 && (
+                      <div className={shared.summarySubProjectItem} style={{ color: '#555', fontWeight: 500, marginTop: 4 }}>当前风险:</div>
+                    )}
+                    {clatest.risks.filter(rk => rk.status !== '已解决').slice(0, 3).map(rk => (
+                      <div key={rk.id} className={shared.summarySubProjectItem} style={{ color: '#D85A30' }}>• [{rk.level}] {rk.description}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 综合风险提示 */}
+        <div className={shared.summaryRiskSection}>
+          <h3 className={shared.summarySectionTitle}>综合风险提示</h3>
+          {(() => {
+            const riskMap = new Map<string, { risk: import('../types').Risk; projectName: string }>();
+            [...childProjects, project].forEach(p => {
+              allReports.filter(r => r.projectId === p.id).forEach(r => {
+                r.risks.forEach(rk => {
+                  if (rk.status === '已解决') return;
+                  const key = rk.description.trim();
+                  if (key && !riskMap.has(key)) {
+                    riskMap.set(key, { risk: rk, projectName: p.name });
+                  }
+                });
+              });
+            });
+            const items = Array.from(riskMap.values()).sort((a, b) => {
+              const order: Record<string, number> = { '高': 0, '中': 1, '低': 2 };
+              return (order[a.risk.level] ?? 9) - (order[b.risk.level] ?? 9);
+            });
+            if (items.length === 0) {
+              return <p className={shared.summaryText} style={{ color: '#999' }}>暂无风险</p>;
+            }
+            return items.map((item, i) => (
+              <div key={i} className={shared.summaryRiskItem}>
+                <span className={shared.summaryRiskLevel} style={{
+                  background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE',
+                  color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#3B6D11',
+                }}>
+                  {item.risk.level}
+                </span>
+                <span style={{ flex: 1 }}>
+                  {item.risk.description}
+                  {item.risk.suggestion ? ` — ${item.risk.suggestion}` : ''}
+                </span>
+                <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f0f0', color: '#888' }}>
+                  {item.projectName}
+                </span>
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
     </div>
   );
 }

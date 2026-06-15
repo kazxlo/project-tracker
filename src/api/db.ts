@@ -16,6 +16,10 @@ function mapProject(row: any): Project {
     status: row.status,
     color: row.color,
     viewerIds: row.viewer_ids || undefined,
+    parentId: row.parent_id || undefined,
+    description: row.description || undefined,
+    serviceStart: row.service_start || undefined,
+    serviceEnd: row.service_end || undefined,
   };
 }
 
@@ -73,6 +77,10 @@ export async function saveProject(project: Project): Promise<void> {
     status: project.status,
     color: project.color,
     viewer_ids: (project.viewerIds && project.viewerIds.length > 0) ? project.viewerIds : null,
+    parent_id: project.parentId || null,
+    description: project.description || null,
+    service_start: project.serviceStart || null,
+    service_end: project.serviceEnd || null,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

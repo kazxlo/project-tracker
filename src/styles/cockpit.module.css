@@ -622,6 +622,64 @@
   background: #0f1923;
 }
 
+/* ===== 父项目聚合信息 ===== */
+.parentBadge {
+  font-size: 11px;
+  color: #5B9BE0;
+  background: rgba(55, 138, 221, 0.1);
+  border: 1px solid rgba(55, 138, 221, 0.2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.parentProgressLabel {
+  font-size: 12px;
+  color: #5a6e82;
+  margin-bottom: 4px;
+}
+
+/* ===== 服务期时间线（深色主题） ===== */
+.serviceTimeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.serviceTimelineLabel {
+  font-size: 11px;
+  color: #5a6e82;
+  white-space: nowrap;
+  min-width: 36px;
+}
+
+.serviceTimelineBar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.serviceTimelineFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+  opacity: 0.5;
+}
+
+.serviceTimelineDate {
+  font-size: 11px;
+  color: #5a6e82;
+  white-space: nowrap;
+}
+
+.serviceTimelineExpired .serviceTimelineFill {
+  opacity: 0.85;
+  background: rgba(240, 112, 74, 0.7) !important;
+}
+
 /* 响应式：小屏时 KPI 和卡片自动收窄 */
 @media (max-width: 1200px) {
   .kpiRow {
