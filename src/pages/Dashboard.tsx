@@ -322,9 +322,9 @@ export default function Dashboard() {
         );
       })()}
 
-      {/* 项目卡片网格 */}
+      {/* 项目卡片网格（仅展示顶层项目，子项目在父项目详情页查看） */}
       <div className={shared.projectGrid}>
-        {projects.map(p => {
+        {projects.filter(p => !p.parentId).map(p => {
           const stats = getProjectStats(p.id);
           const tagCls = STATUS_CLASS[p.status] || shared.tagNormal;
           return (
@@ -391,7 +391,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {projects.length === 0 && (
+      {projects.filter(p => !p.parentId).length === 0 && (
         <div className={shared.emptyState}>
           <p style={{ fontSize: 15, marginBottom: 8 }}>暂无项目</p>
           <p className={shared.textSmall}>点击上方「添加项目」创建第一个项目</p>
@@ -399,7 +399,7 @@ export default function Dashboard() {
       )}
 
       {/* 整体汇总 */}
-      {projects.length > 0 && (
+      {projects.filter(p => !p.parentId).length > 0 && (
         <div className={shared.summaryPanel}>
           <h3 className={shared.sectionTitle}>整体汇总</h3>
           <div className={shared.summaryGrid}>
@@ -407,7 +407,7 @@ export default function Dashboard() {
               { key: 'completed', val: totalCompleted, label: '累计完成事项', color: '#378ADD' },
               { key: 'planned', val: remainingPlanned, label: '剩余计划事项', color: '#639922' },
               { key: 'risks', val: totalRisks, label: '累计风险项', color: '#D85A30' },
-              { key: 'members', val: projects.length, label: '协作成员', color: '#7F77DD' },
+              { key: 'members', val: projects.filter(p => !p.parentId).length, label: '协作成员', color: '#7F77DD' },
             ].map((item, i) => (
               <div
                 key={i}

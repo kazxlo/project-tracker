@@ -285,7 +285,7 @@ export default function ProjectDetail() {
         <div className={shared.tabBar}>
           {[
             { key: 'children' as TabKey, label: '子项目概览' },
-            { key: 'reports' as TabKey, label: '采购周报' },
+            { key: 'reports' as TabKey, label: '周报列表' },
             { key: 'summary' as TabKey, label: '汇总视图' },
           ].map(t => (
             <span
@@ -329,7 +329,7 @@ export default function ProjectDetail() {
           </>
         )}
 
-        {/* Tab: 采购周报 */}
+        {/* Tab: 周报列表 */}
         {tab === 'reports' && (
           <>
             {!isPublic && (
@@ -878,6 +878,11 @@ function SummaryView({
         <div className={shared.summarySection}>
           <h3 className={shared.summarySectionTitle}>建设目标</h3>
           <p className={shared.summaryText}>{latest?.goals || '暂无'}</p>
+        </div>
+
+        <div className={shared.summarySection}>
+          <h3 className={shared.summarySectionTitle}>重点内容</h3>
+          <p className={shared.summaryText}>{latest?.highlights || '暂无'}</p>
         </div>
 
         <div className={shared.summarySection}>

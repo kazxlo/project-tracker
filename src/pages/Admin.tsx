@@ -91,18 +91,32 @@ function ProjectPermissions() {
     }));
   };
 
-  // 保存单个项目权限
+  // 保存单个项目权限（含子项目继承）
   const handleSave = async (project: Project) => {
     setSaving(project.id);
     try {
+      // 保存父项目权限
       await saveProject(project);
-      showToast(`${project.name} 权限已保存`, 'success');
+      // 子项目继承父项目 viewerIds
+      const children = projects.filter(p => p.parentId === project.id);
+      for (const child of children) {
+        await saveProject({ ...child, viewerIds: project.viewerIds });
+      }
+      showToast(
+        children.length > 0
+          ? `${project.name} 权限已保存（${children.length}个子项目自动继承）`
+          : `${project.name} 权限已保存`,
+        'success'
+      );
     } catch {
       showToast('保存失败', 'error');
     } finally {
       setSaving(null);
     }
   };
+
+  // 仅展示顶层项目
+  const topProjects = projects.filter(p => !p.parentId);
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>加载中...</div>;
@@ -116,17 +130,25 @@ function ProjectPermissions() {
         </div>
       )}
 
-      {projects.length === 0 ? (
+      {topProjects.length === 0 ? (
         <div className={shared.emptyState}>暂无项目</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {projects.map(p => {
+          {topProjects.map(p => {
             const viewerIds = p.viewerIds || [];
+            const childCount = projects.filter(c => c.parentId === p.id).length;
             return (
               <div key={p.id} className={shared.section} style={{ marginBottom: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color }} />
-                  <h3 className={shared.sectionTitle} style={{ margin: 0, flex: 1 }}>{p.name}</h3>
+                  <h3 className={shared.sectionTitle} style={{ margin: 0, flex: 1 }}>
+                    {p.name}
+                    {childCount > 0 && (
+                      <span style={{ fontSize: 12, fontWeight: 400, color: '#999', marginLeft: 8 }}>
+                        ({childCount}个子项目自动继承)
+                      </span>
+                    )}
+                  </h3>
                   <span className={shared.textSmall} style={{ color: '#999' }}>
                     {viewerIds.length === 0 ? '所有人可见' : `${viewerIds.length}人可见`}
                   </span>
@@ -175,6 +197,7 @@ function ProjectPermissions() {
                   {viewerIds.length === 0
                     ? '未勾选任何人 = 所有用户可见'
                     : '仅勾选的成员 + 管理员本人 可见此项目'}
+                  {childCount > 0 && ' · 保存后子项目自动继承相同权限'}
                 </div>
               </div>
             );
