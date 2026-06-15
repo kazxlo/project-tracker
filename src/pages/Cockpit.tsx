@@ -104,54 +104,87 @@ export default function Cockpit() {
     };
   }, [allReports]);
 
-  // 各项目统计
+  // 各项目统计（仅顶层项目）
   const projectStats = useMemo(() => {
-    return projects.map(p => {
+    const topProjects = projects.filter(p => !p.parentId);
+    return topProjects.map(p => {
+      const childProjects = projects.filter(c => c.parentId === p.id);
       const prpts = allReports.filter(r => r.projectId === p.id);
       const latestReport =
         prpts.length > 0 ? prpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b)) : null;
+      const hasChildren = childProjects.length > 0;
 
-      // 活跃风险（未解决/持续关注的）
+      // 活跃风险（未解决/持续关注的）—— 包含自身和子项目
+      const riskSeen = new Set<string>();
+      const allRiskCount = (() => {
+        let count = 0;
+        const targets = hasChildren ? [p, ...childProjects] : [p];
+        targets.forEach(proj => {
+          const rpts = allReports.filter(r => r.projectId === proj.id);
+          rpts.forEach(r => {
+            r.risks.forEach(rk => {
+              if (rk.status === '已解决') return;
+              const key = rk.description.trim();
+              if (key && !riskSeen.has(key)) {
+                riskSeen.add(key);
+                count++;
+              }
+            });
+          });
+        });
+        return count;
+      })();
+
       const activeRisks = latestReport?.risks.filter(
         r => r.status === '待处理' || r.status === '持续关注'
       ) || [];
 
-      const riskSeen = new Set<string>();
-      const allRisks = prpts.reduce<string[]>((acc, r) => {
-        r.risks.forEach(rk => {
-          if (rk.status === '已解决') return;
-          const key = rk.description.trim();
-          if (key && !riskSeen.has(key)) {
-            riskSeen.add(key);
-            acc.push(key);
+      // 进度：父项目取子项目平均值
+      let progress = latestReport?.progress || 0;
+      let totalReports = prpts.length;
+      if (hasChildren) {
+        let childProgressSum = 0;
+        let childWithProgress = 0;
+        childProjects.forEach(c => {
+          const crpts = allReports.filter(r => r.projectId === c.id);
+          const clatest = crpts.length > 0 ? crpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b)) : null;
+          totalReports += crpts.length;
+          if (clatest && clatest.progress > 0) {
+            childProgressSum += clatest.progress;
+            childWithProgress++;
           }
         });
-        return acc;
-      }, []);
+        if (childWithProgress > 0) {
+          progress = Math.round(childProgressSum / childWithProgress);
+        }
+      }
 
       // 逾期检测
       let isOverdue = false;
       if (p.deadline && p.deadline.trim() !== '') {
         const today = new Date().toISOString().split('T')[0];
-        if (p.deadline < today && (latestReport?.progress || 0) < 100) {
+        if (p.deadline < today && progress < 100) {
           isOverdue = true;
         }
       }
 
       return {
         project: p,
-        reportCount: prpts.length,
-        progress: latestReport?.progress || 0,
+        reportCount: totalReports,
+        progress,
         activeRisks,
-        allRiskCount: allRisks.length,
+        allRiskCount,
         isOverdue,
+        hasChildren,
+        childCount: childProjects.length,
       };
     });
   }, [projects, allReports]);
 
   // KPI 指标 + 下钻详情
   const kpiData = useMemo(() => {
-    const totalProjects = projects.length;
+    const topProjects = projects.filter(p => !p.parentId);
+    const totalProjects = topProjects.length;
     const overallProgress =
       totalProjects > 0
         ? Math.round(
@@ -296,7 +329,7 @@ export default function Cockpit() {
       </section>
 
       {/* 项目快照 2×2 网格 */}
-      {projects.length === 0 ? (
+      {projectStats.length === 0 ? (
         <div className={styles.emptyState}>
           <div className={styles.emptyTitle}>暂无项目数据</div>
           <div>请在项目总览中添加项目后查看驾驶舱</div>
@@ -308,6 +341,18 @@ export default function Cockpit() {
             const bg = `rgba(${r},${g},${b},0.06)`;
             const border = `1px solid rgba(${r},${g},${b},0.18)`;
             const statusCls = STATUS_BADGE_CLASS[s.project.status] || styles.statusNormal;
+            // 服务期进度
+            const svcProgress = (() => {
+              if (!s.project.serviceStart || !s.project.serviceEnd) return null;
+              const today = new Date().toISOString().split('T')[0];
+              const st = new Date(s.project.serviceStart + 'T00:00:00').getTime();
+              const ed = new Date(s.project.serviceEnd + 'T00:00:00').getTime();
+              const nw = new Date(today + 'T00:00:00').getTime();
+              if (nw < st) return 0;
+              if (nw > ed) return 100;
+              return Math.round(((nw - st) / (ed - st)) * 100);
+            })();
+            const svcExpired = s.project.serviceEnd ? s.project.serviceEnd < new Date().toISOString().split('T')[0] : false;
 
             return (
               <div
@@ -327,6 +372,9 @@ export default function Cockpit() {
                     {s.isOverdue && (
                       <span className={styles.overdueBadge}>已逾期</span>
                     )}
+                    {s.hasChildren && (
+                      <span className={styles.parentBadge}>{s.childCount}个子项目</span>
+                    )}
                   </div>
                   <span className={`${styles.statusBadge} ${statusCls}`}>
                     {s.project.status}
@@ -336,7 +384,7 @@ export default function Cockpit() {
                 {/* 项目元信息 */}
                 <div className={styles.projectMeta}>
                   <span>负责人 {s.project.owner}</span>
-                  {s.project.deadline && (
+                  {s.project.deadline && !s.hasChildren && (
                     <span>截止 {s.project.deadline}</span>
                   )}
                 </div>
@@ -345,7 +393,7 @@ export default function Cockpit() {
                 <div className={styles.progressSection}>
                   <div className={styles.progressLabel}>
                     <span className={styles.progressLabel} style={{ color: '#5a6e82', fontSize: 12 }}>
-                      完成进度
+                      {s.hasChildren ? '子项目综合进度' : '完成进度'}
                     </span>
                     <span
                       className={styles.progressPercent}
@@ -364,6 +412,31 @@ export default function Cockpit() {
                     />
                   </div>
                 </div>
+
+                {/* 服务期时间线 */}
+                {svcProgress !== null && (
+                  <div className={`${styles.serviceTimeline} ${svcExpired ? styles.serviceTimelineExpired : ''}`}>
+                    <span className={styles.serviceTimelineLabel}>服务期</span>
+                    <div className={styles.serviceTimelineBar}>
+                      <div
+                        className={styles.serviceTimelineFill}
+                        style={{
+                          width: `${svcProgress}%`,
+                          background: svcExpired ? '#F0704A' : s.project.color,
+                        }}
+                      />
+                    </div>
+                    <span className={styles.serviceTimelineDate}>
+                      {(() => {
+                        const fmt = (str: string) => {
+                          const d = new Date(str + 'T00:00:00');
+                          return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+                        };
+                        return `${fmt(s.project.serviceStart!)} — ${fmt(s.project.serviceEnd!)}`;
+                      })()}
+                    </span>
+                  </div>
+                )}
 
                 {/* 底部统计 */}
                 <div className={styles.projectStats}>

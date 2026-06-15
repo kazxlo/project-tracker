@@ -15,6 +15,11 @@ function mapProject(row: any): Project {
     lastDeadline: row.last_deadline || undefined,
     status: row.status,
     color: row.color,
+    viewerIds: row.viewer_ids || undefined,
+    parentId: row.parent_id || undefined,
+    description: row.description || undefined,
+    serviceStart: row.service_start || undefined,
+    serviceEnd: row.service_end || undefined,
   };
 }
 
@@ -71,6 +76,11 @@ export async function saveProject(project: Project): Promise<void> {
     last_deadline: project.lastDeadline || null,
     status: project.status,
     color: project.color,
+    viewer_ids: (project.viewerIds && project.viewerIds.length > 0) ? project.viewerIds : null,
+    parent_id: project.parentId || null,
+    description: project.description || null,
+    service_start: project.serviceStart || null,
+    service_end: project.serviceEnd || null,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
@@ -124,6 +134,7 @@ export async function getLatestReport(projectId: string): Promise<WeeklyReport |
 }
 
 export async function saveReport(report: WeeklyReport): Promise<void> {
+  const now = new Date().toISOString();
   const { error } = await supabase.from('weekly_reports').upsert({
     id: report.id,
     project_id: report.projectId,
@@ -136,7 +147,8 @@ export async function saveReport(report: WeeklyReport): Promise<void> {
     completed_items: report.completedItems,
     planned_items: report.plannedItems,
     risks: report.risks,
-    updated_at: new Date().toISOString(),
+    created_at: report.createdAt || now,
+    updated_at: now,
   });
   if (error) throw error;
 }
@@ -144,6 +156,33 @@ export async function saveReport(report: WeeklyReport): Promise<void> {
 export async function deleteReport(id: string): Promise<void> {
   const { error } = await supabase.from('weekly_reports').delete().eq('id', id);
   if (error) throw error;
+}
+
+/**
+ * 更新风险状态：找到指定项目中最新一期包含该风险描述的周报，更新其状态
+ * 仅 admin/member 可调用（调用方需自行校验权限）
+ */
+export async function updateRiskStatus(
+  projectId: string,
+  riskDescription: string,
+  newStatus: Risk['status']
+): Promise<void> {
+  const reports = await getReports(projectId); // 已按 week_start DESC 排序
+  for (const report of reports) {
+    const idx = report.risks.findIndex(
+      r => r.description.trim() === riskDescription.trim()
+    );
+    if (idx === -1) continue;
+
+    const risk = { ...report.risks[idx] };
+    risk.status = newStatus;
+    if (newStatus === '已解决') {
+      risk.resolvedAt = new Date().toISOString();
+    }
+    report.risks[idx] = risk;
+    await saveReport(report);
+    return; // 只更新最新一期含该风险的周报
+  }
 }
 
 export async function getAllReports(): Promise<WeeklyReport[]> {

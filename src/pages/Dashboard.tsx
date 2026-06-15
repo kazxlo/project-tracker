@@ -18,7 +18,7 @@ const COLOR_PALETTE = [
 ];
 
 function emptyProject(): Project {
-  return { id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0, status: '正常推进', color: COLOR_PALETTE[0] };
+  return { id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0, status: '正常推进', color: COLOR_PALETTE[0], parentId: undefined, description: '', serviceStart: '', serviceEnd: '' };
 }
 
 export default function Dashboard() {
@@ -579,6 +579,52 @@ export default function Dashboard() {
                   <option value="正常推进">正常推进</option>
                   <option value="需关注">需关注</option>
                   <option value="存在风险">存在风险</option>
+                </select>
+              </div>
+              <div>
+                <label className={shared.formLabel}>服务内容</label>
+                <textarea
+                  className={shared.formTextarea}
+                  rows={2}
+                  value={editForm.description || ''}
+                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="简述服务内容（可选）"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div className={shared.formGroup}>
+                  <label className={shared.formLabel}>服务期开始</label>
+                  <input
+                    className={shared.formInput}
+                    type="date"
+                    value={editForm.serviceStart || ''}
+                    onChange={e => setEditForm({ ...editForm, serviceStart: e.target.value })}
+                  />
+                </div>
+                <div className={shared.formGroup}>
+                  <label className={shared.formLabel}>服务期结束</label>
+                  <input
+                    className={shared.formInput}
+                    type="date"
+                    value={editForm.serviceEnd || ''}
+                    onChange={e => setEditForm({ ...editForm, serviceEnd: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={shared.formLabel}>所属父项目</label>
+                <select
+                  className={shared.formSelect}
+                  style={{ width: '100%', padding: '8px 12px' }}
+                  value={editForm.parentId || ''}
+                  onChange={e => setEditForm({ ...editForm, parentId: e.target.value || undefined })}
+                >
+                  <option value="">无（顶层项目）</option>
+                  {projects
+                    .filter(p => !p.parentId && p.id !== editForm.id)
+                    .map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
                 </select>
               </div>
               <div>
