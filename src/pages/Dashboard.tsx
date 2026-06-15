@@ -4,6 +4,7 @@ import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, 
 import { useAuth } from '../hooks/useAuth';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { Project } from '../types';
+import ProjectExportModal from '../components/ProjectExportModal';
 import shared from '../styles/shared.module.css';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -41,6 +42,7 @@ export default function Dashboard() {
 
   // 汇总下钻弹窗
   const [drillDown, setDrillDown] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -257,7 +259,7 @@ export default function Dashboard() {
             <button className={shared.btnToolbar} onClick={openCreateModal}>+ 添加项目</button>
           )}
           {!isPublic && (
-            <button className={shared.btnToolbar} onClick={() => exportWeeklySummaryPDF(projects, allReports)}>
+            <button className={shared.btnToolbar} onClick={() => setShowExportModal(true)}>
               📄 导出PDF
             </button>
           )}
@@ -653,6 +655,20 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 导出项目选择弹窗 */}
+      {showExportModal && (
+        <ProjectExportModal
+          projects={projects}
+          allReports={allReports}
+          onCancel={() => setShowExportModal(false)}
+          onConfirm={(selectedIds) => {
+            const selectedProjects = projects.filter(p => selectedIds.includes(p.id));
+            setShowExportModal(false);
+            exportWeeklySummaryPDF(selectedProjects, allReports);
+          }}
+        />
       )}
     </div>
   );

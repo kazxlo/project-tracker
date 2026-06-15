@@ -4,6 +4,7 @@ import { getProjects, getAllReports, updateRiskStatus } from '../api/db';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { useAuth } from '../hooks/useAuth';
 import { Project } from '../types';
+import ProjectExportModal from '../components/ProjectExportModal';
 import styles from '../styles/cockpit.module.css';
 
 // hex → {r, g, b}
@@ -37,6 +38,7 @@ export default function Cockpit() {
   const [loading, setLoading] = useState(true);
   const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
   const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
   const { username, role, doLogout } = useAuth();
   const isAdmin = role === 'admin';
   const isMember = role === 'member';
@@ -299,7 +301,7 @@ export default function Cockpit() {
             {isAdmin && <span className={styles.userRole}>(管理员)</span>}
           </span>
           {!isPublic && (
-            <button className={styles.pdfBtn} onClick={() => exportWeeklySummaryPDF(projects, allReports)}>
+            <button className={styles.pdfBtn} onClick={() => setShowExportModal(true)}>
               导出PDF
             </button>
           )}
@@ -612,6 +614,20 @@ export default function Cockpit() {
             )}
           </div>
         </div>
+      )}
+
+      {/* 导出项目选择弹窗 */}
+      {showExportModal && (
+        <ProjectExportModal
+          projects={projects}
+          allReports={allReports}
+          onCancel={() => setShowExportModal(false)}
+          onConfirm={(selectedIds) => {
+            const selectedProjects = projects.filter(p => selectedIds.includes(p.id));
+            setShowExportModal(false);
+            exportWeeklySummaryPDF(selectedProjects, allReports);
+          }}
+        />
       )}
 
       {/* 底部时间戳：最新一份周报的更新时间 */}
