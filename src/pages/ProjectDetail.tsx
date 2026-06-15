@@ -178,12 +178,12 @@ export default function ProjectDetail() {
     }
   };
 
-  // 确定默认tab
+  // 确定默认tab：顶层项目默认切到「子项目概览」
   useEffect(() => {
-    if (!loading && hasChildren) {
+    if (!loading && !isChild && tab === 'list') {
       setTab('children');
     }
-  }, [loading, hasChildren]);
+  }, [loading, isChild]);
 
   if (loading) {
     return (
@@ -218,8 +218,8 @@ export default function ProjectDetail() {
     };
   };
 
-  // ====== 父项目布局 ======
-  if (hasChildren) {
+  // ====== 父项目布局（顶层项目始终显示此布局） ======
+  if (!isChild) {
     return (
       <div>
         {toast && (
