@@ -1,12 +1,13 @@
 /* ====== Layout ====== */
 .pageWrap {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: #f0f2f5;
 }
 
 .header {
   background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   padding: 0 32px;
   height: 56px;
   display: flex;
@@ -28,7 +29,8 @@
 
 .navbar {
   background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   padding: 0 32px;
   display: flex;
 }
@@ -43,8 +45,8 @@
 .brand {
   text-decoration: none;
   color: inherit;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .weekLabel {
@@ -57,6 +59,7 @@
   padding: 10px 20px;
   font-size: 13px;
   text-decoration: none;
+  transition: color 0.15s;
 }
 
 .navTabActive {
@@ -75,14 +78,15 @@
 .card {
   background: #fff;
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
 
 .section {
   background: #fff;
   border-radius: 12px;
-  padding: 20px 24px;
-  border: 1px solid #e0e0e0;
+  padding: 24px 28px;
+  border: 1px solid rgba(0,0,0,0.06);
   margin-bottom: 16px;
 }
 
@@ -95,9 +99,14 @@
 
 .projectCard {
   composes: card;
-  padding: 20px 24px;
+  padding: 24px;
   cursor: pointer;
   position: relative;
+}
+
+.projectCard:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.1);
 }
 
 .projectCard:hover .projectActions {
@@ -124,23 +133,25 @@
 
 .actionBtn {
   background: none;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 6px;
   padding: 2px 8px;
   font-size: 11px;
   cursor: pointer;
   color: #999;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .actionBtn:hover {
-  background: #f0f0f0;
+  background: rgba(0,0,0,0.04);
   color: #333;
+  border-color: rgba(0,0,0,0.2);
 }
 
 .actionBtnDanger:hover {
-  background: #FCEBEB;
-  color: #E24B4A;
-  border-color: #E24B4A;
+  background: rgba(216, 90, 48, 0.08);
+  color: #D85A30;
+  border-color: rgba(216, 90, 48, 0.3);
 }
 
 /* ====== Buttons ====== */
@@ -153,6 +164,7 @@
   font-size: 13px;
   cursor: pointer;
   font-weight: 500;
+  transition: background 0.15s;
 }
 
 .btnPrimary:hover { background: #2d6fc0; }
@@ -166,12 +178,13 @@
 
 .btnOutline {
   background: #fff;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 8px;
   padding: 10px 24px;
   font-size: 14px;
   cursor: pointer;
   color: #666;
+  transition: background 0.15s;
 }
 
 .btnOutline:hover { background: #f8f8f8; }
@@ -208,48 +221,58 @@
 
 .btnLogout {
   background: none;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 6px;
   padding: 4px 12px;
   font-size: 13px;
   cursor: pointer;
   color: #666;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.btnLogout:hover { background: #f0f0f0; }
+.btnLogout:hover {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.2);
+}
 
 .btnToolbar {
   background: none;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 6px;
   padding: 6px 14px;
   font-size: 12px;
   cursor: pointer;
   color: #666;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.btnToolbar:hover { background: #f0f0f0; }
+.btnToolbar:hover {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.2);
+}
 
 /* ====== Form ====== */
 .formInput {
   width: 100%;
   padding: 8px 12px;
   font-size: 13px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.12);
   border-radius: 6px;
   box-sizing: border-box;
   font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.formInput:focus { outline: none; border-color: #378ADD; }
+.formInput:focus { outline: none; border-color: #378ADD; box-shadow: 0 0 0 2px rgba(55, 138, 221, 0.1); }
 
 .formSelect {
   padding: 6px 8px;
   font-size: 13px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.12);
   border-radius: 6px;
   box-sizing: border-box;
   font-family: inherit;
+  transition: border-color 0.15s;
 }
 
 .formSelect:focus { outline: none; border-color: #378ADD; }
@@ -265,14 +288,15 @@
   width: 100%;
   padding: 10px 14px;
   font-size: 13px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.12);
   border-radius: 8px;
   box-sizing: border-box;
   resize: vertical;
   font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.formTextarea:focus { outline: none; border-color: #378ADD; }
+.formTextarea:focus { outline: none; border-color: #378ADD; box-shadow: 0 0 0 2px rgba(55, 138, 221, 0.1); }
 
 .formGroup {
   flex: 1;
@@ -288,13 +312,29 @@
 .badge {
   font-size: 12px;
   padding: 2px 10px;
-  border-radius: 4px;
+  border-radius: 10px;
   display: inline-block;
+  font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
-.tagNormal { background: #EAF3DE; color: #3B6D11; }
-.tagWarning { background: #FAEEDA; color: #854F0B; }
-.tagDanger { background: #FCEBEB; color: #A32D2D; }
+.tagNormal {
+  background: rgba(99, 153, 34, 0.1);
+  color: #4A8518;
+  border: 1px solid rgba(99, 153, 34, 0.2);
+}
+
+.tagWarning {
+  background: rgba(210, 150, 20, 0.1);
+  color: #9A6B0B;
+  border: 1px solid rgba(210, 150, 20, 0.2);
+}
+
+.tagDanger {
+  background: rgba(216, 90, 48, 0.1);
+  color: #C04830;
+  border: 1px solid rgba(216, 90, 48, 0.2);
+}
 
 /* ====== Typography ====== */
 .pageTitle {
@@ -328,36 +368,46 @@
 
 /* ====== KPI / Stats ====== */
 .statValue {
-  font-size: 22px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 .statLabel {
   font-size: 12px;
   color: #999;
+  margin-top: 2px;
 }
 
 .kpiBox {
   background: #fff;
-  border-radius: 8px;
-  padding: 12px 20px;
-  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  border: 1px solid rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.kpiBox:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border-color: rgba(0,0,0,0.1);
 }
 
 .kpiVal {
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 .kpiLbl {
   font-size: 12px;
   color: #999;
+  margin-top: 2px;
 }
 
 /* ====== Summary Panel ====== */
 .summaryPanel {
   composes: card;
-  padding: 20px 24px;
+  padding: 24px 28px;
 }
 
 .summaryGrid {
@@ -367,15 +417,18 @@
 }
 
 .summaryItem {
-  background: #f8f8f8;
-  border-radius: 8px;
-  padding: 14px 16px;
+  background: rgba(55, 138, 221, 0.03);
+  border-radius: 10px;
+  padding: 16px 16px;
   text-align: center;
+  border: 1px solid rgba(0,0,0,0.04);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .summaryValue {
-  font-size: 24px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 .summaryLabel {
@@ -387,7 +440,7 @@
 /* ====== Tabs ====== */
 .tabBar {
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
   margin-bottom: 20px;
 }
 
@@ -420,12 +473,18 @@
 
 .reportRow {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 16px 20px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.06);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.reportRow:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-color: rgba(0,0,0,0.1);
 }
 
 .reportRowTitle {
@@ -444,7 +503,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .projectTitle {
@@ -539,19 +598,19 @@
   color: #999;
   font-weight: 400;
   font-size: 12px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
 
 .progressTable td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
 }
 
 /* ====== Overdue Alert ====== */
 .overdueAlert {
-  background: #FFF3E0;
-  border: 1px solid #FF9800;
-  border-radius: 8px;
+  background: rgba(255, 152, 0, 0.08);
+  border: 1px solid rgba(255, 152, 0, 0.2);
+  border-radius: 10px;
   padding: 10px 16px;
   margin-bottom: 8px;
   display: flex;
@@ -625,10 +684,10 @@
 }
 
 .completedItemBlock {
-  background: #fafafa;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
   margin-bottom: 8px;
 }
 
@@ -655,7 +714,7 @@
   background: #fff;
   border-radius: 12px;
   padding: 32px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.06);
   max-width: 800px;
 }
 
@@ -714,7 +773,8 @@
   border-radius: 12px;
   padding: 40px 48px;
   width: 360px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
 }
 
 .loginTitle {
@@ -735,14 +795,15 @@
   width: 100%;
   padding: 10px 14px;
   font-size: 14px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.12);
   border-radius: 8px;
   outline: none;
   box-sizing: border-box;
   margin-bottom: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.loginInput:focus { border-color: #378ADD; }
+.loginInput:focus { border-color: #378ADD; box-shadow: 0 0 0 2px rgba(55, 138, 221, 0.1); }
 
 .loginBtn {
   width: 100%;
@@ -805,6 +866,7 @@
   min-width: 420px;
   max-width: 520px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
 .modalHeader {
@@ -909,7 +971,7 @@
   display: flex;
   align-items: center;
   padding: 6px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
 .checkLabel {
@@ -928,10 +990,10 @@
 
 /* ====== Risk Block ====== */
 .riskBlock {
-  background: #fafafa;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
   margin-bottom: 8px;
 }
 
@@ -939,9 +1001,9 @@
 .statusSelectSm {
   font-size: 11px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #fff;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(0,0,0,0.1);
   color: #555;
   cursor: pointer;
   font-family: inherit;
@@ -984,6 +1046,7 @@
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
 .drillHeader {
@@ -1045,24 +1108,26 @@
 
 .summaryClickable {
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .summaryClickable:hover {
   transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 /* ====== Child Project Card ====== */
 .childProjectCard {
   composes: card;
-  padding: 20px 24px;
+  padding: 24px;
   cursor: pointer;
   position: relative;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
 
 .childProjectCard:hover {
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.1);
 }
 
 .childProjectCard:hover .childProjectActions {
@@ -1127,14 +1192,15 @@
 }
 
 .childProgressPercent {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 .childProgressBar {
-  height: 5px;
+  height: 6px;
   border-radius: 3px;
-  background: #f0f0f0;
+  background: rgba(0,0,0,0.05);
   overflow: hidden;
 }
 
@@ -1161,9 +1227,9 @@
 
 .serviceTimelineBar {
   flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: #eee;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.05);
   overflow: hidden;
 }
 
@@ -1273,11 +1339,12 @@
 }
 
 .summarySubProject {
-  background: #fafafa;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 12px 16px;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 10px;
+  padding: 14px 18px;
   margin-bottom: 10px;
+  transition: box-shadow 0.15s;
 }
 
 .summarySubProjectName {
@@ -1332,7 +1399,7 @@
   font-size: 10px;
   font-weight: 600;
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 6px;
   white-space: nowrap;
   line-height: 1.6;
 }

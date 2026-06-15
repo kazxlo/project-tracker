@@ -20,22 +20,30 @@ function formatPeriod(start?: string, end?: string): string {
   if (!start && !end) return '';
   const fmt = (s: string) => {
     const d = new Date(s + 'T00:00:00');
-    return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
-  if (start && end) return `${fmt(start)} — ${fmt(end)}`;
-  if (start) return `${fmt(start)} —`;
-  return `— ${fmt(end!)}`;
+  if (start && end) return `${fmt(start)}-${fmt(end)}`;
+  if (start) return `${fmt(start)}-`;
+  return `-${fmt(end!)}`;
 }
 
-function getServicePeriodProgress(serviceStart?: string, serviceEnd?: string): number {
-  if (!serviceStart || !serviceEnd) return 0;
+function getRemainingDays(serviceEnd?: string): number | null {
+  if (!serviceEnd) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(serviceEnd + 'T00:00:00');
+  return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function getServiceRemainingRatio(serviceStart?: string, serviceEnd?: string): number {
+  if (!serviceStart || !serviceEnd) return 100;
   const today = new Date().toISOString().split('T')[0];
   const start = new Date(serviceStart + 'T00:00:00').getTime();
   const end = new Date(serviceEnd + 'T00:00:00').getTime();
   const now = new Date(today + 'T00:00:00').getTime();
-  if (now < start) return 0;
-  if (now > end) return 100;
-  return Math.round(((now - start) / (end - start)) * 100);
+  if (now < start) return 100; // 未开始，剩余100%
+  if (now > end) return 0; // 已到期，剩余0%
+  return Math.round(((end - now) / (end - start)) * 100);
 }
 
 function isServiceExpired(serviceEnd?: string): boolean {
@@ -60,8 +68,9 @@ export default function ChildProjectCard({
     '存在风险': shared.tagDanger,
   };
   const statusCls = STATUS_CLASS[project.status] || shared.tagNormal;
-  const serviceProgress = getServicePeriodProgress(project.serviceStart, project.serviceEnd);
+  const remainingRatio = getServiceRemainingRatio(project.serviceStart, project.serviceEnd);
   const expired = isServiceExpired(project.serviceEnd);
+  const remainingDays = getRemainingDays(project.serviceEnd);
 
   return (
     <div
@@ -110,21 +119,27 @@ export default function ChildProjectCard({
         </div>
       </div>
 
-      {/* 服务期时间线 */}
+      {/* 当前服务期 — 剩余时间 */}
       {(project.serviceStart || project.serviceEnd) && (
         <div className={`${shared.serviceTimeline} ${expired ? shared.serviceTimelineExpired : ''}`}>
-          <span className={shared.serviceTimelineLabel}>服务期</span>
+          <span className={shared.serviceTimelineLabel}>当前服务期</span>
           <div className={shared.serviceTimelineBar}>
             <div
               className={shared.serviceTimelineFill}
               style={{
-                width: `${serviceProgress}%`,
-                background: expired ? '#D85A30' : project.color,
+                width: `${remainingRatio}%`,
+                background: expired ? '#D85A30' : remainingRatio <= 20 ? '#E8A33D' : project.color,
               }}
             />
           </div>
           <span className={shared.serviceTimelineDate}>
             {formatPeriod(project.serviceStart, project.serviceEnd)}
+            {remainingDays !== null && !expired && remainingDays <= 30 && (
+              <span style={{ color: remainingDays <= 0 ? '#D85A30' : '#E8A33D', marginLeft: 6, fontWeight: 500 }}>
+                剩余{remainingDays}天
+              </span>
+            )}
+            {expired && <span style={{ color: '#D85A30', marginLeft: 6, fontWeight: 500 }}>已到期</span>}
           </span>
         </div>
       )}

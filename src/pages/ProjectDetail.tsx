@@ -876,12 +876,12 @@ function SummaryView({
         </div>
 
         <div className={shared.summarySection}>
-          <h3 className={shared.summarySectionTitle}>采购管理 建设目标</h3>
+          <h3 className={shared.summarySectionTitle}>建设目标</h3>
           <p className={shared.summaryText}>{latest?.goals || '暂无'}</p>
         </div>
 
         <div className={shared.summarySection}>
-          <h3 className={shared.summarySectionTitle}>采购管理 本周重点工作</h3>
+          <h3 className={shared.summarySectionTitle}>本周重点工作</h3>
           {latest?.completedItems.length === 0
             ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无记录</p>
             : latest?.completedItems.map((item, i) => (
@@ -894,7 +894,7 @@ function SummaryView({
         </div>
 
         <div className={shared.summarySection}>
-          <h3 className={shared.summarySectionTitle}>采购管理 下周工作计划</h3>
+          <h3 className={shared.summarySectionTitle}>下周工作计划</h3>
           {latest?.plannedItems.length === 0
             ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无计划</p>
             : latest?.plannedItems.map((item, i) => (
