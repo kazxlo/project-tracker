@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getReport, getLatestReport, saveReport, generateWeekLabel } from '../api/db';
-import { useAuth } from '../hooks/useAuth';
 import { WeeklyReport, ReportItem, Risk } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -21,19 +20,8 @@ interface RiskConfirmItem {
 export default function ReportEdit() {
   const { id: projectId, reportId } = useParams<{ id: string; reportId: string }>();
   const navigate = useNavigate();
-  const { role } = useAuth();
   const isEdit = !!reportId;
   const isP1 = projectId === 'p1';
-  const isPublic = role === 'public';
-
-  // public 用户不允许新建周报
-  if (isPublic && !reportId) {
-    navigate(`/project/${projectId}`, { replace: true });
-    return null;
-  }
-
-  // public 用户查看周报时为只读模式
-  const readOnly = isPublic;
 
   const getWeekRange = () => {
     const today = new Date();
@@ -94,24 +82,10 @@ export default function ReportEdit() {
           if (!cancelled) {
             setWeekStart(start);
             setWeekEnd(end);
+            setWeekLabel(generateWeekLabel(start));
           }
 
           const prev = await getLatestReport(projectId!);
-          if (!cancelled) {
-            // 期数递增：从上一期的 weekLabel 解析数字 +1
-            let nextWeekLabel = '';
-            if (prev) {
-              const match = prev.weekLabel.match(/第(\d+)周/);
-              if (match) {
-                nextWeekLabel = `第${parseInt(match[1], 10) + 1}周`;
-              }
-            }
-            if (!nextWeekLabel) {
-              nextWeekLabel = generateWeekLabel(start);
-            }
-            setWeekLabel(nextWeekLabel);
-          }
-
           if (!cancelled && prev) {
             setGoals(prev.goals || prev.summary || '');
             setHighlights(prev.highlights || '');
@@ -285,7 +259,7 @@ export default function ReportEdit() {
       <span className={shared.backLink} onClick={() => navigate(`/project/${projectId}`)}>
         ← 返回项目详情
       </span>
-      <h2 className={shared.pageTitle}>{readOnly ? '查看周报' : isEdit ? '编辑周报' : '新建周报'}</h2>
+      <h2 className={shared.pageTitle}>{isEdit ? '编辑周报' : '新建周报'}</h2>
 
       <div className={shared.formRow}>
         <div className={shared.formGroup}>
@@ -295,7 +269,6 @@ export default function ReportEdit() {
             value={weekLabel}
             onChange={e => setWeekLabel(e.target.value)}
             placeholder="如: 第12周"
-            readOnly={readOnly}
           />
         </div>
         <div className={shared.formGroup}>
@@ -305,7 +278,6 @@ export default function ReportEdit() {
             type="date"
             value={weekStart}
             onChange={e => setWeekStart(e.target.value)}
-            readOnly={readOnly}
           />
         </div>
         <div className={shared.formGroup}>
@@ -315,7 +287,6 @@ export default function ReportEdit() {
             type="date"
             value={weekEnd}
             onChange={e => setWeekEnd(e.target.value)}
-            readOnly={readOnly}
           />
         </div>
       </div>
@@ -405,7 +376,6 @@ export default function ReportEdit() {
           onChange={e => setGoals(e.target.value)}
           placeholder="输入本周建设目标..."
           rows={3}
-          readOnly={readOnly}
         />
       </Section>
 
@@ -416,7 +386,6 @@ export default function ReportEdit() {
           onChange={e => setHighlights(e.target.value)}
           placeholder="输入本周重点工作内容..."
           rows={3}
-          readOnly={readOnly}
         />
       </Section>
 
@@ -430,7 +399,6 @@ export default function ReportEdit() {
               step="5"
               value={progress}
               onChange={e => setProgress(Number(e.target.value))}
-              disabled={readOnly}
             />
             <span className={shared.progressValue}>{progress}%</span>
           </div>
@@ -449,11 +417,8 @@ export default function ReportEdit() {
                 onChange={e => updateItemField(completed, setCompleted, item.id, 'title', e.target.value)}
                 placeholder={isP1 ? '子项目名称' : `完成事项 ${item.order}`}
                 style={{ flex: 1, fontWeight: isP1 ? 500 : 400 }}
-                readOnly={readOnly}
               />
-              {!readOnly && (
-                <button className={shared.delBtn} onClick={() => removeItem(completed, setCompleted, item.id)} title="删除">×</button>
-              )}
+              <button className={shared.delBtn} onClick={() => removeItem(completed, setCompleted, item.id)} title="删除">×</button>
             </div>
             {isP1 && (
               <div style={{ display: 'flex', gap: 8, paddingLeft: 20, marginBottom: completed.indexOf(item) === completed.length - 1 ? 0 : 4 }}>
@@ -463,7 +428,6 @@ export default function ReportEdit() {
                   onChange={e => updateItemField(completed, setCompleted, item.id, 'progress', e.target.value)}
                   placeholder="子项目进展"
                   style={{ flex: 1, fontSize: 12 }}
-                  readOnly={readOnly}
                 />
                 <input
                   className={shared.formInput}
@@ -471,17 +435,14 @@ export default function ReportEdit() {
                   onChange={e => updateItemField(completed, setCompleted, item.id, 'acceptance', e.target.value)}
                   placeholder="验收资料进展"
                   style={{ flex: 1, fontSize: 12 }}
-                  readOnly={readOnly}
                 />
               </div>
             )}
           </div>
         ))}
-        {!readOnly && (
-          <button className={shared.btnDashed} onClick={() => addItem(completed, setCompleted, 'c')} style={{ marginTop: 8 }}>
-            + 添加事项
-          </button>
-        )}
+        <button className={shared.btnDashed} onClick={() => addItem(completed, setCompleted, 'c')} style={{ marginTop: 8 }}>
+          + 添加事项
+        </button>
       </Section>
 
       {/* 下周工作计划 */}
@@ -496,11 +457,8 @@ export default function ReportEdit() {
                 onChange={e => updateItemField(planned, setPlanned, item.id, 'title', e.target.value)}
                 placeholder={`计划事项 ${item.order}`}
                 style={{ flex: 1 }}
-                readOnly={readOnly}
               />
-              {!readOnly && (
-                <button className={shared.delBtn} onClick={() => removeItem(planned, setPlanned, item.id)}>×</button>
-              )}
+              <button className={shared.delBtn} onClick={() => removeItem(planned, setPlanned, item.id)}>×</button>
             </div>
             {item.reason !== undefined && (
               <div style={{ paddingLeft: 24, marginBottom: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -511,17 +469,14 @@ export default function ReportEdit() {
                   onChange={e => updateItemField(planned, setPlanned, item.id, 'reason', e.target.value)}
                   placeholder="未完成原因..."
                   style={{ flex: 1, fontSize: 12, color: '#D85A30' }}
-                  readOnly={readOnly}
                 />
               </div>
             )}
           </div>
         ))}
-        {!readOnly && (
-          <button className={shared.btnDashed} onClick={() => addItem(planned, setPlanned, 'p')} style={{ marginTop: 4 }}>
-            + 添加计划
-          </button>
-        )}
+        <button className={shared.btnDashed} onClick={() => addItem(planned, setPlanned, 'p')} style={{ marginTop: 4 }}>
+          + 添加计划
+        </button>
       </Section>
 
       {/* 风险提示 */}
@@ -535,7 +490,6 @@ export default function ReportEdit() {
                 value={risk.level}
                 onChange={e => updateRisk(risk.id, 'level', e.target.value)}
                 style={{ width: 70 }}
-                disabled={readOnly}
               >
                 <option value="高">高</option>
                 <option value="中">中</option>
@@ -545,15 +499,12 @@ export default function ReportEdit() {
                 className={shared.formSelect}
                 value={risk.status}
                 onChange={e => updateRisk(risk.id, 'status', e.target.value)}
-                disabled={readOnly}
               >
                 <option value="待处理">待处理</option>
                 <option value="已解决">已解决</option>
                 <option value="持续关注">持续关注</option>
               </select>
-              {!readOnly && (
-                <button className={shared.delBtn} onClick={() => removeRisk(risk.id)}>×</button>
-              )}
+              <button className={shared.delBtn} onClick={() => removeRisk(risk.id)}>×</button>
             </div>
             <input
               className={shared.formInput}
@@ -561,7 +512,6 @@ export default function ReportEdit() {
               onChange={e => updateRisk(risk.id, 'description', e.target.value)}
               placeholder="风险描述"
               style={{ marginBottom: 6 }}
-              readOnly={readOnly}
             />
             <input
               className={shared.formInput}
@@ -569,26 +519,19 @@ export default function ReportEdit() {
               onChange={e => updateRisk(risk.id, 'suggestion', e.target.value)}
               placeholder="解决建议"
               style={{ fontSize: 12, color: '#666' }}
-              readOnly={readOnly}
             />
           </div>
         ))}
-        {!readOnly && (
-          <button className={shared.btnDashedDanger} onClick={addRisk} style={{ marginTop: 8 }}>
-            + 添加风险
-          </button>
-        )}
+        <button className={shared.btnDashedDanger} onClick={addRisk} style={{ marginTop: 8 }}>
+          + 添加风险
+        </button>
       </Section>
 
       <div className={shared.editorFooter}>
-        <button className={shared.btnOutline} onClick={() => navigate(`/project/${projectId}`)}>
-          {readOnly ? '返回' : '取消'}
+        <button className={shared.btnOutline} onClick={() => navigate(`/project/${projectId}`)}>取消</button>
+        <button className={shared.btnPrimaryLg} onClick={handleSubmit} disabled={saving}>
+          {saving ? '保存中...' : '保存周报'}
         </button>
-        {!readOnly && (
-          <button className={shared.btnPrimaryLg} onClick={handleSubmit} disabled={saving}>
-            {saving ? '保存中...' : '保存周报'}
-          </button>
-        )}
       </div>
     </div>
   );

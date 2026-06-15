@@ -20,43 +20,28 @@ function formatPeriod(start?: string, end?: string): string {
   if (!start && !end) return '';
   const fmt = (s: string) => {
     const d = new Date(s + 'T00:00:00');
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
-  if (start && end) return `${fmt(start)}-${fmt(end)}`;
-  if (start) return `${fmt(start)}-?`;
-  return `?-${fmt(end!)}`;
+  if (start && end) return `${fmt(start)} — ${fmt(end)}`;
+  if (start) return `${fmt(start)} —`;
+  return `— ${fmt(end!)}`;
 }
 
-/** 返回剩余时间百分比（0-100），强调剩余多少而非已过多少 */
-function getServicePeriodRemaining(serviceStart?: string, serviceEnd?: string): number {
+function getServicePeriodProgress(serviceStart?: string, serviceEnd?: string): number {
   if (!serviceStart || !serviceEnd) return 0;
   const today = new Date().toISOString().split('T')[0];
   const start = new Date(serviceStart + 'T00:00:00').getTime();
   const end = new Date(serviceEnd + 'T00:00:00').getTime();
   const now = new Date(today + 'T00:00:00').getTime();
-  if (now < start) return 100;  // 尚未开始，剩余100%
-  if (now > end) return 0;      // 已到期，剩余0%
-  return Math.round(((end - now) / (end - start)) * 100);
+  if (now < start) return 0;
+  if (now > end) return 100;
+  return Math.round(((now - start) / (end - start)) * 100);
 }
 
 function isServiceExpired(serviceEnd?: string): boolean {
   if (!serviceEnd) return false;
   const today = new Date().toISOString().split('T')[0];
   return serviceEnd < today;
-}
-
-/** 剩余天数文本 */
-function getRemainingDays(serviceEnd?: string): string {
-  if (!serviceEnd) return '';
-  const today = new Date().toISOString().split('T')[0];
-  const end = new Date(serviceEnd + 'T00:00:00').getTime();
-  const now = new Date(today + 'T00:00:00').getTime();
-  const days = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-  if (days < 0) return '已到期';
-  if (days === 0) return '今日到期';
-  if (days <= 30) return `剩余${days}天`;
-  const months = Math.floor(days / 30);
-  return `剩余约${months}个月`;
 }
 
 export default function ChildProjectCard({
@@ -75,17 +60,8 @@ export default function ChildProjectCard({
     '存在风险': shared.tagDanger,
   };
   const statusCls = STATUS_CLASS[project.status] || shared.tagNormal;
-  const serviceRemaining = getServicePeriodRemaining(project.serviceStart, project.serviceEnd);
+  const serviceProgress = getServicePeriodProgress(project.serviceStart, project.serviceEnd);
   const expired = isServiceExpired(project.serviceEnd);
-  const remainingText = getRemainingDays(project.serviceEnd);
-
-  // 服务期剩余时间状态色
-  const getServiceBarColor = () => {
-    if (expired) return '#D85A30';       // 已到期 → 红色
-    if (serviceRemaining <= 20) return '#D4834A';  // 剩余≤20% → 橙色警告
-    if (serviceRemaining <= 40) return '#D4A64A';  // 剩余≤40% → 黄色注意
-    return project.color;                          // 充足 → 项目色
-  };
 
   return (
     <div
@@ -134,28 +110,22 @@ export default function ChildProjectCard({
         </div>
       </div>
 
-      {/* 当前服务期时间线（反显剩余时间，强调Deadline压力） */}
+      {/* 服务期时间线 */}
       {(project.serviceStart || project.serviceEnd) && (
         <div className={`${shared.serviceTimeline} ${expired ? shared.serviceTimelineExpired : ''}`}>
-          <span className={shared.serviceTimelineLabel}>当前服务期</span>
+          <span className={shared.serviceTimelineLabel}>服务期</span>
           <div className={shared.serviceTimelineBar}>
             <div
               className={shared.serviceTimelineFill}
               style={{
-                width: `${serviceRemaining}%`,
-                background: getServiceBarColor(),
+                width: `${serviceProgress}%`,
+                background: expired ? '#D85A30' : project.color,
               }}
             />
           </div>
           <span className={shared.serviceTimelineDate}>
             {formatPeriod(project.serviceStart, project.serviceEnd)}
           </span>
-        </div>
-      )}
-      {/* 剩余时间提示 */}
-      {remainingText && (
-        <div className={`${shared.serviceTimelineRemaining} ${expired ? shared.serviceTimelineRemainingExpired : ''}`}>
-          {remainingText}
         </div>
       )}
 

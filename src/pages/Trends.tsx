@@ -157,13 +157,13 @@ export default function Trends() {
           className={`${shared.tab} ${tab === 'progress' ? shared.tabActive : shared.tabInactive}`}
           onClick={() => setTab('progress')}
         >
-          项目进度趋势
+          📈 项目进度趋势
         </div>
         <div
           className={`${shared.tab} ${tab === 'health' ? shared.tabActive : shared.tabInactive}`}
           onClick={() => setTab('health')}
         >
-          项目健康趋势
+          🏥 项目健康趋势
         </div>
       </div>
 
@@ -310,7 +310,7 @@ export default function Trends() {
               </ResponsiveContainer>
             ) : (
               <div className={shared.emptyState} style={{ padding: 30, fontSize: 13 }}>
-                所有项目均无风险记录
+                🎉 所有项目均无风险记录
               </div>
             )}
           </div>

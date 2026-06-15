@@ -9,11 +9,6 @@ export interface Project {
   lastDeadline?: string;        // 上一次截止时间（YYYY-MM-DD）
   status: '正常推进' | '需关注' | '存在风险';
   color: string;
-  viewerIds?: string[];         // 可见用户ID列表，NULL/空=所有人可见
-  parentId?: string;            // 父项目ID，空=顶层项目
-  description?: string;         // 服务内容简述
-  serviceStart?: string;        // 服务开始日期 YYYY-MM-DD
-  serviceEnd?: string;          // 服务结束日期 YYYY-MM-DD
 }
 
 /** 事项（完成/计划） */
