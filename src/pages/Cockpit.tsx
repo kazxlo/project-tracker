@@ -247,11 +247,11 @@ export default function Cockpit() {
     });
 
     const kpis = [
-      { key: 'projects', value: totalProjects, label: '在建项目', color: '#378ADD', clickable: false },
-      { key: 'progress', value: `${overallProgress}%`, label: '整体进度', color: '#639922', clickable: false },
-      { key: 'risks', value: cumulativeRiskSet.size, label: '当前累计风险', color: '#D85A30', clickable: true },
-      { key: 'plans', value: remainingPlans, label: '剩余计划', color: '#7F77DD', clickable: true },
-      { key: 'overdue', value: overdueCount, label: '已逾期', color: '#D85A30', clickable: false },
+      { key: 'projects', value: totalProjects, label: '在建项目', color: '#5B9EF5', clickable: false },
+      { key: 'progress', value: `${overallProgress}%`, label: '整体进度', color: '#4ADE80', clickable: false },
+      { key: 'risks', value: cumulativeRiskSet.size, label: '当前累计风险', color: '#ff6b6b', clickable: true },
+      { key: 'plans', value: remainingPlans, label: '剩余计划', color: '#A78BFA', clickable: true },
+      { key: 'overdue', value: overdueCount, label: '已逾期', color: '#ffb347', clickable: false },
     ];
 
     return { kpis, cumulativeRiskDetails, planDetails };
@@ -394,7 +394,7 @@ export default function Cockpit() {
                 {/* 进度条 */}
                 <div className={styles.progressSection}>
                   <div className={styles.progressLabel}>
-                    <span className={styles.progressLabel} style={{ color: '#5a6e82', fontSize: 12 }}>
+                    <span className={styles.progressLabel} style={{ color: '#9aaec9', fontSize: 12 }}>
                       {s.hasChildren ? '子项目综合进度' : '完成进度'}
                     </span>
                     <span
@@ -424,7 +424,7 @@ export default function Cockpit() {
                         className={styles.serviceTimelineFill}
                         style={{
                           width: `${svcProgress}%`,
-                          background: svcExpired ? '#F0704A' : s.project.color,
+                          background: svcExpired ? '#ff6b6b' : s.project.color,
                         }}
                       />
                     </div>
@@ -448,7 +448,7 @@ export default function Cockpit() {
                   <div className={styles.projectStatItem}>
                     风险 <span
                       className={styles.projectStatValue}
-                      style={{ color: s.allRiskCount > 0 ? '#F0704A' : undefined }}
+                      style={{ color: s.allRiskCount > 0 ? '#ff6b6b' : undefined }}
                     >
                       {s.allRiskCount}
                     </span>项
@@ -556,7 +556,7 @@ export default function Cockpit() {
                           <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: risk.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
                             {risk.projectName}
                           </span>
-                          <span style={{ color: '#5a6e82', fontSize: 12 }}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
+                          <span style={{ color: '#9aaec9', fontSize: 12 }}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
                           {canEdit ? (
                             <select
                               className={styles.statusSelect}
@@ -569,7 +569,7 @@ export default function Cockpit() {
                               <option value="已解决">✓ 已解决</option>
                             </select>
                           ) : (
-                            <span style={{ color: risk.status === '待处理' ? '#D85A30' : '#5a6e82', fontSize: 12 }}>
+                            <span style={{ color: risk.status === '待处理' ? '#ff6b6b' : '#9aaec9', fontSize: 12 }}>
                               {risk.status === '待处理' ? '待处理' : '持续关注'}
                             </span>
                           )}
@@ -604,7 +604,7 @@ export default function Cockpit() {
                           <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: plan.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
                             {plan.projectName}
                           </span>
-                          <span style={{ color: '#5a6e82', fontSize: 12 }}>{plan.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
+                          <span style={{ color: '#9aaec9', fontSize: 12 }}>{plan.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
                         </div>
                       </div>
                     </div>

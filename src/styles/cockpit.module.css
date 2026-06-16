@@ -1,10 +1,10 @@
-/* ===== 领导驾驶舱 — 深色指挥中心风格 ===== */
+/* ===== 领导驾驶舱 — 深色科技风 ===== */
 
 /* 全屏容器 */
 .cockpit {
   min-height: 100vh;
-  background: #0f1923;
-  color: #e8edf2;
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+  color: #ffffff;
   padding: 32px 40px 24px;
   font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-y: auto;
@@ -17,7 +17,7 @@
   justify-content: space-between;
   margin-bottom: 32px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(232, 237, 242, 0.08);
+  border-bottom: 1px solid rgba(100, 181, 246, 0.1);
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -37,14 +37,15 @@
 .headerTitle {
   font-size: 22px;
   font-weight: 700;
-  color: #e8edf2;
+  color: #ffffff;
   letter-spacing: 0.5px;
   margin: 0;
+  text-shadow: 0 0 20px rgba(100, 181, 246, 0.3);
 }
 
 .headerWeek {
   font-size: 14px;
-  color: #5a6e82;
+  color: #9aaec9;
   letter-spacing: 0.3px;
 }
 
@@ -66,70 +67,70 @@
 }
 
 .topNavItem {
-  color: #7a8a9a;
+  color: #9aaec9;
 }
 
 .topNavLink {
-  color: #5a6e82;
+  color: #9aaec9;
 }
 
 .topNavLink:hover {
-  background: rgba(232, 237, 242, 0.06);
-  color: #a0b0c0;
+  background: rgba(100, 181, 246, 0.08);
+  color: #64b5f6;
 }
 
 .topNavActive {
-  color: #e8edf2;
-  background: rgba(232, 237, 242, 0.06);
+  color: #ffffff;
+  background: rgba(100, 181, 246, 0.12);
   font-weight: 500;
 }
 
 .userInfo {
   font-size: 13px;
-  color: #5a6e82;
+  color: #9aaec9;
   white-space: nowrap;
 }
 
 .userRole {
   font-size: 11px;
-  color: #378ADD;
+  color: #64b5f6;
   margin-left: 4px;
 }
 
 .pdfBtn {
   font-size: 12px;
-  color: #5a6e82;
-  background: rgba(232, 237, 242, 0.04);
-  border: 1px solid rgba(232, 237, 242, 0.08);
+  color: #9aaec9;
+  background: rgba(100, 181, 246, 0.08);
+  border: 1px solid rgba(100, 181, 246, 0.15);
   border-radius: 6px;
   padding: 4px 12px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
 
 .pdfBtn:hover {
-  background: rgba(55, 138, 221, 0.12);
-  color: #5B9BE0;
-  border-color: rgba(55, 138, 221, 0.25);
+  background: rgba(100, 181, 246, 0.18);
+  color: #64b5f6;
+  border-color: rgba(100, 181, 246, 0.35);
 }
 
 .logoutBtn {
   font-size: 12px;
-  color: #5a6e82;
-  background: rgba(232, 237, 242, 0.04);
-  border: 1px solid rgba(232, 237, 242, 0.08);
+  color: #9aaec9;
+  background: rgba(100, 181, 246, 0.08);
+  border: 1px solid rgba(100, 181, 246, 0.15);
   border-radius: 6px;
   padding: 4px 12px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
 
 .logoutBtn:hover {
-  background: rgba(216, 90, 48, 0.12);
-  color: #F0704A;
-  border-color: rgba(216, 90, 48, 0.25);
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.3);
 }
 
 /* ===== KPI 横条 ===== */
@@ -141,29 +142,34 @@
 }
 
 .kpiCard {
-  background: rgba(127, 119, 221, 0.04);
-  border: 1px solid rgba(127, 119, 221, 0.1);
-  border-radius: 12px;
+  background: rgba(18, 28, 48, 0.65);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(100, 181, 246, 0.12);
+  border-radius: 16px;
   padding: 20px 16px;
   text-align: center;
-  transition: border-color 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 181, 246, 0.06);
 }
 
 .kpiCard:hover {
-  border-color: rgba(127, 119, 221, 0.25);
+  border-color: rgba(100, 181, 246, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 181, 246, 0.1), 0 0 24px rgba(100, 181, 246, 0.06);
 }
 
 .kpiValue {
-  font-size: 48px;
+  font-size: 46px;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -1px;
   margin-bottom: 6px;
+  text-shadow: 0 0 24px currentColor;
 }
 
 .kpiLabel {
   font-size: 13px;
-  color: #5a6e82;
+  color: #9aaec9;
   font-weight: 500;
   letter-spacing: 0.5px;
 }
@@ -177,20 +183,24 @@
 }
 
 .projectCard {
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 24px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
   position: relative;
   min-height: 170px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(100, 181, 246, 0.06);
 }
 
 .projectCard:hover {
-  /* 悬停时加深底色和边框 */
-  filter: brightness(1.1);
+  border-color: rgba(100, 181, 246, 0.25);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(100, 181, 246, 0.1), 0 0 30px rgba(100, 181, 246, 0.05);
+  transform: translateY(-2px);
 }
 
 .projectCardHeader {
@@ -206,12 +216,13 @@
   border-radius: 50%;
   margin-right: 10px;
   flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .projectName {
   font-size: 17px;
   font-weight: 600;
-  color: #e8edf2;
+  color: #ffffff;
   display: flex;
   align-items: center;
 }
@@ -226,21 +237,21 @@
 }
 
 .statusNormal {
-  background: rgba(99, 153, 34, 0.15);
-  color: #7CB342;
-  border: 1px solid rgba(99, 153, 34, 0.2);
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.2);
 }
 
 .statusWarning {
-  background: rgba(250, 173, 20, 0.15);
-  color: #F5B642;
-  border: 1px solid rgba(250, 173, 20, 0.2);
+  background: rgba(255, 179, 71, 0.12);
+  color: #ffb347;
+  border: 1px solid rgba(255, 179, 71, 0.2);
 }
 
 .statusDanger {
-  background: rgba(216, 90, 48, 0.18);
-  color: #F0704A;
-  border: 1px solid rgba(216, 90, 48, 0.25);
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.2);
 }
 
 .projectMeta {
@@ -248,7 +259,7 @@
   align-items: center;
   gap: 16px;
   font-size: 13px;
-  color: #5a6e82;
+  color: #9aaec9;
   margin-bottom: 14px;
 }
 
@@ -268,6 +279,7 @@
   font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.5px;
+  text-shadow: 0 0 16px currentColor;
 }
 
 .progressBar {
@@ -275,12 +287,14 @@
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.06);
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .progressFill {
   height: 100%;
   border-radius: 3px;
   transition: width 0.5s ease;
+  box-shadow: 0 0 10px currentColor;
 }
 
 /* 卡片底部统计 */
@@ -288,7 +302,7 @@
   display: flex;
   gap: 20px;
   font-size: 12px;
-  color: #5a6e82;
+  color: #9aaec9;
 }
 
 .projectStatItem {
@@ -299,7 +313,7 @@
 
 .projectStatValue {
   font-weight: 600;
-  color: #c0c8d4;
+  color: #c0d0e4;
 }
 
 /* 逾期标记 */
@@ -307,13 +321,13 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(216, 90, 48, 0.15);
-  color: #F0704A;
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(216, 90, 48, 0.25);
+  border: 1px solid rgba(255, 107, 107, 0.2);
   margin-left: 8px;
 }
 
@@ -332,13 +346,13 @@
 .riskTitle {
   font-size: 16px;
   font-weight: 600;
-  color: #e8edf2;
+  color: #ffffff;
   margin: 0;
 }
 
 .riskCount {
   font-size: 13px;
-  color: #5a6e82;
+  color: #9aaec9;
 }
 
 .riskList {
@@ -352,14 +366,17 @@
   align-items: flex-start;
   gap: 14px;
   padding: 14px 18px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  background: rgba(18, 28, 48, 0.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(100, 181, 246, 0.08);
   transition: border-color 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .riskItem:hover {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(100, 181, 246, 0.18);
 }
 
 .riskLevelBadge {
@@ -373,21 +390,21 @@
 }
 
 .riskLevelHigh {
-  background: rgba(216, 90, 48, 0.2);
-  color: #F0704A;
-  border: 1px solid rgba(216, 90, 48, 0.3);
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.25);
 }
 
 .riskLevelMid {
-  background: rgba(250, 173, 20, 0.18);
-  color: #F5B642;
-  border: 1px solid rgba(250, 173, 20, 0.25);
+  background: rgba(255, 179, 71, 0.12);
+  color: #ffb347;
+  border: 1px solid rgba(255, 179, 71, 0.2);
 }
 
 .riskLevelLow {
-  background: rgba(153, 153, 153, 0.12);
-  color: #a0aab4;
-  border: 1px solid rgba(153, 153, 153, 0.18);
+  background: rgba(154, 174, 201, 0.1);
+  color: #9aaec9;
+  border: 1px solid rgba(154, 174, 201, 0.15);
 }
 
 .riskBody {
@@ -397,20 +414,20 @@
 
 .riskDescription {
   font-size: 14px;
-  color: #d5dce5;
+  color: #e0e8f2;
   font-weight: 500;
   margin-bottom: 4px;
 }
 
 .riskSuggestion {
   font-size: 12px;
-  color: #5a6e82;
+  color: #9aaec9;
   line-height: 1.5;
 }
 
 .riskProjectTag {
   font-size: 11px;
-  color: #5a6e82;
+  color: #9aaec9;
   padding: 2px 8px;
   border-radius: 4px;
   white-space: nowrap;
@@ -429,13 +446,13 @@
 
 .riskWeekTag {
   font-size: 11px;
-  color: #5a6e82;
+  color: #9aaec9;
   white-space: nowrap;
 }
 
 .riskStatusTag {
   font-size: 11px;
-  color: #5a6e82;
+  color: #9aaec9;
   white-space: nowrap;
 }
 
@@ -444,9 +461,9 @@
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(232, 237, 242, 0.04);
-  border: 1px solid rgba(232, 237, 242, 0.12);
-  color: #a0b0c0;
+  background: rgba(100, 181, 246, 0.06);
+  border: 1px solid rgba(100, 181, 246, 0.12);
+  color: #c0d0e4;
   cursor: pointer;
   font-family: inherit;
   outline: none;
@@ -454,11 +471,12 @@
 }
 
 .statusSelect:hover {
-  border-color: rgba(232, 237, 242, 0.25);
+  border-color: rgba(100, 181, 246, 0.3);
 }
 
 .statusSelect:focus {
-  border-color: rgba(55, 138, 221, 0.5);
+  border-color: rgba(100, 181, 246, 0.5);
+  box-shadow: 0 0 8px rgba(100, 181, 246, 0.15);
 }
 
 .statusSelect:disabled {
@@ -468,26 +486,29 @@
 
 .savingHint {
   font-size: 10px;
-  color: #378ADD;
+  color: #64b5f6;
   white-space: nowrap;
 }
 
 /* KPI 可点击 */
 .kpiClickable {
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
 }
 
 .kpiClickable:hover {
-  border-color: rgba(127, 119, 221, 0.35);
-  background: rgba(127, 119, 221, 0.08);
+  border-color: rgba(100, 181, 246, 0.4);
+  background: rgba(18, 28, 48, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 181, 246, 0.12), 0 0 30px rgba(100, 181, 246, 0.08);
 }
 
 /* ===== 下钻弹窗 ===== */
 .drillOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -495,14 +516,17 @@
 }
 
 .drillPanel {
-  background: #131f2e;
-  border: 1px solid rgba(232, 237, 242, 0.1);
-  border-radius: 14px;
+  background: rgba(14, 22, 40, 0.92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(100, 181, 246, 0.12);
+  border-radius: 16px;
   padding: 24px;
   max-width: 700px;
   width: 90%;
   max-height: 70vh;
   overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(100, 181, 246, 0.06);
 }
 
 .drillHeader {
@@ -511,20 +535,20 @@
   justify-content: space-between;
   margin-bottom: 18px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(232, 237, 242, 0.08);
+  border-bottom: 1px solid rgba(100, 181, 246, 0.1);
 }
 
 .drillTitle {
   font-size: 17px;
   font-weight: 600;
-  color: #e8edf2;
+  color: #ffffff;
   margin: 0;
 }
 
 .drillClose {
   background: none;
   border: none;
-  color: #5a6e82;
+  color: #9aaec9;
   font-size: 22px;
   cursor: pointer;
   padding: 0 4px;
@@ -532,13 +556,13 @@
 }
 
 .drillClose:hover {
-  color: #e8edf2;
+  color: #ffffff;
 }
 
 .drillEmpty {
   text-align: center;
   padding: 32px;
-  color: #5a6e82;
+  color: #9aaec9;
   font-size: 14px;
 }
 
@@ -547,7 +571,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(232, 237, 242, 0.05);
+  border-bottom: 1px solid rgba(100, 181, 246, 0.06);
 }
 
 .drillRiskItem:last-child {
@@ -561,7 +585,7 @@
 
 .drillRiskDesc {
   font-size: 14px;
-  color: #d5dce5;
+  color: #e0e8f2;
   font-weight: 500;
   margin-bottom: 6px;
 }
@@ -576,14 +600,14 @@
 
 .drillRiskSuggestion {
   font-size: 12px;
-  color: #5a6e82;
+  color: #9aaec9;
   line-height: 1.5;
   margin-top: 4px;
 }
 
 .drillPlanNum {
   font-size: 12px;
-  color: #5a6e82;
+  color: #9aaec9;
   min-width: 20px;
   text-align: right;
   padding-top: 2px;
@@ -594,21 +618,21 @@
   text-align: center;
   padding: 16px 0 8px;
   font-size: 12px;
-  color: #3d4f63;
-  border-top: 1px solid rgba(232, 237, 242, 0.05);
+  color: #5a7090;
+  border-top: 1px solid rgba(100, 181, 246, 0.06);
 }
 
 /* 空状态 */
 .emptyState {
   text-align: center;
   padding: 80px 40px;
-  color: #5a6e82;
+  color: #9aaec9;
 }
 
 .emptyTitle {
   font-size: 16px;
   margin-bottom: 8px;
-  color: #7a8a9a;
+  color: #9aaec9;
 }
 
 /* 加载状态 */
@@ -617,17 +641,17 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
-  color: #5a6e82;
+  color: #9aaec9;
   font-size: 14px;
-  background: #0f1923;
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
 }
 
 /* ===== 父项目聚合信息 ===== */
 .parentBadge {
   font-size: 11px;
-  color: #5B9BE0;
-  background: rgba(55, 138, 221, 0.1);
-  border: 1px solid rgba(55, 138, 221, 0.2);
+  color: #64b5f6;
+  background: rgba(100, 181, 246, 0.1);
+  border: 1px solid rgba(100, 181, 246, 0.2);
   padding: 2px 8px;
   border-radius: 6px;
   white-space: nowrap;
@@ -635,7 +659,7 @@
 
 .parentProgressLabel {
   font-size: 12px;
-  color: #5a6e82;
+  color: #9aaec9;
   margin-bottom: 4px;
 }
 
@@ -649,7 +673,7 @@
 
 .serviceTimelineLabel {
   font-size: 11px;
-  color: #5a6e82;
+  color: #9aaec9;
   white-space: nowrap;
   min-width: 36px;
 }
@@ -667,17 +691,18 @@
   border-radius: 2px;
   transition: width 0.5s ease;
   opacity: 0.5;
+  box-shadow: 0 0 6px currentColor;
 }
 
 .serviceTimelineDate {
   font-size: 11px;
-  color: #5a6e82;
+  color: #9aaec9;
   white-space: nowrap;
 }
 
 .serviceTimelineExpired .serviceTimelineFill {
   opacity: 0.85;
-  background: rgba(240, 112, 74, 0.7) !important;
+  background: rgba(255, 107, 107, 0.7) !important;
 }
 
 /* 响应式：小屏时 KPI 和卡片自动收窄 */

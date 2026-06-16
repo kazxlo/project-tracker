@@ -41,7 +41,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               window.location.href = '/';
             }}
             style={{
-              background: '#378ADD',
+              background: '#4F8EF7',
               color: '#fff',
               border: 'none',
               borderRadius: 8,

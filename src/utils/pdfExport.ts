@@ -89,14 +89,14 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif; font-size: 12px; color: #333; line-height: 1.7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   
-  .header { text-align: center; padding: 16px 0 12px; border-bottom: 3px double #378ADD; margin-bottom: 18px; }
+  .header { text-align: center; padding: 16px 0 12px; border-bottom: 3px double #4F8EF7; margin-bottom: 18px; }
   .header h1 { font-size: 20px; color: #1a3a5c; letter-spacing: 2px; margin-bottom: 4px; }
   .header .sub { font-size: 12px; color: #888; }
   
-  .section-title { font-size: 15px; font-weight: 700; color: #1a3a5c; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #378ADD; display: flex; align-items: center; gap: 8px; }
+  .section-title { font-size: 15px; font-weight: 700; color: #1a3a5c; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #4F8EF7; display: flex; align-items: center; gap: 8px; }
   .section-title .icon { font-size: 16px; }
   
-  .risk-card { padding: 8px 12px; margin-bottom: 6px; border-left: 4px solid #D85A30; background: #FFFBF5; border-radius: 0 4px 4px 0; page-break-inside: avoid; }
+  .risk-card { padding: 8px 12px; margin-bottom: 6px; border-left: 4px solid #FB923C; background: #FFFBF5; border-radius: 0 4px 4px 0; page-break-inside: avoid; }
   .risk-card .project-tag { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #fff; margin-left: 8px; }
   .risk-desc { font-weight: 500; }
   .risk-suggestion { font-size: 11px; color: #888; margin-top: 2px; padding-left: 4px; }
@@ -108,7 +108,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
   .project-meta { font-size: 11px; color: #888; }
   .project-progress { margin-left: auto; font-size: 16px; font-weight: 700; }
   
-  .sub-title { font-size: 12px; font-weight: 600; color: #555; margin: 8px 0 4px; padding-left: 4px; border-left: 3px solid #378ADD; }
+  .sub-title { font-size: 12px; font-weight: 600; color: #555; margin: 8px 0 4px; padding-left: 4px; border-left: 3px solid #4F8EF7; }
   .text-block { padding: 4px 12px; color: #555; font-size: 12px; }
   .item-list { padding: 2px 0; }
   .item { padding: 3px 12px; font-size: 12px; display: flex; }
@@ -139,7 +139,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
 </div>
 
 <!-- 未处理风险汇总 -->
-<div class="section-title"><span class="icon">⚠️</span> 未处理风险汇总 <span style="font-size:11px;color:#D85A30;font-weight:400;">（待处理 + 持续关注，去重共 ${allUnresolvedRisks.length} 项）</span></div>
+<div class="section-title"><span class="icon">⚠️</span> 未处理风险汇总 <span style="font-size:11px;color:#FB923C;font-weight:400;">（待处理 + 持续关注，去重共 ${allUnresolvedRisks.length} 项）</span></div>
 ${allUnresolvedRisks.length === 0
   ? '<div class="empty">🎉 当前所有项目无未处理风险，继续保持！</div>'
   : allUnresolvedRisks.map(({ projectName, color, risk }) => `
@@ -193,7 +193,7 @@ ${projectReports.map(({ project, latestReport }) => `
           <span class="item-num">${item.order}.</span>
           <div>
             <div class="item-title">${escapeHtml(item.title)}</div>
-            ${item.reason ? `<div class="item-detail" style="color:#D85A30;">📎 未完成原因：${escapeHtml(item.reason)}</div>` : ''}
+            ${item.reason ? `<div class="item-detail" style="color:#FB923C;">📎 未完成原因：${escapeHtml(item.reason)}</div>` : ''}
           </div>
         </div>`).join('')}</div>`
     }

@@ -125,11 +125,11 @@ export default function Trends() {
   }, [projects, allReports]);
 
   // 风险等级颜色
-  const levelColors = { '高': '#D85A30', '中': '#FAAD14', '低': '#639922' };
+  const levelColors = { '高': '#ff6b6b', '中': '#ffb347', '低': '#4ADE80' };
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: 60, color: '#6b7a93' }}>
         加载中...
       </div>
     );
@@ -175,13 +175,13 @@ export default function Trends() {
             {progressData.length > 0 ? (
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={progressData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
                   <XAxis dataKey="week" fontSize={12} />
                   <YAxis domain={[0, 100]} fontSize={12} tickFormatter={v => `${v}%`} />
                   <Tooltip
                     formatter={(value) => [`${value}%`, '']}
                     labelFormatter={(label) => `周次：${label}`}
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    contentStyle={{ fontSize: 12, borderRadius: 12 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                   {projects.map(p => (
@@ -209,25 +209,25 @@ export default function Trends() {
             <h3 className={shared.sectionTitle}>最新一期进度汇总</h3>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #e0e0e0' }}>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>项目</th>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>负责人</th>
-                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>最新周次</th>
-                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>完成进度</th>
-                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#999', fontWeight: 400, fontSize: 12 }}>周报期数</th>
+                <tr style={{ borderBottom: '1px solid #e0e5ec' }}>
+                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#6b7a93', fontWeight: 400, fontSize: 12 }}>项目</th>
+                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#6b7a93', fontWeight: 400, fontSize: 12 }}>负责人</th>
+                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#6b7a93', fontWeight: 400, fontSize: 12 }}>最新周次</th>
+                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#6b7a93', fontWeight: 400, fontSize: 12 }}>完成进度</th>
+                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#6b7a93', fontWeight: 400, fontSize: 12 }}>周报期数</th>
                 </tr>
               </thead>
               <tbody>
                 {latestProgressTable.map(({ project, latest }) => {
                   const prpts = allReports.filter(r => r.projectId === project.id);
                   return (
-                    <tr key={project.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                    <tr key={project.id} style={{ borderBottom: '1px solid #f0f2f7' }}>
                       <td style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 10, height: 10, borderRadius: 3, background: project.color, display: 'inline-block' }} />
                         <span style={{ fontWeight: 500 }}>{project.name}</span>
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#666' }}>{project.owner}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#666' }}>
+                      <td style={{ padding: '10px 12px', color: '#6b7a93' }}>{project.owner}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#6b7a93' }}>
                         {latest ? latest.weekLabel : '—'}
                       </td>
                       <td style={{ padding: '10px 12px', textAlign: 'center' }}>
@@ -239,7 +239,7 @@ export default function Trends() {
                           {latest ? `${latest.progress}%` : '—'}
                         </span>
                       </td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#666' }}>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#6b7a93' }}>
                         {prpts.length}
                       </td>
                     </tr>
@@ -260,13 +260,13 @@ export default function Trends() {
             {activeRiskData.length > 0 ? (
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={activeRiskData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
                   <XAxis dataKey="week" fontSize={12} />
                   <YAxis allowDecimals={false} fontSize={12} />
                   <Tooltip
                     formatter={(value) => [`${value} 项`, '']}
                     labelFormatter={(label) => `周次：${label}`}
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    contentStyle={{ fontSize: 12, borderRadius: 12 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                   {projects.map(p => (
@@ -295,12 +295,12 @@ export default function Trends() {
             {riskLevelData.some(d => d.高 + d.中 + d.低 > 0) ? (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={riskLevelData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis allowDecimals={false} fontSize={12} />
                   <Tooltip
                     formatter={(value, name) => [`${value} 项`, name]}
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    contentStyle={{ fontSize: 12, borderRadius: 12 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                   <Bar dataKey="高" stackId="a" fill={levelColors['高']} name="高风险" />

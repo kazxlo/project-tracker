@@ -188,7 +188,7 @@ export default function ProjectDetail() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: 60, color: '#6b7a93' }}>
         加载中...
       </div>
     );
@@ -360,7 +360,7 @@ export default function ProjectDetail() {
                       <div className={shared.reportRowStats}>
                         完成{r.completedItems.length}项 · 计划{r.plannedItems.length}项 · 风险{r.risks.length}项
                         {updatedTime && (
-                          <span style={{ marginLeft: 12, fontSize: 11, color: '#aaa' }}>最后修改 {updatedTime}</span>
+                          <span style={{ marginLeft: 12, fontSize: 11, color: '#9aaec9' }}>最后修改 {updatedTime}</span>
                         )}
                       </div>
                     </div>
@@ -433,14 +433,14 @@ export default function ProjectDetail() {
                 });
                 const items = Array.from(seen.values());
                 if (items.length === 0) {
-                  return <div className={shared.drillItem} style={{ color: '#999', textAlign: 'center', padding: 24 }}>暂无数据</div>;
+                  return <div className={shared.drillItem} style={{ color: '#6b7a93', textAlign: 'center', padding: 24 }}>暂无数据</div>;
                 }
                 return items.map((item, j) => (
                   <div key={j} className={shared.drillItem} style={{ padding: '8px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#3B6D11' }}>{item.risk.level}</span>
+                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#2d8a4e' }}>{item.risk.level}</span>
                       <span style={{ fontWeight: 500, fontSize: 13 }}>{item.risk.description}</span>
-                      <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f0f0', color: '#888' }}>{item.projectName}</span>
+                      <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f2f7', color: '#6b7a93' }}>{item.projectName}</span>
                       {canEdit ? (
                         <select
                           className={shared.statusSelectSm}
@@ -453,16 +453,16 @@ export default function ProjectDetail() {
                           <option value="已解决">✓ 已解决</option>
                         </select>
                       ) : (
-                        <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f0f0', color: '#666' }}>{item.risk.status}</span>
+                        <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f2f7', color: '#6b7a93' }}>{item.risk.status}</span>
                       )}
                     </div>
                     {item.risk.suggestion && (
-                      <div style={{ fontSize: 12, color: '#666', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
+                      <div style={{ fontSize: 12, color: '#6b7a93', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
                     )}
                     {riskDrillDown === 'resolved' && item.risk.resolvedAt && (
-                      <div style={{ fontSize: 12, color: '#639922', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
+                      <div style={{ fontSize: 12, color: '#4ADE80', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
                     )}
-                    <div style={{ fontSize: 11, color: '#999', paddingLeft: 48 }}>来源：{item.projectName} · {item.weekLabel}</div>
+                    <div style={{ fontSize: 11, color: '#6b7a93', paddingLeft: 48 }}>来源：{item.projectName} · {item.weekLabel}</div>
                   </div>
                 ));
               })()}
@@ -566,7 +566,7 @@ export default function ProjectDetail() {
                 <div>
                   <label className={shared.formLabel}>项目颜色</label>
                   <div className={shared.colorGrid}>
-                    {['#378ADD', '#639922', '#D85A30', '#7F77DD', '#3DA5A5', '#D4834A', '#B05E99', '#5B8DD6'].map(c => (
+                    {['#5B9EF5', '#4ADE80', '#FB923C', '#A78BFA', '#2DD4BF', '#FBBF24', '#F472B6', '#60A5FA'].map(c => (
                       <div
                         key={c}
                         className={`${shared.colorSwatch} ${childModal.form.color === c ? shared.colorSwatchActive : ''}`}
@@ -694,7 +694,7 @@ export default function ProjectDetail() {
                 <div className={shared.reportRowStats}>
                   完成{r.completedItems.length}项 · 计划{r.plannedItems.length}项 · 风险{r.risks.length}项
                   {updatedTime && (
-                    <span style={{ marginLeft: 12, fontSize: 11, color: '#aaa' }}>最后修改 {updatedTime}</span>
+                    <span style={{ marginLeft: 12, fontSize: 11, color: '#9aaec9' }}>最后修改 {updatedTime}</span>
                   )}
                 </div>
               </div>
@@ -739,12 +739,12 @@ export default function ProjectDetail() {
                 const h = Math.max(8, r.completedItems.length * 30);
                 return (
                   <div key={r.id} className={shared.barCol}>
-                    <div className={shared.barValue} style={{ color: '#378ADD' }}>{r.completedItems.length}</div>
+                    <div className={shared.barValue} style={{ color: '#4F8EF7' }}>{r.completedItems.length}</div>
                     <div
                       className={shared.barBody}
                       style={{
                         height: h,
-                        background: '#378ADD',
+                        background: '#4F8EF7',
                         opacity: 0.4 + (i / reports.length) * 0.6,
                       }}
                     />
@@ -785,12 +785,12 @@ export default function ProjectDetail() {
               });
               const items = Array.from(seen.values());
               if (items.length === 0) {
-                return <div className={shared.drillItem} style={{ color: '#999', textAlign: 'center', padding: 24 }}>暂无数据</div>;
+                return <div className={shared.drillItem} style={{ color: '#6b7a93', textAlign: 'center', padding: 24 }}>暂无数据</div>;
               }
               return items.map((item, j) => (
                 <div key={j} className={shared.drillItem} style={{ padding: '8px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#3B6D11' }}>{item.risk.level}</span>
+                    <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#2d8a4e' }}>{item.risk.level}</span>
                     <span style={{ fontWeight: 500, fontSize: 13 }}>{item.risk.description}</span>
                     {canEdit ? (
                       <select
@@ -804,21 +804,21 @@ export default function ProjectDetail() {
                         <option value="已解决">✓ 已解决</option>
                       </select>
                     ) : (
-                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f0f0', color: '#666' }}>
+                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f2f7', color: '#6b7a93' }}>
                         {item.risk.status}
                       </span>
                     )}
                     {savingRiskKey === item.risk.description && (
-                      <span style={{ fontSize: 11, color: '#999' }}>保存中…</span>
+                      <span style={{ fontSize: 11, color: '#6b7a93' }}>保存中…</span>
                     )}
                   </div>
                   {item.risk.suggestion && (
-                    <div style={{ fontSize: 12, color: '#666', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
+                    <div style={{ fontSize: 12, color: '#6b7a93', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
                   )}
                   {riskDrillDown === 'resolved' && item.risk.resolvedAt && (
-                    <div style={{ fontSize: 12, color: '#639922', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
+                    <div style={{ fontSize: 12, color: '#4ADE80', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
                   )}
-                  <div style={{ fontSize: 11, color: '#999', paddingLeft: 48 }}>来源：{item.weekLabel}</div>
+                  <div style={{ fontSize: 11, color: '#6b7a93', paddingLeft: 48 }}>来源：{item.weekLabel}</div>
                 </div>
               ));
             })()}
@@ -833,7 +833,7 @@ export default function ProjectDetail() {
 function emptyChildProject(): Project {
   return {
     id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0,
-    status: '正常推进', color: '#378ADD', parentId: undefined,
+    status: '正常推进', color: '#5B9EF5', parentId: undefined,
     description: '', serviceStart: '', serviceEnd: '',
   };
 }
@@ -888,10 +888,10 @@ function SummaryView({
         <div className={shared.summarySection}>
           <h3 className={shared.summarySectionTitle}>本周重点工作</h3>
           {latest?.completedItems.length === 0
-            ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无记录</p>
+            ? <p className={shared.summaryText} style={{ color: '#6b7a93' }}>暂无记录</p>
             : latest?.completedItems.map((item, i) => (
                 <div key={item.id} className={`${shared.clientItem} ${i < (latest?.completedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
-                  <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
+                  <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
                   <span style={{ fontWeight: 500 }}>{item.title}</span>
                 </div>
               ))
@@ -901,10 +901,10 @@ function SummaryView({
         <div className={shared.summarySection}>
           <h3 className={shared.summarySectionTitle}>下周工作计划</h3>
           {latest?.plannedItems.length === 0
-            ? <p className={shared.summaryText} style={{ color: '#999' }}>暂无计划</p>
+            ? <p className={shared.summaryText} style={{ color: '#6b7a93' }}>暂无计划</p>
             : latest?.plannedItems.map((item, i) => (
                 <div key={item.id} className={`${shared.clientItem} ${i < (latest?.plannedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
-                  <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
+                  <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
                   {item.title}
                 </div>
               ))
@@ -927,7 +927,7 @@ function SummaryView({
                 <div className={shared.summarySubProjectName}>
                   <span className={shared.summarySubProjectDot} style={{ background: c.color }} />
                   {c.name}
-                  <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#EAF3DE', color: '#3B6D11' }}>
+                  <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#EAF3DE', color: '#2d8a4e' }}>
                     {c.status} · {stats.progress}%
                   </span>
                 </div>
@@ -937,22 +937,22 @@ function SummaryView({
                 {clatest && (
                   <div className={shared.summarySubProjectItems}>
                     {clatest.completedItems.length > 0 && (
-                      <div className={shared.summarySubProjectItem} style={{ color: '#555', fontWeight: 500, marginTop: 4 }}>本周完成:</div>
+                      <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>本周完成:</div>
                     )}
                     {clatest.completedItems.slice(0, 3).map(ci => (
                       <div key={ci.id} className={shared.summarySubProjectItem}>• {ci.title}</div>
                     ))}
                     {clatest.plannedItems.length > 0 && (
-                      <div className={shared.summarySubProjectItem} style={{ color: '#555', fontWeight: 500, marginTop: 4 }}>下周计划:</div>
+                      <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>下周计划:</div>
                     )}
                     {clatest.plannedItems.slice(0, 3).map(pi => (
                       <div key={pi.id} className={shared.summarySubProjectItem}>• {pi.title}</div>
                     ))}
                     {clatest.risks.filter(rk => rk.status !== '已解决').length > 0 && (
-                      <div className={shared.summarySubProjectItem} style={{ color: '#555', fontWeight: 500, marginTop: 4 }}>当前风险:</div>
+                      <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>当前风险:</div>
                     )}
                     {clatest.risks.filter(rk => rk.status !== '已解决').slice(0, 3).map(rk => (
-                      <div key={rk.id} className={shared.summarySubProjectItem} style={{ color: '#D85A30' }}>• [{rk.level}] {rk.description}</div>
+                      <div key={rk.id} className={shared.summarySubProjectItem} style={{ color: '#FB923C' }}>• [{rk.level}] {rk.description}</div>
                     ))}
                   </div>
                 )}
@@ -982,13 +982,13 @@ function SummaryView({
               return (order[a.risk.level] ?? 9) - (order[b.risk.level] ?? 9);
             });
             if (items.length === 0) {
-              return <p className={shared.summaryText} style={{ color: '#999' }}>暂无风险</p>;
+              return <p className={shared.summaryText} style={{ color: '#6b7a93' }}>暂无风险</p>;
             }
             return items.map((item, i) => (
               <div key={i} className={shared.summaryRiskItem}>
                 <span className={shared.summaryRiskLevel} style={{
                   background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE',
-                  color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#3B6D11',
+                  color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#2d8a4e',
                 }}>
                   {item.risk.level}
                 </span>
@@ -996,7 +996,7 @@ function SummaryView({
                   {item.risk.description}
                   {item.risk.suggestion ? ` — ${item.risk.suggestion}` : ''}
                 </span>
-                <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f0f0', color: '#888' }}>
+                <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f2f7', color: '#6b7a93' }}>
                   {item.projectName}
                 </span>
               </div>
@@ -1031,14 +1031,14 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
 
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>建设目标</h3>
-        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: '#555' }}>
+        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: '#3d5a80' }}>
           {latest.goals || latest.summary || '暂无'}
         </p>
       </div>
 
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>重点内容</h3>
-        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: '#555' }}>
+        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: '#3d5a80' }}>
           {latest.highlights || '暂无'}
         </p>
       </div>
@@ -1046,26 +1046,26 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>本周工作情况</h3>
         {latest.completedItems.length === 0
-          ? <p className={shared.clientItem} style={{ color: '#999' }}>暂无记录</p>
+          ? <p className={shared.clientItem} style={{ color: '#6b7a93' }}>暂无记录</p>
           : latest.completedItems.map((item, i) => (
               <div
                 key={item.id}
                 className={`${shared.clientItem} ${i < latest.completedItems.length - 1 ? shared.clientItemBorder : ''}`}
               >
-                <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
+                <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
                 <span style={{ fontWeight: 500 }}>{item.title}</span>
                 {isP1 && item.progress && (
-                  <div style={{ fontSize: 12, color: '#666', marginTop: 4, paddingLeft: 20 }}>
+                  <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 4, paddingLeft: 20 }}>
                     进展：{item.progress}
                   </div>
                 )}
                 {isP1 && item.acceptance && (
-                  <div style={{ fontSize: 12, color: '#999', marginTop: 2, paddingLeft: 20 }}>
+                  <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 2, paddingLeft: 20 }}>
                     验收：{item.acceptance}
                   </div>
                 )}
                 {!isP1 && item.detail && (
-                  <span style={{ color: '#999' }}> — {item.detail}</span>
+                  <span style={{ color: '#6b7a93' }}> — {item.detail}</span>
                 )}
               </div>
             ))
@@ -1075,13 +1075,13 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>下周工作计划</h3>
         {latest.plannedItems.length === 0
-          ? <p className={shared.clientItem} style={{ color: '#999' }}>暂无计划</p>
+          ? <p className={shared.clientItem} style={{ color: '#6b7a93' }}>暂无计划</p>
           : latest.plannedItems.map((item, i) => (
               <div
                 key={item.id}
                 className={`${shared.clientItem} ${i < latest.plannedItems.length - 1 ? shared.clientItemBorder : ''}`}
               >
-                <span style={{ color: '#999', marginRight: 8 }}>{item.order}.</span>
+                <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
                 {item.title}
               </div>
             ))
@@ -1090,22 +1090,22 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
 
       <h3 className={shared.clientH3}>风险提示</h3>
       {latest.risks.length === 0
-        ? <p className={shared.clientItem} style={{ color: '#999' }}>本周无风险项</p>
+        ? <p className={shared.clientItem} style={{ color: '#6b7a93' }}>本周无风险项</p>
         : latest.risks.map((risk, i) => (
             <div
               key={risk.id}
               className={`${shared.clientItem} ${i < latest.risks.length - 1 ? shared.clientItemBorder : ''}`}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: risk.level === '高' ? '#FCEBEB' : risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: risk.level === '高' ? '#A32D2D' : risk.level === '中' ? '#854F0B' : '#3B6D11' }}>{risk.level}</span>
-                <span style={{ color: '#999', fontSize: 12 }}>{risk.order}.</span>
+                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: risk.level === '高' ? '#FCEBEB' : risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: risk.level === '高' ? '#A32D2D' : risk.level === '中' ? '#854F0B' : '#2d8a4e' }}>{risk.level}</span>
+                <span style={{ color: '#6b7a93', fontSize: 12 }}>{risk.order}.</span>
                 <span style={{ fontSize: 13 }}>{risk.description}</span>
-                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f0f0', color: '#666' }}>
+                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f2f7', color: '#6b7a93' }}>
                   {risk.status}
                 </span>
               </div>
               {risk.suggestion && (
-                <div style={{ fontSize: 12, color: '#999', paddingLeft: 60 }}>
+                <div style={{ fontSize: 12, color: '#6b7a93', paddingLeft: 60 }}>
                   💡 建议：{risk.suggestion}
                 </div>
               )}

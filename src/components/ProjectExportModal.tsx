@@ -94,15 +94,15 @@ export default function ProjectExportModal({ projects, allReports, onConfirm, on
         onClick={e => e.stopPropagation()}
         style={{
           background: '#fff',
-          borderRadius: 12,
+          borderRadius: 24,
           padding: '24px 28px',
           minWidth: 520,
           maxWidth: 620,
           maxHeight: '80vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-          border: '1px solid rgba(0,0,0,0.04)',
+          boxShadow: '0 8px 28px rgba(0,0,0,0.04)',
+          border: '0.5px solid rgba(0,0,0,0.04)',
         }}
       >
         {/* Header */}
@@ -155,7 +155,7 @@ export default function ProjectExportModal({ projects, allReports, onConfirm, on
             </div>
           ))}
           {filteredGroups.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 24, color: '#999', fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: 24, color: '#6b7a93', fontSize: 13 }}>
               无匹配项目
             </div>
           )}
@@ -168,9 +168,9 @@ export default function ProjectExportModal({ projects, allReports, onConfirm, on
           alignItems: 'center',
           marginTop: 16,
           paddingTop: 16,
-          borderTop: '1px solid rgba(0,0,0,0.06)',
+          borderTop: '0.5px solid rgba(0,0,0,0.06)',
         }}>
-          <span style={{ fontSize: 12, color: '#999' }}>
+          <span style={{ fontSize: 12, color: '#6b7a93' }}>
             已选 {selectedIds.size} / {projects.length} 个项目
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -222,7 +222,7 @@ function ProjectRow({
         type="checkbox"
         checked={selected}
         onChange={onToggle}
-        style={{ width: 16, height: 16, accentColor: '#378ADD', cursor: 'pointer', flexShrink: 0 }}
+        style={{ width: 16, height: 16, accentColor: '#4F8EF7', cursor: 'pointer', flexShrink: 0 }}
       />
       <span
         style={{
@@ -233,14 +233,14 @@ function ProjectRow({
           flexShrink: 0,
         }}
       />
-      <span style={{ flex: 1, fontSize: 13, color: '#333' }}>
+      <span style={{ flex: 1, fontSize: 13, color: '#1c2a44' }}>
         {project.name}
         {indent > 0 && (
-          <span style={{ fontSize: 11, color: '#aaa', marginLeft: 4 }}>↳ 子项目</span>
+          <span style={{ fontSize: 11, color: '#9aa3b2', marginLeft: 4 }}>↳ 子项目</span>
         )}
       </span>
-      <span style={{ fontSize: 12, color: '#999', marginRight: 12 }}>{project.owner}</span>
-      <span style={{ fontSize: 11, color: '#bbb', minWidth: 100, textAlign: 'right' }}>
+      <span style={{ fontSize: 12, color: '#6b7a93', marginRight: 12 }}>{project.owner}</span>
+      <span style={{ fontSize: 11, color: '#9aa3b2', minWidth: 100, textAlign: 'right' }}>
         {report ? `${report.label}${report.date ? ` · ${report.date}` : ''}` : '无周报'}
       </span>
     </label>

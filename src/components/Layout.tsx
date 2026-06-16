@@ -75,13 +75,13 @@ export default function Layout() {
           <span className={shared.weekLabel}>本周: {fmt(monday)} - {fmt(friday)}</span>
         </div>
         <div className={shared.headerRight}>
-          <span className={shared.textSmall} style={{ color: '#666' }}>
+          <span className={shared.textSmall} style={{ color: '#6b7a93' }}>
             {username}
             {role === 'admin' && (
-              <span style={{ fontSize: 11, color: '#378ADD', marginLeft: 4 }}>(管理员)</span>
+              <span style={{ fontSize: 11, color: '#4F8EF7', marginLeft: 4 }}>(管理员)</span>
             )}
             {role === 'public' && (
-              <span style={{ fontSize: 11, color: '#999', marginLeft: 4 }}>(公共访问)</span>
+              <span style={{ fontSize: 11, color: '#6b7a93', marginLeft: 4 }}>(公共访问)</span>
             )}
           </span>
           <button

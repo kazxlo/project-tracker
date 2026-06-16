@@ -119,7 +119,7 @@ function ProjectPermissions() {
   const topProjects = projects.filter(p => !p.parentId);
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>加载中...</div>;
+    return <div style={{ textAlign: 'center', padding: 40, color: '#6b7a93' }}>加载中...</div>;
   }
 
   return (
@@ -144,12 +144,12 @@ function ProjectPermissions() {
                   <h3 className={shared.sectionTitle} style={{ margin: 0, flex: 1 }}>
                     {p.name}
                     {childCount > 0 && (
-                      <span style={{ fontSize: 12, fontWeight: 400, color: '#999', marginLeft: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7a93', marginLeft: 8 }}>
                         ({childCount}个子项目自动继承)
                       </span>
                     )}
                   </h3>
-                  <span className={shared.textSmall} style={{ color: '#999' }}>
+                  <span className={shared.textSmall} style={{ color: '#6b7a93' }}>
                     {viewerIds.length === 0 ? '所有人可见' : `${viewerIds.length}人可见`}
                   </span>
                   <button
@@ -173,11 +173,11 @@ function ProjectPermissions() {
                           gap: 6,
                           padding: '4px 12px',
                           borderRadius: 6,
-                          background: checked ? 'rgba(55,138,221,0.08)' : '#f8f8f8',
-                          border: checked ? '1px solid rgba(55,138,221,0.25)' : '1px solid #eee',
+                          background: checked ? 'rgba(79,142,247,0.06)' : '#f8f9fc',
+                          border: checked ? '1px solid rgba(79,142,247,0.2)' : '1px solid #e8ecf2',
                           cursor: 'pointer',
                           fontSize: 13,
-                          color: checked ? '#378ADD' : '#666',
+                          color: checked ? '#4F8EF7' : '#6b7a93',
                           userSelect: 'none',
                           transition: 'all 0.15s',
                         }}
@@ -186,14 +186,14 @@ function ProjectPermissions() {
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleViewer(p.id, prof.id)}
-                          style={{ accentColor: '#378ADD' }}
+                          style={{ accentColor: '#4F8EF7' }}
                         />
                         {prof.display_name}
                       </label>
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 11, color: '#bbb', marginTop: 10 }}>
+                <div style={{ fontSize: 11, color: '#9aa3b2', marginTop: 10 }}>
                   {viewerIds.length === 0
                     ? '未勾选任何人 = 所有用户可见'
                     : '仅勾选的成员 + 管理员本人 可见此项目'}

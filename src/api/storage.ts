@@ -143,9 +143,9 @@ export function initDemoData(): void {
   // 没有项目 → 创建演示项目
   if (data.projects.length === 0) {
     data.projects = [
-      { id: 'p1', name: '在建项目验收管理', owner: '张三', startDate: '2026-03-17', status: '正常推进', color: '#378ADD' },
-      { id: 'p2', name: 'XC项目及深化设计', owner: '李四', startDate: '2026-03-17', status: '需关注', color: '#639922' },
-      { id: 'p3', name: '影像云', owner: '王五', startDate: '2026-03-17', status: '存在风险', color: '#D85A30' },
+      { id: 'p1', name: '在建项目验收管理', owner: '张三', startDate: '2026-03-17', status: '正常推进', color: '#5B9EF5' },
+      { id: 'p2', name: 'XC项目及深化设计', owner: '李四', startDate: '2026-03-17', status: '需关注', color: '#4ADE80' },
+      { id: 'p3', name: '影像云', owner: '王五', startDate: '2026-03-17', status: '存在风险', color: '#FB923C' },
       { id: 'p4', name: '三期设计方案', owner: '赵六', startDate: '2026-03-17', status: '正常推进', color: '#7F77DD' },
     ];
   }

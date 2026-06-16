@@ -128,18 +128,18 @@ export default function ChildProjectCard({
               className={shared.serviceTimelineFill}
               style={{
                 width: `${remainingRatio}%`,
-                background: expired ? '#D85A30' : remainingRatio <= 20 ? '#E8A33D' : project.color,
+                background: expired ? '#FB923C' : remainingRatio <= 20 ? '#FBBF24' : project.color,
               }}
             />
           </div>
           <span className={shared.serviceTimelineDate}>
             {formatPeriod(project.serviceStart, project.serviceEnd)}
             {remainingDays !== null && !expired && remainingDays <= 30 && (
-              <span style={{ color: remainingDays <= 0 ? '#D85A30' : '#E8A33D', marginLeft: 6, fontWeight: 500 }}>
+              <span style={{ color: remainingDays <= 0 ? '#FB923C' : '#FBBF24', marginLeft: 6, fontWeight: 500 }}>
                 剩余{remainingDays}天
               </span>
             )}
-            {expired && <span style={{ color: '#D85A30', marginLeft: 6, fontWeight: 500 }}>已到期</span>}
+            {expired && <span style={{ color: '#FB923C', marginLeft: 6, fontWeight: 500 }}>已到期</span>}
           </span>
         </div>
       )}
@@ -150,7 +150,7 @@ export default function ChildProjectCard({
           <span>周报 <strong>{stats.reportCount}</strong>期</span>
           <span>
             风险{' '}
-            <strong style={{ color: stats.riskCount > 0 ? '#D85A30' : undefined }}>
+            <strong style={{ color: stats.riskCount > 0 ? '#FB923C' : undefined }}>
               {stats.riskCount}
             </strong>
             项

@@ -14,8 +14,8 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 const COLOR_PALETTE = [
-  '#378ADD', '#639922', '#D85A30', '#7F77DD',
-  '#3DA5A5', '#D4834A', '#B05E99', '#5B8DD6',
+  '#5B9EF5', '#4ADE80', '#FB923C', '#A78BFA',
+  '#2DD4BF', '#FBBF24', '#F472B6', '#60A5FA',
 ];
 
 function emptyProject(): Project {
@@ -350,7 +350,7 @@ export default function Dashboard() {
                   <div className={shared.statLabel}>周报(期)</div>
                 </div>
                 <div>
-                  <div className={shared.statValue} style={{ color: stats.risks > 0 ? '#D85A30' : '#333' }}>
+                  <div className={shared.statValue} style={{ color: stats.risks > 0 ? '#FB923C' : '#1c2a44' }}>
                     {stats.risks}
                   </div>
                   <div className={shared.statLabel}>风险项</div>
@@ -404,9 +404,9 @@ export default function Dashboard() {
           <h3 className={shared.sectionTitle}>整体汇总</h3>
           <div className={shared.summaryGrid}>
             {[
-              { key: 'completed', val: totalCompleted, label: '累计完成事项', color: '#378ADD' },
-              { key: 'planned', val: remainingPlanned, label: '剩余计划事项', color: '#639922' },
-              { key: 'risks', val: totalRisks, label: '累计风险项', color: '#D85A30' },
+              { key: 'completed', val: totalCompleted, label: '累计完成事项', color: '#4F8EF7' },
+              { key: 'planned', val: remainingPlanned, label: '剩余计划事项', color: '#4ADE80' },
+              { key: 'risks', val: totalRisks, label: '累计风险项', color: '#FB923C' },
               { key: 'members', val: projects.filter(p => !p.parentId).length, label: '协作成员', color: '#7F77DD' },
             ].map((item, i) => (
               <div
@@ -556,7 +556,7 @@ export default function Dashboard() {
                 </div>
                 <div className={shared.formGroup}>
                   {editForm.deadlineExtensions && editForm.deadlineExtensions > 0 ? (
-                    <div style={{ fontSize: 12, color: '#D85A30', paddingTop: 20 }}>
+                    <div style={{ fontSize: 12, color: '#FB923C', paddingTop: 20 }}>
                       ⚠ 已延期{editForm.deadlineExtensions}次
                       {editForm.lastDeadline ? `，上一次截止时间：${(() => {
                         const ld = new Date(editForm.lastDeadline + 'T00:00:00');
