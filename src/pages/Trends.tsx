@@ -47,80 +47,144 @@ export default function Trends() {
     });
   }, [allReports]);
 
-  // 进度趋势数据：每个周次标签 → 各项目进度
+  // 进度趋势数据：每个周次标签 → 各父项目进度（子项目合并到父项目）
   const progressData = useMemo(() => {
+    const topProjects = projects.filter(p => !p.parentId);
     return sortedWeekLabels.map(label => {
       const row: Record<string, string | number> = { week: label };
-      projects.forEach(p => {
+      topProjects.forEach(parent => {
+        const childProjects = projects.filter(c => c.parentId === parent.id);
+        const targetIds = [parent.id, ...childProjects.map(c => c.id)];
+        const hasChildren = childProjects.length > 0;
         const reportsInWeek = allReports.filter(
-          r => r.projectId === p.id && r.weekLabel === label
+          r => targetIds.includes(r.projectId) && r.weekLabel === label
         );
-        // 同一周多次提交取最新的
-        const latest = reportsInWeek.length > 0
-          ? reportsInWeek.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
-          : null;
-        row[p.name] = latest ? latest.progress : 0;
+        let progress = 0;
+        if (hasChildren) {
+          // 子项目进度平均值
+          let childSum = 0;
+          let childCount = 0;
+          childProjects.forEach(child => {
+            const childReports = reportsInWeek.filter(r => r.projectId === child.id);
+            const latest = childReports.length > 0
+              ? childReports.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
+              : null;
+            if (latest && latest.progress > 0) {
+              childSum += latest.progress;
+              childCount++;
+            }
+          });
+          if (childCount > 0) {
+            progress = Math.round(childSum / childCount);
+          } else {
+            const parentReports = reportsInWeek.filter(r => r.projectId === parent.id);
+            const parentLatest = parentReports.length > 0
+              ? parentReports.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
+              : null;
+            progress = parentLatest ? parentLatest.progress : 0;
+          }
+        } else {
+          const parentReports = reportsInWeek.filter(r => r.projectId === parent.id);
+          const parentLatest = parentReports.length > 0
+            ? parentReports.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
+            : null;
+          progress = parentLatest ? parentLatest.progress : 0;
+        }
+        row[parent.name] = progress;
       });
       return row;
     });
   }, [sortedWeekLabels, projects, allReports]);
 
-  // 活跃风险数量趋势数据：每个周次 → 各项目活跃风险数（待处理+持续关注，去重）
+  // 活跃风险数量趋势数据：每个周次 → 所有项目活跃风险总数（待处理+持续关注，跨项目去重）
   const activeRiskData = useMemo(() => {
     return sortedWeekLabels.map(label => {
       const row: Record<string, string | number> = { week: label };
+      const seen = new Set<string>();
       projects.forEach(p => {
         const reportsInWeek = allReports.filter(
           r => r.projectId === p.id && r.weekLabel === label
         );
-        const seen = new Set<string>();
         reportsInWeek.forEach(r => {
           r.risks.forEach(rk => {
             if (rk.status === '已解决') return;
-            const key = rk.description.trim();
-            if (key) seen.add(key);
+            const key = `${p.id}::${rk.description.trim()}`;
+            if (key && !seen.has(key)) seen.add(key);
           });
         });
-        row[p.name] = seen.size;
       });
+      row['活跃风险数'] = seen.size;
       return row;
     });
   }, [sortedWeekLabels, projects, allReports]);
 
-  // 风险等级分布（堆叠）：每个项目一列，堆叠 高/中/低（去重）
+  // 累计风险等级分布（堆叠）：每个父项目一列，子项目合并到父项目中，堆叠 高/中/低（去重）
   const riskLevelData = useMemo(() => {
-    return projects.map(p => {
-      const prpts = allReports.filter(r => r.projectId === p.id);
+    const topProjects = projects.filter(p => !p.parentId);
+    return topProjects.map(parent => {
+      const childIds = projects.filter(c => c.parentId === parent.id).map(c => c.id);
+      const targetIds = [parent.id, ...childIds];
       const seenHigh = new Set<string>();
       const seenMid = new Set<string>();
       const seenLow = new Set<string>();
-      prpts.forEach(r => {
-        r.risks.forEach(rk => {
-          const key = rk.description.trim();
-          if (!key) return;
-          if (rk.level === '高') seenHigh.add(key);
-          else if (rk.level === '中') seenMid.add(key);
-          else seenLow.add(key);
+      targetIds.forEach(pid => {
+        const prpts = allReports.filter(r => r.projectId === pid);
+        prpts.forEach(r => {
+          r.risks.forEach(rk => {
+            const key = rk.description.trim();
+            if (!key || seenHigh.has(key) || seenMid.has(key) || seenLow.has(key)) return;
+            if (rk.level === '高') seenHigh.add(key);
+            else if (rk.level === '中') seenMid.add(key);
+            else seenLow.add(key);
+          });
         });
       });
       return {
-        name: p.name,
+        name: parent.name,
         高: seenHigh.size,
         中: seenMid.size,
         低: seenLow.size,
-        color: p.color,
+        color: parent.color,
       };
     });
   }, [projects, allReports]);
 
-  // 最新进度汇总表格
+  // 最新进度汇总表格（子项目合并到父项目）
   const latestProgressTable = useMemo(() => {
-    return projects.map(p => {
-      const prpts = allReports.filter(r => r.projectId === p.id);
+    const topProjects = projects.filter(p => !p.parentId);
+    return topProjects.map(parent => {
+      const childProjects = projects.filter(c => c.parentId === parent.id);
+      const targetIds = [parent.id, ...childProjects.map(c => c.id)];
+      const prpts = allReports.filter(r => targetIds.includes(r.projectId));
       const latest = prpts.length > 0
         ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
         : null;
-      return { project: p, latest };
+      // 进度：子项目取平均值
+      let progress = latest?.progress || 0;
+      if (childProjects.length > 0) {
+        let childSum = 0;
+        let childCount = 0;
+        childProjects.forEach(child => {
+          const crpts = allReports.filter(r => r.projectId === child.id);
+          const clatest = crpts.length > 0
+            ? crpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
+            : null;
+          if (clatest && clatest.progress > 0) {
+            childSum += clatest.progress;
+            childCount++;
+          }
+        });
+        if (childCount > 0) {
+          progress = Math.round(childSum / childCount);
+        }
+      }
+      return {
+        project: parent,
+        latest,
+        reportCount: prpts.length,
+        childCount: childProjects.length,
+        progress,
+      };
     });
   }, [projects, allReports]);
 
@@ -184,7 +248,7 @@ export default function Trends() {
                     contentStyle={{ fontSize: 12, borderRadius: 12 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                  {projects.map(p => (
+                  {projects.filter(p => !p.parentId).map(p => (
                     <Line
                       key={p.id}
                       type="monotone"
@@ -218,13 +282,15 @@ export default function Trends() {
                 </tr>
               </thead>
               <tbody>
-                {latestProgressTable.map(({ project, latest }) => {
-                  const prpts = allReports.filter(r => r.projectId === project.id);
+                {latestProgressTable.map(({ project, latest, reportCount, childCount, progress }) => {
                   return (
                     <tr key={project.id} style={{ borderBottom: '1px solid #f0f2f7' }}>
                       <td style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 10, height: 10, borderRadius: 3, background: project.color, display: 'inline-block' }} />
                         <span style={{ fontWeight: 500 }}>{project.name}</span>
+                        {childCount > 0 && (
+                          <span style={{ fontSize: 11, color: '#6b7a93' }}>(含{childCount}个子项目)</span>
+                        )}
                       </td>
                       <td style={{ padding: '10px 12px', color: '#6b7a93' }}>{project.owner}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'center', color: '#6b7a93' }}>
@@ -236,11 +302,14 @@ export default function Trends() {
                           color: project.color,
                           fontSize: 15,
                         }}>
-                          {latest ? `${latest.progress}%` : '—'}
+                          {latest ? `${progress}%` : '—'}
                         </span>
+                        {childCount > 0 && latest && (
+                          <span style={{ fontSize: 11, color: '#6b7a93', marginLeft: 4 }}>(子项目均值)</span>
+                        )}
                       </td>
                       <td style={{ padding: '10px 12px', textAlign: 'center', color: '#6b7a93' }}>
-                        {prpts.length}
+                        {reportCount}
                       </td>
                     </tr>
                   );
@@ -256,7 +325,7 @@ export default function Trends() {
         <>
           {/* 图表A：活跃风险数量趋势 */}
           <div className={shared.section}>
-            <h3 className={shared.sectionTitle}>活跃风险数量趋势（待处理 + 持续关注）</h3>
+            <h3 className={shared.sectionTitle}>活跃风险数量趋势</h3>
             {activeRiskData.length > 0 ? (
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={activeRiskData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
@@ -264,24 +333,21 @@ export default function Trends() {
                   <XAxis dataKey="week" fontSize={12} />
                   <YAxis allowDecimals={false} fontSize={12} />
                   <Tooltip
-                    formatter={(value) => [`${value} 项`, '']}
+                    formatter={(value) => [`${value} 项`, '活跃风险数']}
                     labelFormatter={(label) => `周次：${label}`}
                     contentStyle={{ fontSize: 12, borderRadius: 12 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                  {projects.map(p => (
-                    <Line
-                      key={p.id}
-                      type="monotone"
-                      dataKey={p.name}
-                      stroke={p.color}
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                      connectNulls
-                      name={p.name}
-                    />
-                  ))}
+                  <Line
+                    type="monotone"
+                    dataKey="活跃风险数"
+                    stroke="#ff6b6b"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#ff6b6b' }}
+                    activeDot={{ r: 6 }}
+                    connectNulls
+                    name="活跃风险数"
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -291,7 +357,7 @@ export default function Trends() {
 
           {/* 图表B：风险等级分布（堆叠柱状图） */}
           <div className={shared.section}>
-            <h3 className={shared.sectionTitle}>累计风险等级分布（去重后）</h3>
+            <h3 className={shared.sectionTitle}>累计风险等级分布</h3>
             {riskLevelData.some(d => d.高 + d.中 + d.低 > 0) ? (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={riskLevelData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
