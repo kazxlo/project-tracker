@@ -861,6 +861,7 @@ function SummaryView({
   const latest = reports.length > 0
     ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
     : null;
+  const hasChildren = childProjects.length > 0;
 
   return (
     <div>
@@ -885,6 +886,7 @@ function SummaryView({
           <p className={shared.summaryText}>{latest?.highlights || '暂无'}</p>
         </div>
 
+        {!hasChildren && (
         <div className={shared.summarySection}>
           <h3 className={shared.summarySectionTitle}>本周重点工作</h3>
           {latest?.completedItems.length === 0
@@ -897,7 +899,9 @@ function SummaryView({
               ))
           }
         </div>
+        )}
 
+        {!hasChildren && (
         <div className={shared.summarySection}>
           <h3 className={shared.summarySectionTitle}>下周工作计划</h3>
           {latest?.plannedItems.length === 0
@@ -910,6 +914,7 @@ function SummaryView({
               ))
           }
         </div>
+        )}
 
         {/* 各子项目最新状态 */}
         <div className={shared.summarySection}>
@@ -936,24 +941,52 @@ function SummaryView({
                 </div>
                 {clatest && (
                   <div className={shared.summarySubProjectItems}>
-                    {clatest.completedItems.length > 0 && (
-                      <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>本周完成:</div>
+                    {hasChildren ? (
+                      <>
+                        <div className={shared.summarySubProjectItem} style={{ color: '#6b7a93', fontWeight: 500, marginTop: 4 }}>
+                          周报时间：{clatest.weekLabel}（{clatest.weekStart} - {clatest.weekEnd}）
+                        </div>
+                        {clatest.goals ? (
+                          <>
+                            <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>建设目标:</div>
+                            <div className={shared.summarySubProjectItem} style={{ color: '#6b7a93' }}>{clatest.goals}</div>
+                          </>
+                        ) : null}
+                        {clatest.highlights ? (
+                          <>
+                            <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>重点内容:</div>
+                            <div className={shared.summarySubProjectItem} style={{ color: '#6b7a93' }}>{clatest.highlights}</div>
+                          </>
+                        ) : null}
+                        {clatest.plannedItems.length > 0 && (
+                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>下周工作计划:</div>
+                        )}
+                        {clatest.plannedItems.map(pi => (
+                          <div key={pi.id} className={shared.summarySubProjectItem}>• {pi.title}</div>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {clatest.completedItems.length > 0 && (
+                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>本周完成:</div>
+                        )}
+                        {clatest.completedItems.slice(0, 3).map(ci => (
+                          <div key={ci.id} className={shared.summarySubProjectItem}>• {ci.title}</div>
+                        ))}
+                        {clatest.plannedItems.length > 0 && (
+                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>下周计划:</div>
+                        )}
+                        {clatest.plannedItems.slice(0, 3).map(pi => (
+                          <div key={pi.id} className={shared.summarySubProjectItem}>• {pi.title}</div>
+                        ))}
+                        {clatest.risks.filter(rk => rk.status !== '已解决').length > 0 && (
+                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>当前风险:</div>
+                        )}
+                        {clatest.risks.filter(rk => rk.status !== '已解决').slice(0, 3).map(rk => (
+                          <div key={rk.id} className={shared.summarySubProjectItem} style={{ color: '#FB923C' }}>• [{rk.level}] {rk.description}</div>
+                        ))}
+                      </>
                     )}
-                    {clatest.completedItems.slice(0, 3).map(ci => (
-                      <div key={ci.id} className={shared.summarySubProjectItem}>• {ci.title}</div>
-                    ))}
-                    {clatest.plannedItems.length > 0 && (
-                      <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>下周计划:</div>
-                    )}
-                    {clatest.plannedItems.slice(0, 3).map(pi => (
-                      <div key={pi.id} className={shared.summarySubProjectItem}>• {pi.title}</div>
-                    ))}
-                    {clatest.risks.filter(rk => rk.status !== '已解决').length > 0 && (
-                      <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>当前风险:</div>
-                    )}
-                    {clatest.risks.filter(rk => rk.status !== '已解决').slice(0, 3).map(rk => (
-                      <div key={rk.id} className={shared.summarySubProjectItem} style={{ color: '#FB923C' }}>• [{rk.level}] {rk.description}</div>
-                    ))}
                   </div>
                 )}
               </div>
