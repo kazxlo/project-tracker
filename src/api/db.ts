@@ -211,21 +211,44 @@ export function generateWeekLabel(weekStart: string): string {
 
 // ==================== 数据导出（保留兼容旧功能） ====================
 
-/** 导出项目数据为 JSON */
+/** 导出项目数据为 JSON（按项目嵌套周报） */
 export async function exportAllData(): Promise<string> {
   const [projects, reports] = await Promise.all([getProjects(), getAllReports()]);
-  return JSON.stringify({ projects, reports }, null, 2);
+  const reportMap = new Map<string, typeof reports>();
+  reports.forEach(r => {
+    const list = reportMap.get(r.projectId) || [];
+    list.push(r);
+    reportMap.set(r.projectId, list);
+  });
+  const projectsWithReports = projects.map(p => ({
+    ...p,
+    reports: reportMap.get(p.id) || [],
+  }));
+  return JSON.stringify({ projects: projectsWithReports }, null, 2);
 }
 
-/** 从 JSON 导入数据（会覆盖当前数据） */
+/** 从 JSON 导入数据（会覆盖当前数据，兼容新旧格式） */
 export async function importAllData(jsonStr: string): Promise<{ success: boolean; message: string }> {
   try {
     const parsed = JSON.parse(jsonStr);
     if (!parsed || !Array.isArray(parsed.projects)) {
       return { success: false, message: '数据格式无效：缺少 projects 字段' };
     }
-    if (!Array.isArray(parsed.reports)) {
-      return { success: false, message: '数据格式无效：缺少 reports 字段' };
+    // 兼容新旧格式：新格式每个project内含reports数组，旧格式顶层有reports数组
+    let allProjects: Project[];
+    let allReports: WeeklyReport[];
+    if (parsed.projects.length > 0 && Array.isArray(parsed.projects[0].reports)) {
+      // 新格式：projects 内含 reports
+      const nested = parsed.projects as (Project & { reports: WeeklyReport[] })[];
+      allProjects = nested.map(({ reports: _reports, ...p }) => p as Project);
+      allReports = nested.flatMap(p => (p.reports || []) as WeeklyReport[]);
+    } else {
+      // 旧格式：顶层 projects + reports 分开
+      if (!Array.isArray(parsed.reports)) {
+        return { success: false, message: '数据格式无效：缺少 reports 字段' };
+      }
+      allProjects = parsed.projects;
+      allReports = parsed.reports;
     }
     // 先清空再导入
     const { error: delError } = await supabase.from('weekly_reports').delete().neq('id', '__skip__');
@@ -233,13 +256,13 @@ export async function importAllData(jsonStr: string): Promise<{ success: boolean
     const { error: delProjError } = await supabase.from('projects').delete().neq('id', '__skip__');
     if (delProjError) throw delProjError;
 
-    for (const p of parsed.projects) {
+    for (const p of allProjects) {
       await saveProject(p);
     }
-    for (const r of parsed.reports) {
+    for (const r of allReports) {
       await saveReport(r);
     }
-    return { success: true, message: `导入成功：${parsed.projects.length} 个项目，${parsed.reports.length} 份周报` };
+    return { success: true, message: `导入成功：${allProjects.length} 个项目，${allReports.length} 份周报` };
   } catch {
     return { success: false, message: '无法解析 JSON 数据，请确认文件格式正确' };
   }

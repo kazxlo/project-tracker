@@ -110,14 +110,25 @@ export function generateWeekLabel(weekStart: string): string {
 }
 
 /**
- * 导出全部数据为 JSON 字符串
+ * 导出全部数据为 JSON 字符串（按项目嵌套周报）
  */
 export function exportAllData(): string {
-  return JSON.stringify(loadData(), null, 2);
+  const data = loadData();
+  const reportMap = new Map<string, typeof data.reports>();
+  data.reports.forEach(r => {
+    const list = reportMap.get(r.projectId) || [];
+    list.push(r);
+    reportMap.set(r.projectId, list);
+  });
+  const projectsWithReports = data.projects.map(p => ({
+    ...p,
+    reports: reportMap.get(p.id) || [],
+  }));
+  return JSON.stringify({ projects: projectsWithReports }, null, 2);
 }
 
 /**
- * 从 JSON 字符串导入数据（会覆盖当前所有数据）
+ * 从 JSON 字符串导入数据（会覆盖当前所有数据，兼容新旧格式）
  */
 export function importAllData(jsonStr: string): { success: boolean; message: string } {
   try {
@@ -125,11 +136,22 @@ export function importAllData(jsonStr: string): { success: boolean; message: str
     if (!parsed || !Array.isArray(parsed.projects)) {
       return { success: false, message: '数据格式无效：缺少 projects 字段' };
     }
-    if (!Array.isArray(parsed.reports)) {
-      return { success: false, message: '数据格式无效：缺少 reports 字段' };
+    // 兼容新旧格式
+    let allProjects: Project[];
+    let allReports: WeeklyReport[];
+    if (parsed.projects.length > 0 && Array.isArray(parsed.projects[0].reports)) {
+      const nested = parsed.projects as (Project & { reports: WeeklyReport[] })[];
+      allProjects = nested.map(({ reports: _reports, ...p }) => p);
+      allReports = nested.flatMap(p => (p.reports || []) as WeeklyReport[]);
+    } else {
+      if (!Array.isArray(parsed.reports)) {
+        return { success: false, message: '数据格式无效：缺少 reports 字段' };
+      }
+      allProjects = parsed.projects;
+      allReports = parsed.reports;
     }
-    saveData(parsed as AppData);
-    return { success: true, message: `导入成功：${parsed.projects.length} 个项目，${parsed.reports.length} 份周报` };
+    saveData({ projects: allProjects, reports: allReports });
+    return { success: true, message: `导入成功：${allProjects.length} 个项目，${allReports.length} 份周报` };
   } catch {
     return { success: false, message: '无法解析 JSON 数据，请确认文件格式正确' };
   }
