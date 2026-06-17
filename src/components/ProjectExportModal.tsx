@@ -73,10 +73,13 @@ export default function ProjectExportModal({ projects, allReports, onConfirm, on
   const toggleOne = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
+      const childIds = projects.filter(p => p.parentId === id).map(p => p.id);
       if (next.has(id)) {
         next.delete(id);
+        childIds.forEach(cid => next.delete(cid));
       } else {
         next.add(id);
+        childIds.forEach(cid => next.add(cid));
       }
       return next;
     });

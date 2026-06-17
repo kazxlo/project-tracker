@@ -6,6 +6,8 @@ import type { Project, WeeklyReport, Risk } from '../types';
 interface ProjectReport {
   project: Project;
   latestReport: WeeklyReport | null;
+  childReports?: { project: Project; latestReport: WeeklyReport | null }[];
+  isParentWithChildren: boolean;
 }
 
 /** HTML 转义，防止 PDF 导出时的 XSS 注入攻击 */
@@ -19,28 +21,65 @@ function escapeHtml(text: string): string {
 }
 
 export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyReport[]) {
-  // 1. 收集各项目最新一期周报
-  const projectReports: ProjectReport[] = projects.map(p => {
+  // 1. 构建父子关系映射
+  const childByParent = new Map<string, Project[]>();
+  projects.forEach(p => {
+    if (p.parentId) {
+      if (!childByParent.has(p.parentId)) childByParent.set(p.parentId, []);
+      childByParent.get(p.parentId)!.push(p);
+    }
+  });
+
+  // 2. 收集所有未处理风险（来自所有选中项目含子项目，去重并排序）
+  const childProjectIds = new Set<string>();
+  projects.forEach(p => {
+    if (p.parentId && projects.some(pp => pp.id === p.parentId)) {
+      childProjectIds.add(p.id);
+    }
+  });
+  const riskMap = new Map<string, { projectName: string; color: string; risk: Risk }>();
+  projects.forEach(p => {
     const prpts = allReports.filter(r => r.projectId === p.id);
     const latest = prpts.length > 0
       ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
       : null;
-    return { project: p, latestReport: latest };
-  });
-
-  // 2. 收集所有未处理风险（待处理 + 持续关注，去重）
-  const allUnresolvedRisks: { projectName: string; color: string; risk: Risk }[] = [];
-  const seenRisk = new Set<string>();
-  projectReports.forEach(({ project, latestReport }) => {
-    if (!latestReport) return;
-    latestReport.risks.forEach(rk => {
+    if (!latest) return;
+    latest.risks.forEach(rk => {
       if (rk.status === '已解决') return;
       const key = rk.description.trim();
-      if (key && !seenRisk.has(key)) {
-        seenRisk.add(key);
-        allUnresolvedRisks.push({ projectName: project.name, color: project.color, risk: rk });
+      if (key && !riskMap.has(key)) {
+        riskMap.set(key, { projectName: p.name, color: p.color, risk: rk });
       }
     });
+  });
+  const allUnresolvedRisks = Array.from(riskMap.values()).sort((a, b) => {
+    const order: Record<string, number> = { '高': 0, '中': 1, '低': 2 };
+    return (order[a.risk.level] ?? 9) - (order[b.risk.level] ?? 9);
+  });
+
+  // 3. 构建项目报告列表（父项目聚合子项目数据，单独子项目跳过展示）
+  const displayProjects = projects.filter(p => !childProjectIds.has(p.id));
+  const projectReports: ProjectReport[] = displayProjects.map(p => {
+    const prpts = allReports.filter(r => r.projectId === p.id);
+    const latest = prpts.length > 0
+      ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
+      : null;
+    const children = childByParent.get(p.id) || [];
+    const childReports = children.length > 0
+      ? children.map(c => {
+          const crpts = allReports.filter(r => r.projectId === c.id);
+          const clatest = crpts.length > 0
+            ? crpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
+            : null;
+          return { project: c, latestReport: clatest };
+        })
+      : undefined;
+    return {
+      project: p,
+      latestReport: latest,
+      childReports,
+      isParentWithChildren: children.length > 0,
+    };
   });
 
   const today = new Date();
@@ -154,7 +193,86 @@ ${allUnresolvedRisks.length === 0
 <div style="border-top:1px dashed #ddd;margin:16px 0;"></div>
 
 <!-- 各项目详细内容 -->
-${projectReports.map(({ project, latestReport }) => `
+${projectReports.map(pr => {
+  const { project, latestReport, childReports, isParentWithChildren } = pr;
+  // 辅助：渲染子项目标签
+  const childTag = (name: string, color: string) =>
+    `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;font-weight:500;color:#fff;background:${escapeHtml(color)};margin-right:4px;">${escapeHtml(name)}</span>`;
+
+  if (isParentWithChildren && childReports && childReports.length > 0) {
+    // 父项目有子项目：建设目标/重点内容来自父项目，其他汇总自子项目
+    const totalCompleted = childReports.reduce((s, cr) => s + (cr.latestReport?.completedItems.length || 0), 0);
+    const totalPlanned = childReports.reduce((s, cr) => s + (cr.latestReport?.plannedItems.length || 0), 0);
+    let itemIdx = 0;
+    return `
+<div class="project-section">
+  <div class="project-header">
+    <span class="project-dot" style="background:${escapeHtml(project.color)};"></span>
+    <span class="project-name">${escapeHtml(project.name)}</span>
+    <span class="project-meta">负责人：${escapeHtml(project.owner)} · 子项目 ${childReports.length} 个</span>
+  </div>
+
+  <div class="sub-title">📌 建设目标</div>
+  <div class="text-block">${escapeHtml(latestReport?.goals || '暂无')}</div>
+
+  <div class="sub-title">🔥 重点内容</div>
+  <div class="text-block">${escapeHtml(latestReport?.highlights || '暂无')}</div>
+
+  <div class="sub-title">✅ 本周完成事项（${totalCompleted}项）</div>
+  ${totalCompleted === 0
+    ? '<div class="empty">暂无记录</div>'
+    : `<div class="item-list">${childReports.filter(cr => cr.latestReport).map(cr => {
+      const items = cr.latestReport!.completedItems;
+      return items.length === 0 ? '' : items.map(item => {
+        itemIdx++;
+        return `
+        <div class="item" style="border-bottom:1px solid #f5f5f5;">
+          <span class="item-num">${itemIdx}.</span>
+          <div>
+            <div class="item-title">${childTag(cr.project.name, cr.project.color)}${escapeHtml(item.title)}</div>
+            ${item.progress ? `<div class="item-detail">进展：${escapeHtml(item.progress)}</div>` : ''}
+            ${item.acceptance ? `<div class="item-detail">验收：${escapeHtml(item.acceptance)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }).join('')}</div>`
+  }
+
+  <div class="sub-title">📅 下周工作计划（${totalPlanned}项）</div>
+  ${totalPlanned === 0
+    ? '<div class="empty">暂无计划</div>'
+    : `<div class="item-list">${(() => { let pi = 0; return childReports.filter(cr => cr.latestReport).map(cr => {
+      const items = cr.latestReport!.plannedItems;
+      return items.length === 0 ? '' : items.map(item => {
+        pi++;
+        return `
+        <div class="item" style="border-bottom:1px solid #f5f5f5;">
+          <span class="item-num">${pi}.</span>
+          <div>
+            <div class="item-title">${childTag(cr.project.name, cr.project.color)}${escapeHtml(item.title)}</div>
+            ${item.reason ? `<div class="item-detail" style="color:#FB923C;">📎 未完成原因：${escapeHtml(item.reason)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }).join(''); })()}</div>`
+  }
+
+  <div class="sub-title">⚡ 风险提示</div>
+  ${(() => {
+    const allRisks = childReports.flatMap(cr => (cr.latestReport?.risks || []).filter(rk => rk.status !== '已解决').map(rk => ({ ...rk, childName: cr.project.name, childColor: cr.project.color })));
+    if (allRisks.length === 0) return '<div class="empty">本周无风险项</div>';
+    return allRisks.map(rk => `
+        <div class="risk-item">
+          <span class="rk-desc">${childTag(rk.childName, rk.childColor)}${levelBadge(rk.level)} ${escapeHtml(rk.description)}</span>
+          ${statusBadge(rk.status)}
+          ${rk.suggestion ? `<div class="rk-sugg">💡 ${escapeHtml(rk.suggestion)}</div>` : ''}
+        </div>`).join('');
+  })()}
+</div>`;
+  }
+
+  // 无子项目或子项目独立展示：原有格式
+  return `
 <div class="project-section">
   <div class="project-header">
     <span class="project-dot" style="background:${escapeHtml(project.color)};"></span>
@@ -208,8 +326,8 @@ ${projectReports.map(({ project, latestReport }) => `
           ${rk.suggestion ? `<div class="rk-sugg">💡 ${escapeHtml(rk.suggestion)}</div>` : ''}
         </div>`).join('')}
   `}
-</div>
-`).join('')}
+</div>`;
+}).join('')}
 
 <div class="footer">
   本报告由项目跟踪管理系统自动生成 · ${escapeHtml(fmtDate(today))} ${escapeHtml(fmtTime(today))}
