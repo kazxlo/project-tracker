@@ -250,7 +250,7 @@ export default function ProjectDetail() {
         <div className={shared.kpiRow}>
           {[
             { label: '子项目数', val: childProjects.length, color: project.color },
-            { label: '综合进度', val: childProjects.length > 0 ? `${Math.round(childProjects.reduce((s, c) => s + getChildStats(c.id).progress, 0) / childProjects.length)}%` : '--', color: project.color },
+            { label: '综合进度', val: childProjects.length > 0 ? `${Math.round(childProjects.reduce((s, c) => s + getChildStats(c.id).progress, 0) / childProjects.length)}%` : (() => { const prLatest = reports.length > 0 ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b) : null; return prLatest ? `${prLatest.progress}%` : '--'; })(), color: project.color },
             { label: '累计周报', val: childProjects.reduce((s, c) => s + getChildStats(c.id).reportCount, 0) + reports.length },
             { label: '当前风险', val: (() => {
               const rs = new Set<string>();
