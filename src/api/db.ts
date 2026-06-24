@@ -323,20 +323,36 @@ export async function getAllProjectTasks(): Promise<ProjectTask[]> {
 
 // ==================== 数据导出（保留兼容旧功能） ====================
 
-/** 导出项目数据为 JSON（按项目嵌套周报） */
+/** 导出项目数据为 JSON（按项目嵌套周报、里程碑、任务） */
 export async function exportAllData(): Promise<string> {
-  const [projects, reports] = await Promise.all([getProjects(), getAllReports()]);
-  const reportMap = new Map<string, typeof reports>();
+  const [projects, reports, milestones, tasks] = await Promise.all([
+    getProjects(), getAllReports(), getAllMilestones(), getAllProjectTasks(),
+  ]);
+  const reportMap = new Map<string, WeeklyReport[]>();
+  const milestoneMap = new Map<string, Milestone[]>();
+  const taskMap = new Map<string, ProjectTask[]>();
   reports.forEach(r => {
     const list = reportMap.get(r.projectId) || [];
     list.push(r);
     reportMap.set(r.projectId, list);
   });
-  const projectsWithReports = projects.map(p => ({
+  milestones.forEach(m => {
+    const list = milestoneMap.get(m.projectId) || [];
+    list.push(m);
+    milestoneMap.set(m.projectId, list);
+  });
+  tasks.forEach(t => {
+    const list = taskMap.get(t.projectId) || [];
+    list.push(t);
+    taskMap.set(t.projectId, list);
+  });
+  const projectsWithData = projects.map(p => ({
     ...p,
     reports: reportMap.get(p.id) || [],
+    milestones: milestoneMap.get(p.id) || [],
+    tasks: taskMap.get(p.id) || [],
   }));
-  return JSON.stringify({ projects: projectsWithReports }, null, 2);
+  return JSON.stringify({ projects: projectsWithData }, null, 2);
 }
 
 /** 从 JSON 导入数据（会覆盖当前数据，兼容新旧格式） */
@@ -349,11 +365,19 @@ export async function importAllData(jsonStr: string): Promise<{ success: boolean
     // 兼容新旧格式：新格式每个project内含reports数组，旧格式顶层有reports数组
     let allProjects: Project[];
     let allReports: WeeklyReport[];
+    let allMilestones: Milestone[] = [];
+    let allTasks: ProjectTask[] = [];
     if (parsed.projects.length > 0 && Array.isArray(parsed.projects[0].reports)) {
-      // 新格式：projects 内含 reports
-      const nested = parsed.projects as (Project & { reports: WeeklyReport[] })[];
-      allProjects = nested.map(({ reports: _reports, ...p }) => p as Project);
+      // 新格式：projects 内含 reports / milestones / tasks
+      const nested = parsed.projects as (Project & {
+        reports: WeeklyReport[];
+        milestones?: Milestone[];
+        tasks?: ProjectTask[];
+      })[];
+      allProjects = nested.map(({ reports: _r, milestones: _m, tasks: _t, ...p }) => p as Project);
       allReports = nested.flatMap(p => (p.reports || []) as WeeklyReport[]);
+      allMilestones = nested.flatMap(p => (p.milestones || []) as Milestone[]);
+      allTasks = nested.flatMap(p => (p.tasks || []) as ProjectTask[]);
     } else {
       // 旧格式：顶层 projects + reports 分开
       if (!Array.isArray(parsed.reports)) {
@@ -363,8 +387,9 @@ export async function importAllData(jsonStr: string): Promise<{ success: boolean
       allReports = parsed.reports;
     }
     // 先清空再导入
-    const { error: delError } = await supabase.from('weekly_reports').delete().neq('id', '__skip__');
-    if (delError) throw delError;
+    await supabase.from('weekly_reports').delete().neq('id', '__skip__');
+    await supabase.from('milestones').delete().neq('id', '__skip__');
+    await supabase.from('project_tasks').delete().neq('id', '__skip__');
     const { error: delProjError } = await supabase.from('projects').delete().neq('id', '__skip__');
     if (delProjError) throw delProjError;
 
@@ -374,7 +399,16 @@ export async function importAllData(jsonStr: string): Promise<{ success: boolean
     for (const r of allReports) {
       await saveReport(r);
     }
-    return { success: true, message: `导入成功：${allProjects.length} 个项目，${allReports.length} 份周报` };
+    for (const m of allMilestones) {
+      await saveMilestone(m);
+    }
+    for (const t of allTasks) {
+      await saveProjectTask(t);
+    }
+    const extra = allMilestones.length > 0 || allTasks.length > 0
+      ? `，${allMilestones.length} 个里程碑，${allTasks.length} 个任务`
+      : '';
+    return { success: true, message: `导入成功：${allProjects.length} 个项目，${allReports.length} 份周报${extra}` };
   } catch {
     return { success: false, message: '无法解析 JSON 数据，请确认文件格式正确' };
   }
