@@ -63,6 +63,31 @@ export interface AuthState {
   username: string;
 }
 
+/** 里程碑（挂 Project 下，与周报独立） */
+export interface Milestone {
+  id: string;
+  projectId: string;
+  name: string;            // "M1 需求调研与评审"
+  targetDate?: string;     // 目标日期 YYYY-MM-DD
+  status: '待开始' | '进行中' | '已完成';
+  description?: string;    // "PRD已签字"
+  sortOrder: number;
+}
+
+/** 项目级任务（挂 Project 下，与周报独立） */
+export interface ProjectTask {
+  id: string;
+  projectId: string;
+  title: string;           // "用户权限模块重构"
+  status: '待开始' | '进行中' | '已完成' | '有风险';
+  priority: 'P0' | 'P1' | 'P2';
+  assignee: string;        // "张三"
+  deadline?: string;       // "2026-06-22"
+  progress: number;        // 0-100，手动维护
+  description?: string;
+  sortOrder: number;
+}
+
 /** 应用全局数据 */
 export interface AppData {
   projects: Project[];

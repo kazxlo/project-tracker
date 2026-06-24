@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus } from '../api/db';
+import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus, getMilestones, getProjectTasks } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
-import { Project, WeeklyReport, Risk } from '../types';
+import { Project, WeeklyReport, Risk, Milestone, ProjectTask } from '../types';
 import ChildProjectCard from '../components/ChildProjectCard';
+import ProjectDashboard from '../components/ProjectDashboard';
+import ProjectPlanEditor from '../components/ProjectPlanEditor';
 import shared from '../styles/shared.module.css';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -12,7 +14,7 @@ const STATUS_CLASS: Record<string, string> = {
   '存在风险': shared.tagDanger,
 };
 
-type TabKey = 'children' | 'reports' | 'summary';
+type TabKey = 'dashboard' | 'children' | 'reports' | 'summary';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +32,13 @@ export default function ProjectDetail() {
   const [tab, setTab] = useState<'list' | 'trend' | 'client' | TabKey>('list');
   const [confirmDeleteReport, setConfirmDeleteReport] = useState<string | null>(null);
   const [confirmDeleteChild, setConfirmDeleteChild] = useState<string | null>(null);
+
+  // 里程碑 + 项目任务
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([]);
+
+  // 计划编辑器弹窗
+  const [planEditorOpen, setPlanEditorOpen] = useState(false);
 
   // 子项目编辑弹窗（表单数据合并到一个状态，避免 setState 分离导致闪退）
   const [childModal, setChildModal] = useState<{
@@ -59,16 +68,20 @@ export default function ProjectDetail() {
   const loadData = async () => {
     if (!id) return;
     try {
-      const [p, projs, reps, allReps] = await Promise.all([
+      const [p, projs, reps, allReps, ms, ts] = await Promise.all([
         getProject(id),
         getProjects(),
         getReports(id),
         getReportsWithChildren(id),
+        getMilestones(id),
+        getProjectTasks(id),
       ]);
       setProject(p || null);
       setAllProjects(projs);
       setReports(reps);
       setAllReports(allReps);
+      setMilestones(ms);
+      setProjectTasks(ts);
     } catch (err) {
       console.error('加载数据失败:', err);
     }
@@ -179,10 +192,10 @@ export default function ProjectDetail() {
     }
   };
 
-  // 确定默认tab：顶层项目默认切到「子项目概览」
+  // 确定默认tab：顶层项目默认切到「项目仪表盘」
   useEffect(() => {
     if (!loading && !isChild && tab === 'list') {
-      setTab('children');
+      setTab('dashboard');
     }
   }, [loading, isChild]);
 
@@ -284,6 +297,7 @@ export default function ProjectDetail() {
         {/* Tabs */}
         <div className={shared.tabBar}>
           {[
+            { key: 'dashboard' as TabKey, label: '项目仪表盘' },
             { key: 'children' as TabKey, label: '子项目概览' },
             { key: 'reports' as TabKey, label: '周报列表' },
             { key: 'summary' as TabKey, label: '汇总视图' },
@@ -297,6 +311,20 @@ export default function ProjectDetail() {
             </span>
           ))}
         </div>
+
+        {/* Tab: 项目仪表盘 */}
+        {tab === 'dashboard' && (
+          <ProjectDashboard
+            project={project}
+            reports={reports}
+            childProjects={childProjects}
+            allReports={allReports}
+            milestones={milestones}
+            tasks={projectTasks}
+            onOpenPlanEditor={() => setPlanEditorOpen(true)}
+            getChildStats={getChildStats}
+          />
+        )}
 
         {/* Tab: 子项目概览 */}
         {tab === 'children' && (
@@ -591,6 +619,24 @@ export default function ProjectDetail() {
             </div>
           </div>
         )}
+
+        {/* 计划编辑器弹窗 */}
+        {planEditorOpen && (
+          <ProjectPlanEditor
+            projectId={id!}
+            open={planEditorOpen}
+            onClose={async () => {
+              setPlanEditorOpen(false);
+              // 重新加载里程碑和任务
+              try {
+                const [ms, ts] = await Promise.all([getMilestones(id!), getProjectTasks(id!)]);
+                setMilestones(ms);
+                setProjectTasks(ts);
+              } catch { /* ignore */ }
+            }}
+            toast={showToast}
+          />
+        )}
       </div>
     );
   }
@@ -647,6 +693,7 @@ export default function ProjectDetail() {
 
       <div className={shared.tabBar}>
         {[
+          { key: 'dashboard' as const, label: '项目仪表盘' },
           { key: 'list' as const, label: '周报列表' },
           { key: 'trend' as const, label: '进度趋势' },
           { key: 'client' as const, label: '汇报视图' },
@@ -670,6 +717,19 @@ export default function ProjectDetail() {
             + 新建周报
           </button>
         </div>
+      )}
+
+      {tab === 'dashboard' && (
+        <ProjectDashboard
+          project={project}
+          reports={reports}
+          childProjects={[]}
+          allReports={allReports}
+          milestones={milestones}
+          tasks={projectTasks}
+          onOpenPlanEditor={() => setPlanEditorOpen(true)}
+          getChildStats={() => ({ reportCount: 0, progress: 0, riskCount: 0 })}
+        />
       )}
 
       {tab === 'list' && (
@@ -824,6 +884,23 @@ export default function ProjectDetail() {
             })()}
           </div>
         </div>
+      )}
+
+      {/* 计划编辑器弹窗 */}
+      {planEditorOpen && (
+        <ProjectPlanEditor
+          projectId={id!}
+          open={planEditorOpen}
+          onClose={async () => {
+            setPlanEditorOpen(false);
+            try {
+              const [ms, ts] = await Promise.all([getMilestones(id!), getProjectTasks(id!)]);
+              setMilestones(ms);
+              setProjectTasks(ts);
+            } catch { /* ignore */ }
+          }}
+          toast={showToast}
+        />
       )}
     </div>
   );

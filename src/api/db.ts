@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Project, WeeklyReport, ReportItem, Risk } from '../types';
+import type { Project, WeeklyReport, ReportItem, Risk, Milestone, ProjectTask } from '../types';
 
 // ==================== 字段映射 ====================
 // 数据库 snake_case ↔ 前端 camelCase
@@ -87,7 +87,9 @@ export async function saveProject(project: Project): Promise<void> {
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  // 先删周报再删项目（外键级联删除）
+  // 级联删除关联数据（外键已有 ON DELETE CASCADE，但显式删除更安全）
+  await supabase.from('project_tasks').delete().eq('project_id', id);
+  await supabase.from('milestones').delete().eq('project_id', id);
   await supabase.from('weekly_reports').delete().eq('project_id', id);
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw error;
@@ -207,6 +209,96 @@ export function generateWeekLabel(weekStart: string): string {
   const daysSinceJan1 = Math.floor((d.getTime() - jan1.getTime()) / 86400000);
   const weekNum = Math.floor((daysSinceJan1 + jan1.getDay()) / 7) + 1;
   return `第${weekNum}周`;
+}
+
+// ==================== 里程碑 CRUD ====================
+
+function mapMilestone(row: any): Milestone {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    name: row.name,
+    targetDate: row.target_date || undefined,
+    status: row.status,
+    description: row.description || undefined,
+    sortOrder: row.sort_order ?? 0,
+  };
+}
+
+export async function getMilestones(projectId: string): Promise<Milestone[]> {
+  const { data, error } = await supabase
+    .from('milestones')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapMilestone);
+}
+
+export async function saveMilestone(m: Milestone): Promise<void> {
+  const { error } = await supabase.from('milestones').upsert({
+    id: m.id,
+    project_id: m.projectId,
+    name: m.name,
+    target_date: m.targetDate || null,
+    status: m.status,
+    description: m.description || null,
+    sort_order: m.sortOrder,
+  });
+  if (error) throw error;
+}
+
+export async function deleteMilestone(id: string): Promise<void> {
+  const { error } = await supabase.from('milestones').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ==================== 项目任务 CRUD ====================
+
+function mapProjectTask(row: any): ProjectTask {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title,
+    status: row.status,
+    priority: row.priority,
+    assignee: row.assignee,
+    deadline: row.deadline || undefined,
+    progress: row.progress ?? 0,
+    description: row.description || undefined,
+    sortOrder: row.sort_order ?? 0,
+  };
+}
+
+export async function getProjectTasks(projectId: string): Promise<ProjectTask[]> {
+  const { data, error } = await supabase
+    .from('project_tasks')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapProjectTask);
+}
+
+export async function saveProjectTask(t: ProjectTask): Promise<void> {
+  const { error } = await supabase.from('project_tasks').upsert({
+    id: t.id,
+    project_id: t.projectId,
+    title: t.title,
+    status: t.status,
+    priority: t.priority,
+    assignee: t.assignee,
+    deadline: t.deadline || null,
+    progress: t.progress,
+    description: t.description || null,
+    sort_order: t.sortOrder,
+  });
+  if (error) throw error;
+}
+
+export async function deleteProjectTask(id: string): Promise<void> {
+  const { error } = await supabase.from('project_tasks').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // ==================== 数据导出（保留兼容旧功能） ====================
