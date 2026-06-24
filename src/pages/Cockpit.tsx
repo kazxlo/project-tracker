@@ -481,15 +481,19 @@ export default function Cockpit() {
                 {/* 最近里程碑 */}
                 {s.nearestMilestone && (
                   <div className={styles.milestoneSection}>
-                    <span className={styles.milestoneIcon}>&#9670;</span>
-                    <span className={styles.milestoneText}>{s.nearestMilestone.name}</span>
-                    <span className={styles.milestoneDate}>目标 {fmtDate(s.nearestMilestone.targetDate)}</span>
+                    <div className={styles.sectionHeader}>最近里程碑</div>
+                    <div className={styles.milestoneRow}>
+                      <span className={styles.milestoneIcon}>&#9670;</span>
+                      <span className={styles.milestoneText}>{s.nearestMilestone.name}</span>
+                      <span className={styles.milestoneDate}>目标 {fmtDate(s.nearestMilestone.targetDate)}</span>
+                    </div>
                   </div>
                 )}
 
                 {/* 近15天任务 */}
                 {s.upcomingTasks.length > 0 && (
                   <div className={styles.taskSection}>
+                    <div className={styles.sectionHeader}>近15天任务 ({s.upcomingTasks.length}项)</div>
                     {s.upcomingTasks.map((t, j) => (
                       <div key={j} className={styles.taskItem}>
                         <span className={styles.taskBullet}>&middot;</span>

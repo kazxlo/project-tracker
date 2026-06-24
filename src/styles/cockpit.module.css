@@ -706,17 +706,28 @@
 }
 
 /* ===== 卡片内最近里程碑 & 近15天任务 ===== */
+.sectionHeader {
+  font-size: 10px;
+  font-weight: 600;
+  color: #5a7d9e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
 .milestoneSection {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: rgba(100, 181, 246, 0.05);
+  border: 1px solid rgba(100, 181, 246, 0.08);
+  border-radius: 6px;
+}
+
+.milestoneRow {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #9aaec9;
-  margin-bottom: 4px;
-  padding: 4px 8px;
-  background: rgba(100, 181, 246, 0.05);
-  border: 1px solid rgba(100, 181, 246, 0.08);
-  border-radius: 6px;
 }
 
 .milestoneIcon {
@@ -743,7 +754,6 @@
 .taskSection {
   display: flex;
   flex-direction: column;
-  gap: 1px;
   margin-bottom: 8px;
 }
 
@@ -753,7 +763,7 @@
   gap: 4px;
   font-size: 11px;
   color: #9aaec9;
-  padding: 2px 8px;
+  padding: 1px 0;
 }
 
 .taskBullet {
