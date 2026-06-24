@@ -42,16 +42,6 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast }: P
 
   if (!open) return null;
 
-  const handleSaveMilestone = async (m: Milestone) => {
-    try {
-      await saveMilestone(m);
-      await load();
-      toast('里程碑已保存', 'success');
-    } catch {
-      toast('保存失败', 'error');
-    }
-  };
-
   const handleDeleteMilestone = async (id: string) => {
     try {
       await deleteMilestone(id);
@@ -62,16 +52,6 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast }: P
     }
   };
 
-  const handleSaveTask = async (t: ProjectTask) => {
-    try {
-      await saveProjectTask(t);
-      await load();
-      toast('任务已保存', 'success');
-    } catch {
-      toast('保存失败', 'error');
-    }
-  };
-
   const handleDeleteTask = async (id: string) => {
     try {
       await deleteProjectTask(id);
@@ -79,6 +59,30 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast }: P
       toast('任务已删除', 'success');
     } catch {
       toast('删除失败', 'error');
+    }
+  };
+
+  const handleReorderMilestones = async (ms: Milestone[]) => {
+    try {
+      for (const m of ms) {
+        await saveMilestone(m);
+      }
+      await load();
+      toast('排序已保存', 'success');
+    } catch {
+      toast('排序保存失败', 'error');
+    }
+  };
+
+  const handleReorderTasks = async (ts: ProjectTask[]) => {
+    try {
+      for (const t of ts) {
+        await saveProjectTask(t);
+      }
+      await load();
+      toast('排序已保存', 'success');
+    } catch {
+      toast('排序保存失败', 'error');
     }
   };
 
@@ -115,9 +119,11 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast }: P
               milestones={milestones}
               setMilestones={setMilestones}
               projectId={projectId}
-              onSave={handleSaveMilestone}
               onDelete={handleDeleteMilestone}
+              onReorder={handleReorderMilestones}
               loading={loading}
+              load={load}
+              toast={toast}
             />
           )}
           {tab === 'tasks' && (
@@ -125,9 +131,11 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast }: P
               tasks={tasks}
               setTasks={setTasks}
               projectId={projectId}
-              onSave={handleSaveTask}
               onDelete={handleDeleteTask}
+              onReorder={handleReorderTasks}
               loading={loading}
+              load={load}
+              toast={toast}
             />
           )}
         </div>
@@ -141,14 +149,16 @@ function emptyMilestone(projectId: string): Milestone {
 }
 
 function MilestoneEditor({
-  milestones, setMilestones, projectId, onSave, onDelete, loading,
+  milestones, setMilestones, projectId, onDelete, onReorder, loading, load, toast,
 }: {
   milestones: Milestone[];
   setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
   projectId: string;
-  onSave: (m: Milestone) => void;
   onDelete: (id: string) => void;
+  onReorder: (milestones: Milestone[]) => void;
   loading: boolean;
+  load: () => Promise<void>;
+  toast: (msg: string, type: 'success' | 'error') => void;
 }) {
   const [editing, setEditing] = useState<Milestone | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -161,12 +171,67 @@ function MilestoneEditor({
 
   const cancel = () => { setEditing(null); setIsNew(false); };
 
-  const save = () => {
+  const save = async () => {
     if (!editing || !editing.name.trim()) return;
-    const final = editing.id ? editing : { ...editing, id: 'ms_' + Date.now() };
-    onSave(final);
-    setEditing(null);
-    setIsNew(false);
+    const final: Milestone = editing.id
+      ? editing
+      : { ...editing, id: 'ms_' + Date.now() };
+
+    try {
+      if (!editing.id) {
+        // 新建里程碑：根据目标日期自动计算正确的 sort_order
+        if (final.targetDate) {
+          let insertIdx = milestones.length;
+          for (let i = 0; i < milestones.length; i++) {
+            const m = milestones[i];
+            if (!m.targetDate || m.targetDate > final.targetDate) {
+              insertIdx = i;
+              break;
+            }
+          }
+          final.sortOrder = insertIdx;
+        } else {
+          final.sortOrder = milestones.length;
+        }
+
+        await saveMilestone(final);
+
+        // 如果插入到中间位置，将后续元素的 sort_order 顺延
+        if (final.sortOrder < milestones.length) {
+          for (let i = final.sortOrder; i < milestones.length; i++) {
+            await saveMilestone({ ...milestones[i], sortOrder: i + 1 });
+          }
+        }
+      } else {
+        // 编辑已有里程碑 — 保持用户手动排序结果不动
+        await saveMilestone(final);
+      }
+
+      await load();
+      setEditing(null);
+      setIsNew(false);
+      toast('里程碑已保存', 'success');
+    } catch {
+      toast('保存失败', 'error');
+    }
+  };
+
+  const moveUp = (index: number) => {
+    if (index <= 0) return;
+    const list = [...milestones];
+    [list[index - 1], list[index]] = [list[index], list[index - 1]];
+    list.forEach((m, i) => { m.sortOrder = i; });
+    setMilestones(list);
+    onReorder(list);
+  };
+
+  const moveDown = (index: number) => {
+    if (index >= milestones.length - 1) return;
+    const list = [...milestones];
+    [list[index], list[index + 1]] = [list[index + 1], list[index]];
+    list.forEach((m, i) => { m.sortOrder = i; });
+    setMilestones(list);
+    onReorder(list);
   };
 
   if (loading) return <div className={shared.emptyState}>加载中...</div>;
@@ -179,9 +244,36 @@ function MilestoneEditor({
         </div>
       )}
 
-      {milestones.map(m => (
+      {milestones.map((m, i) => (
         <div key={m.id} className={shared.riskBlock} style={{ padding: '10px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            {/* 排序按钮 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2, flexShrink: 0 }}>
+              <button
+                onClick={() => moveUp(i)}
+                disabled={i === 0}
+                style={{
+                  width: 22, height: 18, border: 'none', borderRadius: 3,
+                  background: i === 0 ? '#f0f2f7' : '#e5e7eb',
+                  color: i === 0 ? '#bfc8d6' : '#6b7a93',
+                  cursor: i === 0 ? 'default' : 'pointer',
+                  fontSize: 10, lineHeight: '18px', padding: 0,
+                }}
+                title="上移"
+              >▲</button>
+              <button
+                onClick={() => moveDown(i)}
+                disabled={i === milestones.length - 1}
+                style={{
+                  width: 22, height: 18, border: 'none', borderRadius: 3,
+                  background: i === milestones.length - 1 ? '#f0f2f7' : '#e5e7eb',
+                  color: i === milestones.length - 1 ? '#bfc8d6' : '#6b7a93',
+                  cursor: i === milestones.length - 1 ? 'default' : 'pointer',
+                  fontSize: 10, lineHeight: '18px', padding: 0,
+                }}
+                title="下移"
+              >▼</button>
+            </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontWeight: 500, fontSize: 13 }}>{m.name}</span>
@@ -212,7 +304,7 @@ function MilestoneEditor({
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               <button
                 className={shared.actionBtn}
                 onClick={() => { setEditing({ ...m }); setIsNew(false); }}
@@ -289,14 +381,16 @@ function emptyTask(projectId: string): ProjectTask {
 }
 
 function TaskEditor({
-  tasks, setTasks, projectId, onSave, onDelete, loading,
+  tasks, setTasks, projectId, onDelete, onReorder, loading, load, toast,
 }: {
   tasks: ProjectTask[];
   setTasks: React.Dispatch<React.SetStateAction<ProjectTask[]>>;
   projectId: string;
-  onSave: (t: ProjectTask) => void;
   onDelete: (id: string) => void;
+  onReorder: (tasks: ProjectTask[]) => void;
   loading: boolean;
+  load: () => Promise<void>;
+  toast: (msg: string, type: 'success' | 'error') => void;
 }) {
   const [editing, setEditing] = useState<ProjectTask | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -309,12 +403,67 @@ function TaskEditor({
 
   const cancel = () => { setEditing(null); setIsNew(false); };
 
-  const save = () => {
+  const save = async () => {
     if (!editing || !editing.title.trim()) return;
-    const final = editing.id ? editing : { ...editing, id: 'pt_' + Date.now() };
-    onSave(final);
-    setEditing(null);
-    setIsNew(false);
+    const final: ProjectTask = editing.id
+      ? editing
+      : { ...editing, id: 'pt_' + Date.now() };
+
+    try {
+      if (!editing.id) {
+        // 新建任务：根据截止日期自动计算正确的 sort_order
+        if (final.deadline) {
+          let insertIdx = tasks.length;
+          for (let i = 0; i < tasks.length; i++) {
+            const t = tasks[i];
+            if (!t.deadline || t.deadline > final.deadline) {
+              insertIdx = i;
+              break;
+            }
+          }
+          final.sortOrder = insertIdx;
+        } else {
+          final.sortOrder = tasks.length;
+        }
+
+        await saveProjectTask(final);
+
+        // 如果插入到中间位置，将后续元素的 sort_order 顺延
+        if (final.sortOrder < tasks.length) {
+          for (let i = final.sortOrder; i < tasks.length; i++) {
+            await saveProjectTask({ ...tasks[i], sortOrder: i + 1 });
+          }
+        }
+      } else {
+        // 编辑已有任务 — 保持用户手动排序结果不动
+        await saveProjectTask(final);
+      }
+
+      await load();
+      setEditing(null);
+      setIsNew(false);
+      toast('任务已保存', 'success');
+    } catch {
+      toast('保存失败', 'error');
+    }
+  };
+
+  const moveUp = (index: number) => {
+    if (index <= 0) return;
+    const list = [...tasks];
+    [list[index - 1], list[index]] = [list[index], list[index - 1]];
+    list.forEach((t, i) => { t.sortOrder = i; });
+    setTasks(list);
+    onReorder(list);
+  };
+
+  const moveDown = (index: number) => {
+    if (index >= tasks.length - 1) return;
+    const list = [...tasks];
+    [list[index], list[index + 1]] = [list[index + 1], list[index]];
+    list.forEach((t, i) => { t.sortOrder = i; });
+    setTasks(list);
+    onReorder(list);
   };
 
   if (loading) return <div className={shared.emptyState}>加载中...</div>;
@@ -352,9 +501,36 @@ function TaskEditor({
         </div>
       )}
 
-      {tasks.map(t => (
+      {tasks.map((t, i) => (
         <div key={t.id} className={shared.riskBlock} style={{ padding: '10px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            {/* 排序按钮 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2, flexShrink: 0 }}>
+              <button
+                onClick={() => moveUp(i)}
+                disabled={i === 0}
+                style={{
+                  width: 22, height: 18, border: 'none', borderRadius: 3,
+                  background: i === 0 ? '#f0f2f7' : '#e5e7eb',
+                  color: i === 0 ? '#bfc8d6' : '#6b7a93',
+                  cursor: i === 0 ? 'default' : 'pointer',
+                  fontSize: 10, lineHeight: '18px', padding: 0,
+                }}
+                title="上移"
+              >▲</button>
+              <button
+                onClick={() => moveDown(i)}
+                disabled={i === tasks.length - 1}
+                style={{
+                  width: 22, height: 18, border: 'none', borderRadius: 3,
+                  background: i === tasks.length - 1 ? '#f0f2f7' : '#e5e7eb',
+                  color: i === tasks.length - 1 ? '#bfc8d6' : '#6b7a93',
+                  cursor: i === tasks.length - 1 ? 'default' : 'pointer',
+                  fontSize: 10, lineHeight: '18px', padding: 0,
+                }}
+                title="下移"
+              >▼</button>
+            </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <span style={{ fontWeight: 500, fontSize: 13 }}>{t.title}</span>
@@ -374,7 +550,7 @@ function TaskEditor({
                 }} />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               <button
                 className={shared.actionBtn}
                 onClick={() => { setEditing({ ...t }); setIsNew(false); }}
