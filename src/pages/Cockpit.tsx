@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getProjects, getAllReports, updateRiskStatus } from '../api/db';
+import { getProjects, getAllReports, updateRiskStatus, getAllMilestones, getAllProjectTasks } from '../api/db';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { useAuth } from '../hooks/useAuth';
-import { Project } from '../types';
+import { Project, Milestone, ProjectTask } from '../types';
 import ProjectExportModal from '../components/ProjectExportModal';
 import styles from '../styles/cockpit.module.css';
 
@@ -15,6 +15,12 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
     g: parseInt(h.substring(2, 4), 16),
     b: parseInt(h.substring(4, 6), 16),
   };
+}
+
+// YYYY-MM-DD → YYYY.MM.DD
+function fmtDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // 状态对应的样式类
@@ -35,6 +41,8 @@ const LEVEL_ORDER: Record<string, number> = { '高': 0, '中': 1, '低': 2 };
 export default function Cockpit() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
+  const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
+  const [allTasks, setAllTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
   const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
@@ -49,9 +57,13 @@ export default function Cockpit() {
   // 加载数据
   const loadData = async () => {
     try {
-      const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
+      const [projs, reps, mss, tss] = await Promise.all([
+        getProjects(), getAllReports(), getAllMilestones(), getAllProjectTasks(),
+      ]);
       setProjects(projs);
       setAllReports(reps);
+      setAllMilestones(mss);
+      setAllTasks(tss);
     } catch {
       // 静默处理
     }
@@ -162,13 +174,37 @@ export default function Cockpit() {
       }
 
       // 逾期检测
+      const today = new Date().toISOString().split('T')[0];
       let isOverdue = false;
       if (p.deadline && p.deadline.trim() !== '') {
-        const today = new Date().toISOString().split('T')[0];
         if (p.deadline < today && progress < 100) {
           isOverdue = true;
         }
       }
+
+      // 最近里程碑（含子项目，取未来最近一个）
+      const projectIds = hasChildren ? [p.id, ...childProjects.map(c => c.id)] : [p.id];
+      const nearestMilestone = (() => {
+        const ms = allMilestones
+          .filter(m => projectIds.includes(m.projectId) && m.status !== '已完成' && m.targetDate && m.targetDate >= today)
+          .sort((a, b) => (a.targetDate! > b.targetDate! ? 1 : -1));
+        return ms.length > 0 ? { name: ms[0].name, targetDate: ms[0].targetDate! } : null;
+      })();
+
+      // 近15天任务（含子项目）
+      const day15 = new Date();
+      day15.setDate(day15.getDate() + 15);
+      const day15Str = day15.toISOString().split('T')[0];
+      const upcomingTasks = allTasks
+        .filter(t =>
+          projectIds.includes(t.projectId) &&
+          t.status !== '已完成' &&
+          t.deadline &&
+          t.deadline >= today &&
+          t.deadline <= day15Str
+        )
+        .sort((a, b) => (a.deadline! > b.deadline! ? 1 : -1))
+        .map(t => ({ title: t.title, deadline: t.deadline! }));
 
       return {
         project: p,
@@ -179,9 +215,11 @@ export default function Cockpit() {
         isOverdue,
         hasChildren,
         childCount: childProjects.length,
+        nearestMilestone,
+        upcomingTasks,
       };
     });
-  }, [projects, allReports]);
+  }, [projects, allReports, allMilestones, allTasks]);
 
   // KPI 指标 + 下钻详情
   const kpiData = useMemo(() => {
@@ -437,6 +475,28 @@ export default function Cockpit() {
                         return `${fmt(s.project.serviceStart!)} — ${fmt(s.project.serviceEnd!)}`;
                       })()}
                     </span>
+                  </div>
+                )}
+
+                {/* 最近里程碑 */}
+                {s.nearestMilestone && (
+                  <div className={styles.milestoneSection}>
+                    <span className={styles.milestoneIcon}>&#9670;</span>
+                    <span className={styles.milestoneText}>{s.nearestMilestone.name}</span>
+                    <span className={styles.milestoneDate}>目标 {fmtDate(s.nearestMilestone.targetDate)}</span>
+                  </div>
+                )}
+
+                {/* 近15天任务 */}
+                {s.upcomingTasks.length > 0 && (
+                  <div className={styles.taskSection}>
+                    {s.upcomingTasks.map((t, j) => (
+                      <div key={j} className={styles.taskItem}>
+                        <span className={styles.taskBullet}>&middot;</span>
+                        <span className={styles.taskText}>{t.title}</span>
+                        <span className={styles.taskDate}>截止 {fmtDate(t.deadline)}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
 

@@ -301,6 +301,26 @@ export async function deleteProjectTask(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// ==================== 全局查询（驾驶舱用） ====================
+
+export async function getAllMilestones(): Promise<Milestone[]> {
+  const { data, error } = await supabase
+    .from('milestones')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapMilestone);
+}
+
+export async function getAllProjectTasks(): Promise<ProjectTask[]> {
+  const { data, error } = await supabase
+    .from('project_tasks')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapProjectTask);
+}
+
 // ==================== 数据导出（保留兼容旧功能） ====================
 
 /** 导出项目数据为 JSON（按项目嵌套周报） */

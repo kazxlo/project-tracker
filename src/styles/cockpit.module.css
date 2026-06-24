@@ -705,6 +705,76 @@
   background: rgba(255, 107, 107, 0.7) !important;
 }
 
+/* ===== 卡片内最近里程碑 & 近15天任务 ===== */
+.milestoneSection {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9aaec9;
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  background: rgba(100, 181, 246, 0.05);
+  border: 1px solid rgba(100, 181, 246, 0.08);
+  border-radius: 6px;
+}
+
+.milestoneIcon {
+  font-size: 10px;
+  color: #64b5f6;
+  flex-shrink: 0;
+}
+
+.milestoneText {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #c0d0e4;
+}
+
+.milestoneDate {
+  color: #64b5f6;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.taskSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 8px;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #9aaec9;
+  padding: 2px 8px;
+}
+
+.taskBullet {
+  color: #64b5f6;
+  flex-shrink: 0;
+}
+
+.taskText {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #9aaec9;
+}
+
+.taskDate {
+  color: #6b8aae;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* 响应式：小屏时 KPI 和卡片自动收窄 */
 @media (max-width: 1200px) {
   .kpiRow {
