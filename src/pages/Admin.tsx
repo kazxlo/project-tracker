@@ -66,7 +66,7 @@ function ProjectPermissions() {
         const [projs, profs] = await Promise.all([getProjects(), getAllProfiles()]);
         if (!cancelled) {
           setProjects(projs);
-          setProfiles(profs.filter(p => p.role !== 'public'));
+          setProfiles(profs);
         }
       } catch {
         if (!cancelled) showToast('加载数据失败', 'error');

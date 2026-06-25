@@ -12,10 +12,11 @@ interface Props {
   tasks: ProjectTask[];
   onOpenPlanEditor: () => void;
   getChildStats: (childId: string) => { reportCount: number; progress: number; riskCount: number };
+  isPublic?: boolean;
 }
 
 export default function ProjectDashboard({
-  project, reports, childProjects, allReports, milestones, tasks, onOpenPlanEditor, getChildStats,
+  project, reports, childProjects, allReports, milestones, tasks, onOpenPlanEditor, getChildStats, isPublic,
 }: Props) {
   const navigate = useNavigate();
   const today = new Date().toISOString().split('T')[0];
@@ -266,15 +267,17 @@ export default function ProjectDashboard({
         <div style={{ background: '#fff', border: '0.5px solid rgba(0,0,0,0.06)', borderRadius: 16, padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontWeight: 500, fontSize: 13 }}>里程碑路线图</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                className={shared.btnToolbar}
-                onClick={onOpenPlanEditor}
-                style={{ fontSize: 11 }}
-              >
-                {milestones.length > 0 ? '编辑' : '+ 添加'}
-              </button>
-            </div>
+            {!isPublic && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  className={shared.btnToolbar}
+                  onClick={onOpenPlanEditor}
+                  style={{ fontSize: 11 }}
+                >
+                  {milestones.length > 0 ? '编辑' : '+ 添加'}
+                </button>
+              </div>
+            )}
           </div>
           <div style={{ position: 'relative', paddingLeft: 20 }}>
             <div style={{
@@ -336,13 +339,15 @@ export default function ProjectDashboard({
                 {f}
               </button>
             ))}
-            <button
-              className={shared.btnToolbar}
-              onClick={onOpenPlanEditor}
-              style={{ fontSize: 11, marginLeft: 4 }}
-            >
-              + 管理
-            </button>
+            {!isPublic && (
+              <button
+                className={shared.btnToolbar}
+                onClick={onOpenPlanEditor}
+                style={{ fontSize: 11, marginLeft: 4 }}
+              >
+                + 管理
+              </button>
+            )}
           </div>
         </div>
 

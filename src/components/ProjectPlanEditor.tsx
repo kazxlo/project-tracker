@@ -8,11 +8,12 @@ interface Props {
   open: boolean;
   onClose: () => void;
   toast: (msg: string, type: 'success' | 'error') => void;
+  readOnly?: boolean;
 }
 
 type EditTab = 'milestones' | 'tasks';
 
-export default function ProjectPlanEditor({ projectId, open, onClose, toast }: Props) {
+export default function ProjectPlanEditor({ projectId, open, onClose, toast, readOnly }: Props) {
   const [tab, setTab] = useState<EditTab>('milestones');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
@@ -124,6 +125,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast }: P
               loading={loading}
               load={load}
               toast={toast}
+              readOnly={readOnly}
             />
           )}
           {tab === 'tasks' && (
@@ -136,6 +138,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast }: P
               loading={loading}
               load={load}
               toast={toast}
+              readOnly={readOnly}
             />
           )}
         </div>
@@ -149,7 +152,7 @@ function emptyMilestone(projectId: string): Milestone {
 }
 
 function MilestoneEditor({
-  milestones, setMilestones, projectId, onDelete, onReorder, loading, load, toast,
+  milestones, setMilestones, projectId, onDelete, onReorder, loading, load, toast, readOnly,
 }: {
   milestones: Milestone[];
   setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
@@ -159,6 +162,7 @@ function MilestoneEditor({
   loading: boolean;
   load: () => Promise<void>;
   toast: (msg: string, type: 'success' | 'error') => void;
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState<Milestone | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -248,6 +252,7 @@ function MilestoneEditor({
         <div key={m.id} className={shared.riskBlock} style={{ padding: '10px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
             {/* 排序按钮 */}
+            {!readOnly && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2, flexShrink: 0 }}>
               <button
                 onClick={() => moveUp(i)}
@@ -274,6 +279,7 @@ function MilestoneEditor({
                 title="下移"
               >▼</button>
             </div>
+            )}
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontWeight: 500, fontSize: 13 }}>{m.name}</span>
@@ -304,6 +310,7 @@ function MilestoneEditor({
                 </div>
               )}
             </div>
+            {!readOnly && (
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               <button
                 className={shared.actionBtn}
@@ -318,11 +325,12 @@ function MilestoneEditor({
                 删除
               </button>
             </div>
+            )}
           </div>
         </div>
       ))}
 
-      {editing && (
+      {editing && !readOnly && (
         <div className={shared.riskBlock} style={{ padding: '10px 14px', borderColor: '#4F8EF7' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input
@@ -367,7 +375,7 @@ function MilestoneEditor({
         </div>
       )}
 
-      {!editing && (
+      {!editing && !readOnly && (
         <button className={shared.btnDashed} onClick={add} style={{ alignSelf: 'flex-start' }}>
           + 添加里程碑
         </button>
@@ -381,7 +389,7 @@ function emptyTask(projectId: string): ProjectTask {
 }
 
 function TaskEditor({
-  tasks, setTasks, projectId, onDelete, onReorder, loading, load, toast,
+  tasks, setTasks, projectId, onDelete, onReorder, loading, load, toast, readOnly,
 }: {
   tasks: ProjectTask[];
   setTasks: React.Dispatch<React.SetStateAction<ProjectTask[]>>;
@@ -391,6 +399,7 @@ function TaskEditor({
   loading: boolean;
   load: () => Promise<void>;
   toast: (msg: string, type: 'success' | 'error') => void;
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState<ProjectTask | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -505,6 +514,7 @@ function TaskEditor({
         <div key={t.id} className={shared.riskBlock} style={{ padding: '10px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
             {/* 排序按钮 */}
+            {!readOnly && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2, flexShrink: 0 }}>
               <button
                 onClick={() => moveUp(i)}
@@ -531,6 +541,7 @@ function TaskEditor({
                 title="下移"
               >▼</button>
             </div>
+            )}
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <span style={{ fontWeight: 500, fontSize: 13 }}>{t.title}</span>
@@ -550,6 +561,7 @@ function TaskEditor({
                 }} />
               </div>
             </div>
+            {!readOnly && (
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               <button
                 className={shared.actionBtn}
@@ -564,11 +576,12 @@ function TaskEditor({
                 删除
               </button>
             </div>
+            )}
           </div>
         </div>
       ))}
 
-      {editing && (
+      {editing && !readOnly && (
         <div className={shared.riskBlock} style={{ padding: '12px 14px', borderColor: '#4F8EF7' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input
@@ -638,7 +651,7 @@ function TaskEditor({
         </div>
       )}
 
-      {!editing && (
+      {!editing && !readOnly && (
         <button className={shared.btnDashed} onClick={add} style={{ alignSelf: 'flex-start' }}>
           + 添加任务
         </button>

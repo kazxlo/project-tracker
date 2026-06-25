@@ -323,6 +323,7 @@ export default function ProjectDetail() {
             tasks={projectTasks}
             onOpenPlanEditor={() => setPlanEditorOpen(true)}
             getChildStats={getChildStats}
+            isPublic={isPublic}
           />
         )}
 
@@ -635,6 +636,7 @@ export default function ProjectDetail() {
               } catch { /* ignore */ }
             }}
             toast={showToast}
+            readOnly={isPublic}
           />
         )}
       </div>
@@ -729,6 +731,7 @@ export default function ProjectDetail() {
           tasks={projectTasks}
           onOpenPlanEditor={() => setPlanEditorOpen(true)}
           getChildStats={() => ({ reportCount: 0, progress: 0, riskCount: 0 })}
+          isPublic={isPublic}
         />
       )}
 
@@ -900,6 +903,7 @@ export default function ProjectDetail() {
             } catch { /* ignore */ }
           }}
           toast={showToast}
+          readOnly={isPublic}
         />
       )}
     </div>
