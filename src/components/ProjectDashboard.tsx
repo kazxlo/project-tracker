@@ -364,12 +364,13 @@ export default function ProjectDashboard({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ color: '#6b7a93', fontSize: 11, textAlign: 'left' }}>
-                <th style={{ padding: '8px 8px', fontWeight: 500, width: '34%' }}>任务</th>
-                <th style={{ padding: '8px 8px', fontWeight: 500, width: '12%' }}>状态</th>
-                <th style={{ padding: '8px 8px', fontWeight: 500, width: '12%' }}>优先级</th>
-                <th style={{ padding: '8px 8px', fontWeight: 500, width: '14%' }}>负责人</th>
-                <th style={{ padding: '8px 8px', fontWeight: 500, width: '14%' }}>截止日</th>
-                <th style={{ padding: '8px 8px', fontWeight: 500, width: '14%' }}>进度</th>
+                <th style={{ padding: '8px 8px', fontWeight: 500, width: '26%' }}>任务</th>
+                <th style={{ padding: '8px 8px', fontWeight: 500, width: '10%' }}>状态</th>
+                <th style={{ padding: '8px 8px', fontWeight: 500, width: '8%' }}>优先级</th>
+                <th style={{ padding: '8px 8px', fontWeight: 500, width: '10%' }}>负责人</th>
+                <th style={{ padding: '8px 8px', fontWeight: 500, width: '11%' }}>开始时间</th>
+                <th style={{ padding: '8px 8px', fontWeight: 500, width: '11%' }}>截止日</th>
+                <th style={{ padding: '8px 8px', fontWeight: 500 }}>进度</th>
               </tr>
             </thead>
             <tbody>
@@ -383,6 +384,9 @@ export default function ProjectDashboard({
                     <TaskPriorityBadge priority={t.priority} />
                   </td>
                   <td style={{ padding: '10px 8px', color: '#6b7a93' }}>{t.assignee}</td>
+                  <td style={{ padding: '10px 8px', color: '#6b7a93', fontSize: 11 }}>
+                    {t.startDate || '--'}
+                  </td>
                   <td style={{
                     padding: '10px 8px',
                     color: t.deadline && t.deadline < today && t.status !== '已完成' ? '#D85A30' : '#6b7a93',

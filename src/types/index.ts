@@ -82,6 +82,7 @@ export interface ProjectTask {
   status: '待开始' | '进行中' | '已完成' | '有风险';
   priority: 'P0' | 'P1' | 'P2';
   assignee: string;        // "张三"
+  startDate?: string;      // "2026-06-01" 开始时间
   deadline?: string;       // "2026-06-22"
   progress: number;        // 0-100，手动维护
   description?: string;

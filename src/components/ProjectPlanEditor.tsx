@@ -550,6 +550,7 @@ function TaskEditor({
               </div>
               <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#6b7a93' }}>
                 {t.assignee && <span>负责人: {t.assignee}</span>}
+                {t.startDate && <span>开始: {t.startDate}</span>}
                 {t.deadline && <span>截止: {t.deadline}</span>}
                 <span>进度: {t.progress}%</span>
               </div>
@@ -620,6 +621,14 @@ function TaskEditor({
                 value={editing.assignee}
                 onChange={e => setEditing({ ...editing, assignee: e.target.value })}
                 placeholder="负责人"
+                style={{ flex: 1 }}
+              />
+              <input
+                className={shared.formInput}
+                type="date"
+                value={editing.startDate || ''}
+                onChange={e => setEditing({ ...editing, startDate: e.target.value })}
+                placeholder="开始时间"
                 style={{ flex: 1 }}
               />
               <input
