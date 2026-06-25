@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
-const PUBLIC_EMAIL = import.meta.env.VITE_PUBLIC_EMAIL as string || 'public@123.com';
-const PUBLIC_USERNAME = import.meta.env.VITE_PUBLIC_USERNAME as string || 'public';
+const PUBLIC_EMAIL = import.meta.env.VITE_PUBLIC_EMAIL as string;
+const PUBLIC_USERNAME = import.meta.env.VITE_PUBLIC_USERNAME as string;
+const ALLOW_REGISTRATION = import.meta.env.VITE_ALLOW_REGISTRATION !== 'false';
 
 export default function Login() {
   const [isRegister, setIsRegister] = useState(false);
@@ -42,8 +43,8 @@ export default function Login() {
           navigate('/');
         }
       } else {
-        // 登录：公共账号特殊处理
-        const loginEmail = username === PUBLIC_USERNAME ? PUBLIC_EMAIL : username;
+        // 登录：公共账号特殊处理（仅当环境变量配置了才生效）
+        const loginEmail = (PUBLIC_USERNAME && username === PUBLIC_USERNAME) ? PUBLIC_EMAIL : username;
         const ok = await doLogin(loginEmail, password);
         if (ok) {
           navigate('/');
@@ -103,13 +104,15 @@ export default function Login() {
             {loading ? '请稍候...' : isRegister ? '注 册' : '登 录'}
           </button>
         </form>
-        <p
-          className={shared.loginSub}
-          style={{ marginTop: 16, cursor: 'pointer', fontSize: 14 }}
-          onClick={() => { setIsRegister(!isRegister); setError(''); }}
-        >
-          {isRegister ? '已有账号？去登录' : '没有账号？点此注册'}
-        </p>
+        {ALLOW_REGISTRATION && (
+          <p
+            className={shared.loginSub}
+            style={{ marginTop: 16, cursor: 'pointer', fontSize: 14 }}
+            onClick={() => { setIsRegister(!isRegister); setError(''); }}
+          >
+            {isRegister ? '已有账号？去登录' : '没有账号？点此注册'}
+          </p>
+        )}
       </div>
     </div>
   );
