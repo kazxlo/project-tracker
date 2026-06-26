@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getMilestones, saveMilestone, deleteMilestone, getProjectTasks, saveProjectTask, deleteProjectTask } from '../api/db';
+import { genId } from '../utils/helpers';
 import type { Milestone, ProjectTask } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -18,35 +19,42 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const reqIdRef = useRef(0);
 
-  const load = async () => {
+  const load = async (reqId: number) => {
     try {
       const [ms, ts] = await Promise.all([
         getMilestones(projectId),
         getProjectTasks(projectId),
       ]);
+      if (reqId !== reqIdRef.current) return; // 过时响应丢弃，防竞态
       setMilestones(ms);
       setTasks(ts);
     } catch {
-      toast('加载计划数据失败', 'error');
+      if (reqId === reqIdRef.current) toast('加载计划数据失败', 'error');
     } finally {
-      setLoading(false);
+      if (reqId === reqIdRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (open) {
       setLoading(true);
-      load();
+      const reqId = ++reqIdRef.current;
+      load(reqId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, projectId]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const reload = () => load(++reqIdRef.current);
 
   if (!open) return null;
 
   const handleDeleteMilestone = async (id: string) => {
     try {
       await deleteMilestone(id);
-      await load();
+      await reload();
       toast('里程碑已删除', 'success');
     } catch {
       toast('删除失败', 'error');
@@ -56,7 +64,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
   const handleDeleteTask = async (id: string) => {
     try {
       await deleteProjectTask(id);
-      await load();
+      await reload();
       toast('任务已删除', 'success');
     } catch {
       toast('删除失败', 'error');
@@ -65,10 +73,8 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
 
   const handleReorderMilestones = async (ms: Milestone[]) => {
     try {
-      for (const m of ms) {
-        await saveMilestone(m);
-      }
-      await load();
+      await Promise.all(ms.map(m => saveMilestone(m)));
+      await reload();
       toast('排序已保存', 'success');
     } catch {
       toast('排序保存失败', 'error');
@@ -77,10 +83,8 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
 
   const handleReorderTasks = async (ts: ProjectTask[]) => {
     try {
-      for (const t of ts) {
-        await saveProjectTask(t);
-      }
-      await load();
+      await Promise.all(ts.map(t => saveProjectTask(t)));
+      await reload();
       toast('排序已保存', 'success');
     } catch {
       toast('排序保存失败', 'error');
@@ -123,7 +127,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
               onDelete={handleDeleteMilestone}
               onReorder={handleReorderMilestones}
               loading={loading}
-              load={load}
+              reload={reload}
               toast={toast}
               readOnly={readOnly}
             />
@@ -136,7 +140,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
               onDelete={handleDeleteTask}
               onReorder={handleReorderTasks}
               loading={loading}
-              load={load}
+              reload={reload}
               toast={toast}
               readOnly={readOnly}
             />
@@ -147,12 +151,38 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
   );
 }
 
+/** 排序按钮组（里程碑/任务共用，消除重复） */
+function ReorderButtons({ onUp, onDown, disabledUp, disabledDown }: {
+  onUp: () => void; onDown: () => void; disabledUp: boolean; disabledDown: boolean;
+}) {
+  const btn = (onClick: () => void, disabled: boolean, label: string, title: string) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: 22, height: 18, border: 'none', borderRadius: 3,
+        background: disabled ? '#f0f2f7' : '#e5e7eb',
+        color: disabled ? '#bfc8d6' : '#6b7a93',
+        cursor: disabled ? 'default' : 'pointer',
+        fontSize: 10, lineHeight: '18px', padding: 0,
+      }}
+      title={title}
+    >{label}</button>
+  );
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2, flexShrink: 0 }}>
+      {btn(onUp, disabledUp, '▲', '上移')}
+      {btn(onDown, disabledDown, '▼', '下移')}
+    </div>
+  );
+}
+
 function emptyMilestone(projectId: string): Milestone {
   return { id: '', projectId, name: '', status: '待开始', sortOrder: 0 };
 }
 
 function MilestoneEditor({
-  milestones, setMilestones, projectId, onDelete, onReorder, loading, load, toast, readOnly,
+  milestones, setMilestones, projectId, onDelete, onReorder, loading, reload, toast, readOnly,
 }: {
   milestones: Milestone[];
   setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
@@ -160,7 +190,7 @@ function MilestoneEditor({
   onDelete: (id: string) => void;
   onReorder: (milestones: Milestone[]) => void;
   loading: boolean;
-  load: () => Promise<void>;
+  reload: () => Promise<void>;
   toast: (msg: string, type: 'success' | 'error') => void;
   readOnly?: boolean;
 }) {
@@ -168,27 +198,21 @@ function MilestoneEditor({
   const [isNew, setIsNew] = useState(false);
 
   const add = () => {
-    const m = { ...emptyMilestone(projectId), sortOrder: milestones.length };
-    setEditing(m);
+    setEditing({ ...emptyMilestone(projectId), sortOrder: milestones.length });
     setIsNew(true);
   };
-
   const cancel = () => { setEditing(null); setIsNew(false); };
 
   const save = async () => {
     if (!editing || !editing.name.trim()) return;
-    const final: Milestone = editing.id
-      ? editing
-      : { ...editing, id: 'ms_' + Date.now() };
-
+    const final: Milestone = editing.id ? editing : { ...editing, id: genId('ms_') };
     try {
       if (!editing.id) {
-        // 新建里程碑：根据目标日期自动计算正确的 sort_order
+        // 新建：按目标日期插入合适位置
         if (final.targetDate) {
           let insertIdx = milestones.length;
           for (let i = 0; i < milestones.length; i++) {
-            const m = milestones[i];
-            if (!m.targetDate || m.targetDate > final.targetDate) {
+            if (!milestones[i].targetDate || milestones[i].targetDate! > final.targetDate) {
               insertIdx = i;
               break;
             }
@@ -197,21 +221,14 @@ function MilestoneEditor({
         } else {
           final.sortOrder = milestones.length;
         }
-
         await saveMilestone(final);
-
-        // 如果插入到中间位置，将后续元素的 sort_order 顺延
         if (final.sortOrder < milestones.length) {
-          for (let i = final.sortOrder; i < milestones.length; i++) {
-            await saveMilestone({ ...milestones[i], sortOrder: i + 1 });
-          }
+          await Promise.all(milestones.slice(final.sortOrder).map((m, i) => saveMilestone({ ...m, sortOrder: final.sortOrder + i + 1 })));
         }
       } else {
-        // 编辑已有里程碑 — 保持用户手动排序结果不动
         await saveMilestone(final);
       }
-
-      await load();
+      await reload();
       setEditing(null);
       setIsNew(false);
       toast('里程碑已保存', 'success');
@@ -220,20 +237,15 @@ function MilestoneEditor({
     }
   };
 
-  const moveUp = (index: number) => {
-    if (index <= 0) return;
-    const list = [...milestones];
-    [list[index - 1], list[index]] = [list[index], list[index - 1]];
-    list.forEach((m, i) => { m.sortOrder = i; });
-    setMilestones(list);
-    onReorder(list);
-  };
-
-  const moveDown = (index: number) => {
-    if (index >= milestones.length - 1) return;
-    const list = [...milestones];
-    [list[index], list[index + 1]] = [list[index + 1], list[index]];
-    list.forEach((m, i) => { m.sortOrder = i; });
+  // 交换并生成全新数组/对象，避免 mutate 原对象
+  const reorder = (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= milestones.length) return;
+    const list = milestones.map((m, i) => {
+      if (i === index) return { ...m, sortOrder: target };
+      if (i === target) return { ...m, sortOrder: index };
+      return { ...m, sortOrder: i };
+    }).sort((a, b) => a.sortOrder - b.sortOrder);
     setMilestones(list);
     onReorder(list);
   };
@@ -243,88 +255,32 @@ function MilestoneEditor({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {milestones.length === 0 && !editing && (
-        <div className={shared.emptyState} style={{ padding: '20px 0' }}>
-          暂无里程碑，点击下方按钮添加
-        </div>
+        <div className={shared.emptyState} style={{ padding: '20px 0' }}>暂无里程碑，点击下方按钮添加</div>
       )}
 
       {milestones.map((m, i) => (
         <div key={m.id} className={shared.riskBlock} style={{ padding: '10px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-            {/* 排序按钮 */}
             {!readOnly && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2, flexShrink: 0 }}>
-              <button
-                onClick={() => moveUp(i)}
-                disabled={i === 0}
-                style={{
-                  width: 22, height: 18, border: 'none', borderRadius: 3,
-                  background: i === 0 ? '#f0f2f7' : '#e5e7eb',
-                  color: i === 0 ? '#bfc8d6' : '#6b7a93',
-                  cursor: i === 0 ? 'default' : 'pointer',
-                  fontSize: 10, lineHeight: '18px', padding: 0,
-                }}
-                title="上移"
-              >▲</button>
-              <button
-                onClick={() => moveDown(i)}
-                disabled={i === milestones.length - 1}
-                style={{
-                  width: 22, height: 18, border: 'none', borderRadius: 3,
-                  background: i === milestones.length - 1 ? '#f0f2f7' : '#e5e7eb',
-                  color: i === milestones.length - 1 ? '#bfc8d6' : '#6b7a93',
-                  cursor: i === milestones.length - 1 ? 'default' : 'pointer',
-                  fontSize: 10, lineHeight: '18px', padding: 0,
-                }}
-                title="下移"
-              >▼</button>
-            </div>
+              <ReorderButtons onUp={() => reorder(i, -1)} onDown={() => reorder(i, 1)} disabledUp={i === 0} disabledDown={i === milestones.length - 1} />
             )}
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontWeight: 500, fontSize: 13 }}>{m.name}</span>
-                <span
-                  className={shared.badge}
-                  style={{
-                    fontSize: 10,
-                    padding: '1px 8px',
-                    background:
-                      m.status === '已完成' ? '#EAF3DE' :
-                      m.status === '进行中' ? '#E6F1FB' : '#f0f2f7',
-                    color:
-                      m.status === '已完成' ? '#3B6D11' :
-                      m.status === '进行中' ? '#185FA5' : '#6b7a93',
-                  }}
-                >
-                  {m.status}
-                </span>
+                <span className={shared.badge} style={{
+                  fontSize: 10, padding: '1px 8px',
+                  background: m.status === '已完成' ? '#EAF3DE' : m.status === '进行中' ? '#E6F1FB' : '#f0f2f7',
+                  color: m.status === '已完成' ? '#3B6D11' : m.status === '进行中' ? '#185FA5' : '#6b7a93',
+                }}>{m.status}</span>
               </div>
-              {m.targetDate && (
-                <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>
-                  目标日期: {m.targetDate}
-                </div>
-              )}
-              {m.description && (
-                <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>
-                  {m.description}
-                </div>
-              )}
+              {m.targetDate && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>目标日期: {m.targetDate}</div>}
+              {m.description && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>{m.description}</div>}
             </div>
             {!readOnly && (
-            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-              <button
-                className={shared.actionBtn}
-                onClick={() => { setEditing({ ...m }); setIsNew(false); }}
-              >
-                编辑
-              </button>
-              <button
-                className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
-                onClick={() => onDelete(m.id)}
-              >
-                删除
-              </button>
-            </div>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <button className={shared.actionBtn} onClick={() => { setEditing({ ...m }); setIsNew(false); }}>编辑</button>
+                <button className={`${shared.actionBtn} ${shared.actionBtnDanger}`} onClick={() => onDelete(m.id)}>删除</button>
+              </div>
             )}
           </div>
         </div>
@@ -333,52 +289,32 @@ function MilestoneEditor({
       {editing && !readOnly && (
         <div className={shared.riskBlock} style={{ padding: '10px 14px', borderColor: '#4F8EF7' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input
-              className={shared.formInput}
-              value={editing.name}
+            <input className={shared.formInput} value={editing.name}
               onChange={e => setEditing({ ...editing, name: e.target.value })}
-              placeholder="里程碑名称，如: M1 需求调研与评审"
-              autoFocus
-            />
+              placeholder="里程碑名称，如: M1 需求调研与评审" autoFocus />
             <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                className={shared.formInput}
-                type="date"
-                value={editing.targetDate || ''}
-                onChange={e => setEditing({ ...editing, targetDate: e.target.value })}
-                style={{ flex: 1 }}
-              />
-              <select
-                className={shared.formSelect}
-                value={editing.status}
-                onChange={e => setEditing({ ...editing, status: e.target.value as Milestone['status'] })}
-                style={{ width: 110 }}
-              >
+              <input className={shared.formInput} type="date" value={editing.targetDate || ''}
+                onChange={e => setEditing({ ...editing, targetDate: e.target.value })} style={{ flex: 1 }} />
+              <select className={shared.formSelect} value={editing.status}
+                onChange={e => setEditing({ ...editing, status: e.target.value as Milestone['status'] })} style={{ width: 110 }}>
                 <option value="待开始">待开始</option>
                 <option value="进行中">进行中</option>
                 <option value="已完成">已完成</option>
               </select>
             </div>
-            <input
-              className={shared.formInput}
-              value={editing.description || ''}
+            <input className={shared.formInput} value={editing.description || ''}
               onChange={e => setEditing({ ...editing, description: e.target.value })}
-              placeholder="描述，如: PRD已签字"
-            />
+              placeholder="描述，如: PRD已签字" />
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
               <button className={shared.btnToolbar} onClick={cancel}>取消</button>
-              <button className={shared.btnPrimary} onClick={save} disabled={!editing.name.trim()}>
-                {isNew ? '添加' : '保存'}
-              </button>
+              <button className={shared.btnPrimary} onClick={save} disabled={!editing.name.trim()}>{isNew ? '添加' : '保存'}</button>
             </div>
           </div>
         </div>
       )}
 
       {!editing && !readOnly && (
-        <button className={shared.btnDashed} onClick={add} style={{ alignSelf: 'flex-start' }}>
-          + 添加里程碑
-        </button>
+        <button className={shared.btnDashed} onClick={add} style={{ alignSelf: 'flex-start' }}>+ 添加里程碑</button>
       )}
     </div>
   );
@@ -389,7 +325,7 @@ function emptyTask(projectId: string): ProjectTask {
 }
 
 function TaskEditor({
-  tasks, setTasks, projectId, onDelete, onReorder, loading, load, toast, readOnly,
+  tasks, setTasks, projectId, onDelete, onReorder, loading, reload, toast, readOnly,
 }: {
   tasks: ProjectTask[];
   setTasks: React.Dispatch<React.SetStateAction<ProjectTask[]>>;
@@ -397,58 +333,38 @@ function TaskEditor({
   onDelete: (id: string) => void;
   onReorder: (tasks: ProjectTask[]) => void;
   loading: boolean;
-  load: () => Promise<void>;
+  reload: () => Promise<void>;
   toast: (msg: string, type: 'success' | 'error') => void;
   readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState<ProjectTask | null>(null);
   const [isNew, setIsNew] = useState(false);
 
-  const add = () => {
-    const t = { ...emptyTask(projectId), sortOrder: tasks.length };
-    setEditing(t);
-    setIsNew(true);
-  };
-
+  const add = () => { setEditing({ ...emptyTask(projectId), sortOrder: tasks.length }); setIsNew(true); };
   const cancel = () => { setEditing(null); setIsNew(false); };
 
   const save = async () => {
     if (!editing || !editing.title.trim()) return;
-    const final: ProjectTask = editing.id
-      ? editing
-      : { ...editing, id: 'pt_' + Date.now() };
-
+    const final: ProjectTask = editing.id ? editing : { ...editing, id: genId('pt_') };
     try {
       if (!editing.id) {
-        // 新建任务：根据截止日期自动计算正确的 sort_order
         if (final.deadline) {
           let insertIdx = tasks.length;
           for (let i = 0; i < tasks.length; i++) {
-            const t = tasks[i];
-            if (!t.deadline || t.deadline > final.deadline) {
-              insertIdx = i;
-              break;
-            }
+            if (!tasks[i].deadline || tasks[i].deadline! > final.deadline) { insertIdx = i; break; }
           }
           final.sortOrder = insertIdx;
         } else {
           final.sortOrder = tasks.length;
         }
-
         await saveProjectTask(final);
-
-        // 如果插入到中间位置，将后续元素的 sort_order 顺延
         if (final.sortOrder < tasks.length) {
-          for (let i = final.sortOrder; i < tasks.length; i++) {
-            await saveProjectTask({ ...tasks[i], sortOrder: i + 1 });
-          }
+          await Promise.all(tasks.slice(final.sortOrder).map((t, i) => saveProjectTask({ ...t, sortOrder: final.sortOrder + i + 1 })));
         }
       } else {
-        // 编辑已有任务 — 保持用户手动排序结果不动
         await saveProjectTask(final);
       }
-
-      await load();
+      await reload();
       setEditing(null);
       setIsNew(false);
       toast('任务已保存', 'success');
@@ -457,20 +373,14 @@ function TaskEditor({
     }
   };
 
-  const moveUp = (index: number) => {
-    if (index <= 0) return;
-    const list = [...tasks];
-    [list[index - 1], list[index]] = [list[index], list[index - 1]];
-    list.forEach((t, i) => { t.sortOrder = i; });
-    setTasks(list);
-    onReorder(list);
-  };
-
-  const moveDown = (index: number) => {
-    if (index >= tasks.length - 1) return;
-    const list = [...tasks];
-    [list[index], list[index + 1]] = [list[index + 1], list[index]];
-    list.forEach((t, i) => { t.sortOrder = i; });
+  const reorder = (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= tasks.length) return;
+    const list = tasks.map((t, i) => {
+      if (i === index) return { ...t, sortOrder: target };
+      if (i === target) return { ...t, sortOrder: index };
+      return { ...t, sortOrder: i };
+    }).sort((a, b) => a.sortOrder - b.sortOrder);
     setTasks(list);
     onReorder(list);
   };
@@ -485,62 +395,27 @@ function TaskEditor({
       '有风险': { bg: '#FAEEDA', color: '#854F0B' },
     };
     const s = map[status] || map['待开始'];
-    return (
-      <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: s.bg, color: s.color }}>
-        {status}
-      </span>
-    );
+    return <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: s.bg, color: s.color }}>{status}</span>;
   };
-
   const priorityBadge = (p: string) => (
     <span className={shared.badge} style={{
       fontSize: 10, padding: '1px 6px',
-      background: p === 'P0' ? '#FCEBEB' : '#FAEEDA',
-      color: p === 'P0' ? '#A32D2D' : '#854F0B',
-    }}>
-      {p}
-    </span>
+      background: p === 'P0' ? '#FCEBEB' : p === 'P1' ? '#FAEEDA' : '#f0f2f7',
+      color: p === 'P0' ? '#A32D2D' : p === 'P1' ? '#854F0B' : '#6b7a93',
+    }}>{p}</span>
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {tasks.length === 0 && !editing && (
-        <div className={shared.emptyState} style={{ padding: '20px 0' }}>
-          暂无任务，点击下方按钮添加
-        </div>
+        <div className={shared.emptyState} style={{ padding: '20px 0' }}>暂无任务，点击下方按钮添加</div>
       )}
 
       {tasks.map((t, i) => (
         <div key={t.id} className={shared.riskBlock} style={{ padding: '10px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-            {/* 排序按钮 */}
             {!readOnly && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2, flexShrink: 0 }}>
-              <button
-                onClick={() => moveUp(i)}
-                disabled={i === 0}
-                style={{
-                  width: 22, height: 18, border: 'none', borderRadius: 3,
-                  background: i === 0 ? '#f0f2f7' : '#e5e7eb',
-                  color: i === 0 ? '#bfc8d6' : '#6b7a93',
-                  cursor: i === 0 ? 'default' : 'pointer',
-                  fontSize: 10, lineHeight: '18px', padding: 0,
-                }}
-                title="上移"
-              >▲</button>
-              <button
-                onClick={() => moveDown(i)}
-                disabled={i === tasks.length - 1}
-                style={{
-                  width: 22, height: 18, border: 'none', borderRadius: 3,
-                  background: i === tasks.length - 1 ? '#f0f2f7' : '#e5e7eb',
-                  color: i === tasks.length - 1 ? '#bfc8d6' : '#6b7a93',
-                  cursor: i === tasks.length - 1 ? 'default' : 'pointer',
-                  fontSize: 10, lineHeight: '18px', padding: 0,
-                }}
-                title="下移"
-              >▼</button>
-            </div>
+              <ReorderButtons onUp={() => reorder(i, -1)} onDown={() => reorder(i, 1)} disabledUp={i === 0} disabledDown={i === tasks.length - 1} />
             )}
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -563,20 +438,10 @@ function TaskEditor({
               </div>
             </div>
             {!readOnly && (
-            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-              <button
-                className={shared.actionBtn}
-                onClick={() => { setEditing({ ...t }); setIsNew(false); }}
-              >
-                编辑
-              </button>
-              <button
-                className={`${shared.actionBtn} ${shared.actionBtnDanger}`}
-                onClick={() => onDelete(t.id)}
-              >
-                删除
-              </button>
-            </div>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <button className={shared.actionBtn} onClick={() => { setEditing({ ...t }); setIsNew(false); }}>编辑</button>
+                <button className={`${shared.actionBtn} ${shared.actionBtnDanger}`} onClick={() => onDelete(t.id)}>删除</button>
+              </div>
             )}
           </div>
         </div>
@@ -585,85 +450,49 @@ function TaskEditor({
       {editing && !readOnly && (
         <div className={shared.riskBlock} style={{ padding: '12px 14px', borderColor: '#4F8EF7' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input
-              className={shared.formInput}
-              value={editing.title}
+            <input className={shared.formInput} value={editing.title}
               onChange={e => setEditing({ ...editing, title: e.target.value })}
-              placeholder="任务名称，如: 用户权限模块重构"
-              autoFocus
-            />
+              placeholder="任务名称，如: 用户权限模块重构" autoFocus />
             <div style={{ display: 'flex', gap: 8 }}>
-              <select
-                className={shared.formSelect}
-                value={editing.status}
-                onChange={e => setEditing({ ...editing, status: e.target.value as ProjectTask['status'] })}
-                style={{ flex: 1 }}
-              >
+              <select className={shared.formSelect} value={editing.status}
+                onChange={e => setEditing({ ...editing, status: e.target.value as ProjectTask['status'] })} style={{ flex: 1 }}>
                 <option value="待开始">待开始</option>
                 <option value="进行中">进行中</option>
                 <option value="已完成">已完成</option>
                 <option value="有风险">有风险</option>
               </select>
-              <select
-                className={shared.formSelect}
-                value={editing.priority}
-                onChange={e => setEditing({ ...editing, priority: e.target.value as ProjectTask['priority'] })}
-                style={{ width: 80 }}
-              >
+              <select className={shared.formSelect} value={editing.priority}
+                onChange={e => setEditing({ ...editing, priority: e.target.value as ProjectTask['priority'] })} style={{ width: 80 }}>
                 <option value="P0">P0</option>
                 <option value="P1">P1</option>
                 <option value="P2">P2</option>
               </select>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                className={shared.formInput}
-                value={editing.assignee}
+              <input className={shared.formInput} value={editing.assignee}
                 onChange={e => setEditing({ ...editing, assignee: e.target.value })}
-                placeholder="负责人"
-                style={{ flex: 1 }}
-              />
-              <input
-                className={shared.formInput}
-                type="date"
-                value={editing.startDate || ''}
-                onChange={e => setEditing({ ...editing, startDate: e.target.value })}
-                placeholder="开始时间"
-                style={{ flex: 1 }}
-              />
-              <input
-                className={shared.formInput}
-                type="date"
-                value={editing.deadline || ''}
-                onChange={e => setEditing({ ...editing, deadline: e.target.value })}
-                style={{ flex: 1 }}
-              />
+                placeholder="负责人" style={{ flex: 1 }} />
+              <input className={shared.formInput} type="date" value={editing.startDate || ''}
+                onChange={e => setEditing({ ...editing, startDate: e.target.value })} style={{ flex: 1 }} />
+              <input className={shared.formInput} type="date" value={editing.deadline || ''}
+                onChange={e => setEditing({ ...editing, deadline: e.target.value })} style={{ flex: 1 }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 12, color: '#6b7a93', whiteSpace: 'nowrap' }}>进度: {editing.progress}%</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={editing.progress}
+              <input type="range" min={0} max={100} value={editing.progress}
                 onChange={e => setEditing({ ...editing, progress: Number(e.target.value) })}
-                style={{ flex: 1, height: 4, accentColor: '#4F8EF7' }}
-              />
+                style={{ flex: 1, height: 4, accentColor: '#4F8EF7' }} />
             </div>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
               <button className={shared.btnToolbar} onClick={cancel}>取消</button>
-              <button className={shared.btnPrimary} onClick={save} disabled={!editing.title.trim()}>
-                {isNew ? '添加' : '保存'}
-              </button>
+              <button className={shared.btnPrimary} onClick={save} disabled={!editing.title.trim()}>{isNew ? '添加' : '保存'}</button>
             </div>
           </div>
         </div>
       )}
 
       {!editing && !readOnly && (
-        <button className={shared.btnDashed} onClick={add} style={{ alignSelf: 'flex-start' }}>
-          + 添加任务
-        </button>
+        <button className={shared.btnDashed} onClick={add} style={{ alignSelf: 'flex-start' }}>+ 添加任务</button>
       )}
     </div>
   );

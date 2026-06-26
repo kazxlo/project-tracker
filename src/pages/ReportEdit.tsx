@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { getProject, getReport, getLatestReport, saveReport, generateWeekLabel } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
-import { WeeklyReport, ReportItem, Risk } from '../types';
+import { getWeekRange, genId } from '../utils/helpers';
+import type { WeeklyReport, ReportItem, Risk } from '../types';
 import shared from '../styles/shared.module.css';
 
 /** 上一周计划确认项 */
@@ -23,27 +24,13 @@ export default function ReportEdit() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const isEdit = !!reportId;
-  const isP1 = projectId === 'p1';
   const isPublic = role === 'public';
 
-  // public 用户不允许新建周报
-  if (isPublic && !reportId) {
-    navigate(`/project/${projectId}`, { replace: true });
-    return null;
-  }
-
-  // public 用户查看周报时为只读模式
+  // public 用户不允许新建周报（用 Navigate 组件做重定向，避免在 hooks 之前 return 违反规则）
   const readOnly = isPublic;
-
-  const getWeekRange = () => {
-    const today = new Date();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-    const friday = new Date(monday);
-    friday.setDate(monday.getDate() + 4);
-    const fmt = (d: Date) => d.toISOString().split('T')[0];
-    return { start: fmt(monday), end: fmt(friday) };
-  };
+  if (isPublic && !reportId) {
+    return <Navigate to={`/project/${projectId}`} replace />;
+  }
 
   const [goals, setGoals] = useState('');
   const [highlights, setHighlights] = useState('');
@@ -57,6 +44,7 @@ export default function ReportEdit() {
   const [savedCreatedAt, setSavedCreatedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [detailedItems, setDetailedItems] = useState(false);
 
   // 上一周计划完成确认（仅新建时）
   const [planConfirm, setPlanConfirm] = useState<PlanConfirmItem[]>([]);
@@ -73,6 +61,7 @@ export default function ReportEdit() {
         const project = await getProject(projectId!);
         if (!cancelled) {
           if (!project) { navigate('/'); return; }
+          setDetailedItems(!!project.detailedItems);
         }
 
         if (isEdit && reportId) {
@@ -81,8 +70,8 @@ export default function ReportEdit() {
             setGoals(existing.goals || existing.summary || '');
             setHighlights(existing.highlights || '');
             setProgress(existing.progress || 0);
-            setCompleted(existing.completedItems.length > 0 ? existing.completedItems : []);
-            setPlanned(existing.plannedItems.length > 0 ? existing.plannedItems : []);
+            setCompleted(existing.completedItems);
+            setPlanned(existing.plannedItems);
             setRisks(existing.risks);
             setWeekLabel(existing.weekLabel);
             setWeekStart(existing.weekStart);
@@ -112,31 +101,23 @@ export default function ReportEdit() {
             setWeekLabel(nextWeekLabel);
           }
 
+          // 新建周报：仅把上周目标/重点/进度作为默认值带入；上周计划与风险通过确认区处理，避免双重带入
           if (!cancelled && prev) {
             setGoals(prev.goals || prev.summary || '');
             setHighlights(prev.highlights || '');
             setProgress(prev.progress || 0);
-            setCompleted(prev.completedItems.length > 0
-              ? prev.completedItems.map(c => ({ ...c, id: 'c_' + Date.now() + '_' + c.order }))
-              : []);
-            setPlanned(prev.plannedItems.length > 0
-              ? prev.plannedItems.map(p => ({ ...p, id: 'p_' + Date.now() + '_' + p.order }))
-              : []);
-            setRisks(prev.risks.length > 0
-              ? prev.risks.map(r => ({ ...r, id: 'r_' + Date.now() + '_' + r.order, status: r.status === '已解决' ? '持续关注' as const : r.status }))
-              : []);
 
             // 上周风险确认（仅带入未解决的）
             if (prev.risks.length > 0) {
               setRiskConfirm(prev.risks.map(r => ({
-                risk: { ...r, id: 'rc_' + Date.now() + '_' + r.order },
+                risk: { ...r, id: genId('rc_') },
                 stillRisk: r.status !== '已解决',
               })));
             }
 
             if (prev.plannedItems.length > 0) {
               setPlanConfirm(prev.plannedItems.map(p => ({
-                item: { ...p, id: 'pc_' + Date.now() + '_' + p.order },
+                item: { ...p, id: genId('pc_') },
                 done: false,
                 reason: '',
               })));
@@ -166,7 +147,7 @@ export default function ReportEdit() {
   const confirmCompletedPlans = () => {
     const doneItems = planConfirm.filter(pc => pc.done).map((pc, idx) => ({
       ...pc.item,
-      id: 'c_pl_' + Date.now() + '_' + idx,
+      id: genId('c_pl_'),
       order: completed.length + idx + 1,
       carriedForward: true, // 标记为从上周带入的已完成事项
     }));
@@ -175,7 +156,7 @@ export default function ReportEdit() {
     // 未完成的计划事项带入本周计划，附上未完成原因
     const undoneItems = planConfirm.filter(pc => !pc.done).map((pc, idx) => ({
       ...pc.item,
-      id: 'p_undone_' + Date.now() + '_' + idx,
+      id: genId('p_undone_'),
       order: planned.length + idx + 1,
       reason: pc.reason || '', // 保留未完成原因
     }));
@@ -186,7 +167,7 @@ export default function ReportEdit() {
 
   // --- 事项操作 ---
   const addItem = (list: ReportItem[], setter: (v: ReportItem[]) => void, prefix: string) => {
-    setter([...list, { id: prefix + Date.now(), order: list.length + 1, title: '' }]);
+    setter([...list, { id: genId(prefix), order: list.length + 1, title: '' }]);
   };
 
   const removeItem = (list: ReportItem[], setter: (v: ReportItem[]) => void, id: string) => {
@@ -206,7 +187,7 @@ export default function ReportEdit() {
     // 仍属于风险的项目带入本周风险
     const stillRisks = riskConfirm.filter(rc => rc.stillRisk).map((rc, idx) => ({
       ...rc.risk,
-      id: 'r_cf_' + Date.now() + '_' + idx,
+      id: genId('r_cf_'),
       order: risks.length + idx + 1,
       status: rc.risk.status === '已解决' ? '持续关注' as const : rc.risk.status,
     }));
@@ -215,7 +196,7 @@ export default function ReportEdit() {
     // 已不属于风险的项目：加入本周风险列表，标记为已解决并记录处理时间
     const resolvedRisks = riskConfirm.filter(rc => !rc.stillRisk).map((rc, idx) => ({
       ...rc.risk,
-      id: 'r_res_' + Date.now() + '_' + idx,
+      id: genId('r_res_'),
       order: risks.length + stillRisks.length + idx + 1,
       status: '已解决' as const,
       resolvedAt: new Date().toISOString(),
@@ -227,7 +208,7 @@ export default function ReportEdit() {
 
   // --- 风险操作 ---
   const addRisk = () => {
-    setRisks([...risks, { id: 'r' + Date.now(), order: risks.length + 1, description: '', suggestion: '', level: '中', status: '待处理' }]);
+    setRisks([...risks, { id: genId('r'), order: risks.length + 1, description: '', suggestion: '', level: '中', status: '待处理' }]);
   };
 
   const removeRisk = (id: string) => {
@@ -248,7 +229,7 @@ export default function ReportEdit() {
       const filteredRisks = risks.filter(r => r.description.trim());
 
       const report: WeeklyReport = {
-        id: isEdit && reportId ? reportId : 'wr_' + Date.now(),
+        id: isEdit && reportId ? reportId : genId('wr_'),
         projectId,
         weekLabel: weekLabel || generateWeekLabel(weekStart),
         weekStart,
@@ -440,22 +421,22 @@ export default function ReportEdit() {
       {/* 本周工作完成情况 */}
       <Section title="本周工作完成情况">
         {completed.map((item) => (
-          <div key={item.id} className={isP1 ? shared.completedItemBlock : ''}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: isP1 ? 6 : 0 }}>
+          <div key={item.id} className={detailedItems ? shared.completedItemBlock : ''}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: detailedItems ? 6 : 0 }}>
               <span className={shared.orderNum}>{item.order}.</span>
               <input
                 className={shared.formInput}
                 value={item.title}
                 onChange={e => updateItemField(completed, setCompleted, item.id, 'title', e.target.value)}
-                placeholder={isP1 ? '子项目名称' : `完成事项 ${item.order}`}
-                style={{ flex: 1, fontWeight: isP1 ? 500 : 400 }}
+                placeholder={detailedItems ? '子项目名称' : `完成事项 ${item.order}`}
+                style={{ flex: 1, fontWeight: detailedItems ? 500 : 400 }}
                 readOnly={readOnly}
               />
               {!readOnly && (
                 <button className={shared.delBtn} onClick={() => removeItem(completed, setCompleted, item.id)} title="删除">×</button>
               )}
             </div>
-            {isP1 && (
+            {detailedItems && (
               <div style={{ display: 'flex', gap: 8, paddingLeft: 20, marginBottom: completed.indexOf(item) === completed.length - 1 ? 0 : 4 }}>
                 <input
                   className={shared.formInput}

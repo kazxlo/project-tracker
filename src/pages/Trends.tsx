@@ -1,15 +1,18 @@
 import { getProjects, getAllReports } from '../api/db';
-import { Project, WeeklyReport } from '../types';
+import { getLatestReport, filterVisibleProjects, calcOverallProgress } from '../utils/helpers';
+import type { Project, WeeklyReport } from '../types';
 import { useState, useEffect, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   BarChart, Bar, ResponsiveContainer,
 } from 'recharts';
+import { useAuth } from '../hooks/useAuth';
 import shared from '../styles/shared.module.css';
 
 type TabKey = 'progress' | 'health';
 
 export default function Trends() {
+  const { userId, role } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +24,7 @@ export default function Trends() {
       try {
         const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
         if (!cancelled) {
-          setProjects(projs);
+          setProjects(filterVisibleProjects(projs, userId, role));
           setAllReports(reps);
         }
       } catch (err) {
@@ -32,7 +35,7 @@ export default function Trends() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [userId, role]);
 
   // ---- 数据处理 ----
 
@@ -55,41 +58,20 @@ export default function Trends() {
       topProjects.forEach(parent => {
         const childProjects = projects.filter(c => c.parentId === parent.id);
         const targetIds = [parent.id, ...childProjects.map(c => c.id)];
-        const hasChildren = childProjects.length > 0;
         const reportsInWeek = allReports.filter(
           r => targetIds.includes(r.projectId) && r.weekLabel === label
         );
-        let progress = 0;
-        if (hasChildren) {
-          // 子项目进度平均值
-          let childSum = 0;
-          let childCount = 0;
-          childProjects.forEach(child => {
-            const childReports = reportsInWeek.filter(r => r.projectId === child.id);
-            const latest = childReports.length > 0
-              ? childReports.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
-              : null;
-            if (latest && latest.progress > 0) {
-              childSum += latest.progress;
-              childCount++;
-            }
-          });
-          if (childCount > 0) {
-            progress = Math.round(childSum / childCount);
-          } else {
-            const parentReports = reportsInWeek.filter(r => r.projectId === parent.id);
-            const parentLatest = parentReports.length > 0
-              ? parentReports.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
-              : null;
-            progress = parentLatest ? parentLatest.progress : 0;
-          }
-        } else {
-          const parentReports = reportsInWeek.filter(r => r.projectId === parent.id);
-          const parentLatest = parentReports.length > 0
-            ? parentReports.reduce((a, b) => a.createdAt > b.createdAt ? a : b)
-            : null;
-          progress = parentLatest ? parentLatest.progress : 0;
-        }
+        // 父项目进度 = 自身最新周报进度 + 各子项目最新周报进度 取均值（同一周内按 createdAt 取最新）
+        const values: number[] = [];
+        const pickLatest = (reps: WeeklyReport[]) =>
+          reps.length > 0 ? reps.reduce((a, b) => (a.createdAt > b.createdAt ? a : b)) : null;
+        const selfLatest = pickLatest(reportsInWeek.filter(r => r.projectId === parent.id));
+        if (selfLatest && selfLatest.progress > 0) values.push(selfLatest.progress);
+        childProjects.forEach(child => {
+          const latest = pickLatest(reportsInWeek.filter(r => r.projectId === child.id));
+          if (latest && latest.progress > 0) values.push(latest.progress);
+        });
+        const progress = values.length > 0 ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : 0;
         row[parent.name] = progress;
       });
       return row;
@@ -149,35 +131,18 @@ export default function Trends() {
     });
   }, [projects, allReports]);
 
-  // 最新进度汇总表格（子项目合并到父项目）
+  // 最新进度汇总表格（子项目合并到父项目，父项目自身周报进度也纳入均值）
   const latestProgressTable = useMemo(() => {
     const topProjects = projects.filter(p => !p.parentId);
     return topProjects.map(parent => {
       const childProjects = projects.filter(c => c.parentId === parent.id);
       const targetIds = [parent.id, ...childProjects.map(c => c.id)];
       const prpts = allReports.filter(r => targetIds.includes(r.projectId));
-      const latest = prpts.length > 0
-        ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-        : null;
-      // 进度：子项目取平均值
-      let progress = latest?.progress || 0;
-      if (childProjects.length > 0) {
-        let childSum = 0;
-        let childCount = 0;
-        childProjects.forEach(child => {
-          const crpts = allReports.filter(r => r.projectId === child.id);
-          const clatest = crpts.length > 0
-            ? crpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-            : null;
-          if (clatest && clatest.progress > 0) {
-            childSum += clatest.progress;
-            childCount++;
-          }
-        });
-        if (childCount > 0) {
-          progress = Math.round(childSum / childCount);
-        }
-      }
+      const latest = getLatestReport(prpts);
+      const progress = calcOverallProgress(
+        allReports.filter(r => r.projectId === parent.id),
+        childProjects.map(c => allReports.filter(r => r.projectId === c.id))
+      );
       return {
         project: parent,
         latest,

@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react';
 import { getAllProfiles, updateProfileRole, UserProfile } from '../api/profiles';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import Toast from '../components/Toast';
 import shared from '../styles/shared.module.css';
 
 export default function AdminUsers() {
   const { userId } = useAuth();
+  const { toast, showToast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (msg: string, type: 'success' | 'error') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
 
   const loadUsers = async () => {
     try {
@@ -62,11 +59,7 @@ export default function AdminUsers() {
 
   return (
     <div>
-      {toast && (
-        <div className={`${shared.toast} ${toast.type === 'success' ? shared.toastSuccess : shared.toastError}`}>
-          {toast.msg}
-        </div>
-      )}
+      <Toast toast={toast} />
 
       <h2 className={shared.pageTitle}>用户管理</h2>
 

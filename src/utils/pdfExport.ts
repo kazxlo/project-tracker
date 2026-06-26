@@ -2,6 +2,7 @@
  * PDF 导出工具 — 生成本周汇总报告并通过浏览器打印为 PDF
  */
 import type { Project, WeeklyReport, Risk } from '../types';
+import { getLatestReport, formatDateChinese, RISK_LEVEL_ORDER } from './helpers';
 
 interface ProjectReport {
   project: Project;
@@ -40,9 +41,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
   const riskMap = new Map<string, { projectName: string; color: string; risk: Risk }>();
   projects.forEach(p => {
     const prpts = allReports.filter(r => r.projectId === p.id);
-    const latest = prpts.length > 0
-      ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-      : null;
+    const latest = getLatestReport(prpts);
     if (!latest) return;
     latest.risks.forEach(rk => {
       if (rk.status === '已解决') return;
@@ -52,25 +51,20 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
       }
     });
   });
-  const allUnresolvedRisks = Array.from(riskMap.values()).sort((a, b) => {
-    const order: Record<string, number> = { '高': 0, '中': 1, '低': 2 };
-    return (order[a.risk.level] ?? 9) - (order[b.risk.level] ?? 9);
-  });
+  const allUnresolvedRisks = Array.from(riskMap.values()).sort((a, b) =>
+    (RISK_LEVEL_ORDER[a.risk.level] ?? 9) - (RISK_LEVEL_ORDER[b.risk.level] ?? 9)
+  );
 
   // 3. 构建项目报告列表（父项目聚合子项目数据，单独子项目跳过展示）
   const displayProjects = projects.filter(p => !childProjectIds.has(p.id));
   const projectReports: ProjectReport[] = displayProjects.map(p => {
     const prpts = allReports.filter(r => r.projectId === p.id);
-    const latest = prpts.length > 0
-      ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-      : null;
+    const latest = getLatestReport(prpts);
     const children = childByParent.get(p.id) || [];
     const childReports = children.length > 0
       ? children.map(c => {
           const crpts = allReports.filter(r => r.projectId === c.id);
-          const clatest = crpts.length > 0
-            ? crpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-            : null;
+          const clatest = getLatestReport(crpts);
           return { project: c, latestReport: clatest };
         })
       : undefined;
@@ -89,13 +83,8 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
   // 找到最新一期周报的日期范围作为PDF标题
   let dateRangeTitle = '';
   if (allReports.length > 0) {
-    const latestReport = allReports.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
-    const fmtChinese = (dateStr: string) => {
-      if (!dateStr) return '';
-      const d = new Date(dateStr + 'T00:00:00');
-      return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`;
-    };
-    dateRangeTitle = escapeHtml(`${fmtChinese(latestReport.weekStart)}-${fmtChinese(latestReport.weekEnd)}`);
+    const latestReport = getLatestReport(allReports)!;
+    dateRangeTitle = escapeHtml(`${formatDateChinese(latestReport.weekStart)}-${formatDateChinese(latestReport.weekEnd)}`);
   } else {
     dateRangeTitle = escapeHtml(fmtDate(today));
   }

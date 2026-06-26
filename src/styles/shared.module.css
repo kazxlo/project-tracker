@@ -15,6 +15,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .headerLeft {
@@ -37,6 +40,9 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
   padding: 0 32px;
   display: flex;
+  position: sticky;
+  top: 56px;
+  z-index: 99;
 }
 
 .main {
@@ -601,6 +607,11 @@
 }
 
 /* ====== Progress Table ====== */
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .progressTable {
   width: 100%;
   border-collapse: collapse;
@@ -889,7 +900,9 @@
   border-radius: 24px;
   padding: 28px 32px;
   min-width: 420px;
-  max-width: 520px;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
   box-shadow: 0 8px 28px rgba(0,0,0,0.04);
   border: 0.5px solid rgba(0,0,0,0.04);
 }
@@ -1077,6 +1090,7 @@
   overflow-y: auto;
   box-shadow: 0 8px 28px rgba(0,0,0,0.04);
   border: 0.5px solid rgba(0,0,0,0.04);
+  width: 90%;
 }
 
 .drillHeader {
@@ -1478,6 +1492,15 @@
 }
 
 /* ====== Responsive ====== */
+@media (max-width: 1200px) {
+  .main {
+    max-width: 100%;
+  }
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     padding: 0 16px;

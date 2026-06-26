@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getProjects, getAllReports, getAllProjectTasks } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
-import { Project, ProjectTask, WeeklyReport } from '../types';
+import { getTodayStr, hexToRgb, getLatestReport } from '../utils/helpers';
+import { filterVisibleProjects } from '../utils/helpers';
+import type { Project, ProjectTask, WeeklyReport } from '../types';
+import TopNav from '../components/TopNav';
 import styles from '../styles/workspace.module.css';
 
 // 状态颜色映射
@@ -36,7 +39,7 @@ interface ProjectGroup {
 }
 
 export default function Workspace() {
-  const { username, role, doLogout } = useAuth();
+  const { username, role, userId, doLogout } = useAuth();
   const navigate = useNavigate();
   const isAdmin = role === 'admin';
 
@@ -56,19 +59,22 @@ export default function Workspace() {
           getProjects(), getAllProjectTasks(), getAllReports(),
         ]);
         if (!cancelled) {
-          setProjects(projs);
+          // 按 viewerIds 过滤可见项目（admin 可见全部）
+          setProjects(filterVisibleProjects(projs, userId, role));
           setAllTasks(tasks);
           setAllReports(reps);
         }
-      } catch { /* 静默处理 */ }
+      } catch (e) {
+        console.error('加载工作台数据失败:', e);
+      }
       if (!cancelled) setLoading(false);
     }
     init();
     return () => { cancelled = true; };
-  }, []);
+  }, [userId, role]);
 
   // 当前日期
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const today = useMemo(() => getTodayStr(), []);
 
   // 我的任务（分配给我 + 关联的项目）
   const myTasks = useMemo(() => {
@@ -85,9 +91,7 @@ export default function Workspace() {
     return myProjects.map(p => {
       const projectTasks = allTasks.filter(t => t.projectId === p.id);
       const prpts = allReports.filter(r => r.projectId === p.id);
-      const latestReport = prpts.length > 0
-        ? prpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b))
-        : null;
+      const latestReport = getLatestReport(prpts);
 
       // 我是负责人 → 显示所有任务；否则只显示我的任务
       const isOwner = p.owner === username;
@@ -308,12 +312,7 @@ export default function Workspace() {
           </div>
         </div>
         <div className={styles.headerRight}>
-          <nav className={styles.topNav}>
-            <span className={`${styles.topNavItem} ${styles.topNavActive}`}>工作台</span>
-            <Link to="/cockpit" className={styles.topNavLink}>驾驶舱</Link>
-            <Link to="/trends" className={styles.topNavLink}>趋势分析</Link>
-            {isAdmin && <Link to="/admin" className={styles.topNavLink}>管理中心</Link>}
-          </nav>
+          <TopNav active="workspace" theme="dark" styles={styles} />
           <select
             className={styles.filterSelect}
             value={projectFilter}
@@ -336,7 +335,7 @@ export default function Workspace() {
             {username}
             {isAdmin && <span className={styles.adminBadge}>管理员</span>}
           </span>
-          <button className={styles.logoutBtn} onClick={() => { doLogout(); navigate('/login'); }}>
+          <button className={styles.logoutBtn} onClick={() => { doLogout(); }}>
             退出
           </button>
         </div>
@@ -433,7 +432,6 @@ export default function Workspace() {
                 const left = `${((startIdx + 0.1) / totalTimelineDays) * 100}%`;
                 const width = `${Math.max(1, ((endIdx - startIdx + 0.8) / totalTimelineDays) * 100)}%`;
                 const isConflict = conflictTaskIds.has(t.id);
-                const project = projects.find(p => p.id === t.projectId);
                 const isOverdue = t.deadline && t.deadline < today && t.status !== '已完成';
 
                 return (
@@ -518,14 +516,7 @@ export default function Workspace() {
       <section className={styles.projectGroups}>
         {projectGroups.map(g => {
           const color = g.project.color;
-          const { r, g: gn, b } = (() => {
-            const h = color.replace('#', '');
-            return {
-              r: parseInt(h.substring(0, 2), 16),
-              g: parseInt(h.substring(2, 4), 16),
-              b: parseInt(h.substring(4, 6), 16),
-            };
-          })();
+          const { r, g: gn, b } = hexToRgb(color);
 
           return (
             <div
@@ -563,7 +554,6 @@ export default function Workspace() {
                   g.tasks.map(t => {
                     const statusCls = STATUS_CLASS[t.status] || styles.taskTodo;
                     const isConflict = conflictTaskIds.has(t.id);
-                    const project = projects.find(p => p.id === t.projectId);
                     return (
                       <div
                         key={t.id}

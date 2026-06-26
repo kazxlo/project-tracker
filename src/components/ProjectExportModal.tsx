@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { getLatestReport, formatDate } from '../utils/helpers';
 import type { Project, WeeklyReport } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -15,23 +16,22 @@ export default function ProjectExportModal({ projects, allReports, onConfirm, on
     new Set(projects.map(p => p.id))
   );
 
+  // projects 变化时同步默认全选（修复 useState 初始值不随 props 更新的问题）
+  useEffect(() => {
+    setSelectedIds(new Set(projects.map(p => p.id)));
+  }, [projects]);
+
   // 获取项目最新周报信息
   const reportMap = useMemo(() => {
     const map: Record<string, { label: string; date: string } | null> = {};
     projects.forEach(p => {
       const prpts = allReports.filter(r => r.projectId === p.id);
-      if (prpts.length === 0) {
+      const latest = getLatestReport(prpts);
+      if (!latest) {
         map[p.id] = null;
         return;
       }
-      const latest = prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
-      const weekDate = latest.weekStart
-        ? (() => {
-            const d = new Date(latest.weekStart + 'T00:00:00');
-            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-          })()
-        : '';
-      map[p.id] = { label: latest.weekLabel, date: weekDate };
+      map[p.id] = { label: latest.weekLabel, date: formatDate(latest.weekStart) };
     });
     return map;
   }, [projects, allReports]);

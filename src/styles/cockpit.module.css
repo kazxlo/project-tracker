@@ -20,6 +20,10 @@
   border-bottom: 1px solid rgba(100, 181, 246, 0.1);
   flex-wrap: wrap;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
 }
 
 .headerLeft {

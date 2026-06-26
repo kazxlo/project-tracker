@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getTodayStr, getLatestReport, calcOverallProgress } from '../utils/helpers';
 import type { Project, WeeklyReport, Milestone, ProjectTask } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -19,16 +20,17 @@ export default function ProjectDashboard({
   project, reports, childProjects, allReports, milestones, tasks, onOpenPlanEditor, getChildStats, isPublic,
 }: Props) {
   const navigate = useNavigate();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayStr();
 
   // ====== 层1数据 ======
-  const latest = reports.length > 0
-    ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-    : null;
+  const latest = getLatestReport(reports);
 
-  // 综合进度：有子项目取子项目平均，否则取项目自身最新周报进度
+  // 综合进度：父项目 = 自身最新周报进度 + 各子项目最新周报进度 取均值（自身填写也生效）
   const overallProgress = childProjects.length > 0
-    ? Math.round(childProjects.reduce((s, c) => s + getChildStats(c.id).progress, 0) / childProjects.length)
+    ? calcOverallProgress(
+        reports,
+        childProjects.map(c => allReports.filter(r => r.projectId === c.id))
+      )
     : (latest?.progress || 0);
 
   // 本周完成数
@@ -100,7 +102,7 @@ export default function ProjectDashboard({
     // 截止日迫近的子项目 (deadline <= 2周)
     const twoWeeksLater = new Date();
     twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
-    const twoWeeksLaterStr = twoWeeksLater.toISOString().split('T')[0];
+    const twoWeeksLaterStr = `${twoWeeksLater.getFullYear()}-${String(twoWeeksLater.getMonth() + 1).padStart(2, '0')}-${String(twoWeeksLater.getDate()).padStart(2, '0')}`;
     childProjects.filter(c => {
       const dl = c.deadline || c.serviceEnd;
       return dl && dl >= today && dl <= twoWeeksLaterStr && getChildStats(c.id).progress < 95;
@@ -121,14 +123,17 @@ export default function ProjectDashboard({
   const [taskFilter, setTaskFilter] = useState<string>('全部');
 
   const displayTasks = useMemo(() => {
-    let list = tasks.length > 0 ? tasks : [];
+    // 始终基于新数组，避免 mutate props 传入的 tasks
+    let list: ProjectTask[] = [...tasks];
 
     // 无任务时用子项目最新周报数据近似
     if (list.length === 0 && childProjects.length > 0) {
+      list = [];
       childProjects.forEach(c => {
         const crpts = allReports.filter(r => r.projectId === c.id);
         if (crpts.length === 0) return;
-        const clatest = crpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
+        const clatest = getLatestReport(crpts);
+        if (!clatest) return;
 
         clatest.completedItems.forEach(ci => {
           list.push({
@@ -290,7 +295,7 @@ export default function ProjectDashboard({
               </div>
             )}
             {milestoneEntries.map((entry, i) => (
-              <div key={i} style={{ marginBottom: i < milestoneEntries.length - 1 ? 14 : 0, position: 'relative' }}>
+              <div key={`${entry.name}_${entry.date}_${i}`} style={{ marginBottom: i < milestoneEntries.length - 1 ? 14 : 0, position: 'relative' }}>
                 <div style={{
                   position: 'absolute', left: -18, top: 2, width: 10, height: 10, borderRadius: '50%',
                   background:
@@ -374,7 +379,7 @@ export default function ProjectDashboard({
               </tr>
             </thead>
             <tbody>
-              {displayTasks.map((t, idx) => (
+              {displayTasks.map((t) => (
                 <tr key={t.id} style={{ borderTop: '0.5px solid rgba(0,0,0,0.04)' }}>
                   <td style={{ padding: '10px 8px', fontWeight: 500 }}>{t.title}</td>
                   <td style={{ padding: '10px 8px' }}>

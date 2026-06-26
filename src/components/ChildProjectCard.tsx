@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Project, WeeklyReport } from '../types';
+import { getTodayStr, formatDate } from '../utils/helpers';
+import type { Project } from '../types';
 import shared from '../styles/shared.module.css';
 
 interface ChildProjectCardProps {
@@ -18,26 +19,22 @@ interface ChildProjectCardProps {
 
 function formatPeriod(start?: string, end?: string): string {
   if (!start && !end) return '';
-  const fmt = (s: string) => {
-    const d = new Date(s + 'T00:00:00');
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-  };
-  if (start && end) return `${fmt(start)}-${fmt(end)}`;
-  if (start) return `${fmt(start)}-`;
-  return `-${fmt(end!)}`;
+  if (start && end) return `${formatDate(start)}-${formatDate(end)}`;
+  if (start) return `${formatDate(start)}-`;
+  return `-${formatDate(end!)}`;
 }
 
 function getRemainingDays(serviceEnd?: string): number | null {
   if (!serviceEnd) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getTodayStr();
   const end = new Date(serviceEnd + 'T00:00:00');
-  return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const now = new Date(today + 'T00:00:00');
+  return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function getServiceRemainingRatio(serviceStart?: string, serviceEnd?: string): number {
   if (!serviceStart || !serviceEnd) return 100;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayStr();
   const start = new Date(serviceStart + 'T00:00:00').getTime();
   const end = new Date(serviceEnd + 'T00:00:00').getTime();
   const now = new Date(today + 'T00:00:00').getTime();
@@ -48,8 +45,7 @@ function getServiceRemainingRatio(serviceStart?: string, serviceEnd?: string): n
 
 function isServiceExpired(serviceEnd?: string): boolean {
   if (!serviceEnd) return false;
-  const today = new Date().toISOString().split('T')[0];
-  return serviceEnd < today;
+  return serviceEnd < getTodayStr();
 }
 
 export default function ChildProjectCard({

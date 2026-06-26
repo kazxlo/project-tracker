@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { getAllProfiles, UserProfile } from '../api/profiles';
 import { getProjects, saveProject } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
-import { Project } from '../types';
+import { useToast } from '../hooks/useToast';
+import { filterVisibleProjects } from '../utils/helpers';
+import type { Project } from '../types';
+import Toast from '../components/Toast';
 import shared from '../styles/shared.module.css';
 
 // 内嵌子组件
@@ -48,16 +51,12 @@ export default function Admin() {
 
 /** 项目权限Tab */
 function ProjectPermissions() {
+  const { userId, role } = useAuth();
+  const { toast, showToast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (msg: string, type: 'success' | 'error') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +64,7 @@ function ProjectPermissions() {
       try {
         const [projs, profs] = await Promise.all([getProjects(), getAllProfiles()]);
         if (!cancelled) {
-          setProjects(projs);
+          setProjects(filterVisibleProjects(projs, userId, role));
           setProfiles(profs);
         }
       } catch {
@@ -76,7 +75,8 @@ function ProjectPermissions() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, role]);
 
   // 切换用户可见性
   const toggleViewer = (projectId: string, userId: string) => {
@@ -124,11 +124,7 @@ function ProjectPermissions() {
 
   return (
     <div>
-      {toast && (
-        <div className={`${shared.toast} ${toast.type === 'success' ? shared.toastSuccess : shared.toastError}`}>
-          {toast.msg}
-        </div>
-      )}
+      <Toast toast={toast} />
 
       {topProjects.length === 0 ? (
         <div className={shared.emptyState}>暂无项目</div>

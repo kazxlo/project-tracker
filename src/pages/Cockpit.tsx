@@ -1,27 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getProjects, getAllReports, updateRiskStatus, getAllMilestones, getAllProjectTasks } from '../api/db';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { useAuth } from '../hooks/useAuth';
-import { Project, Milestone, ProjectTask } from '../types';
+import { getTodayStr, hexToRgb, formatDate, getLatestReport, calcOverallProgress, filterVisibleProjects } from '../utils/helpers';
+import type { Project, Milestone, ProjectTask, WeeklyReport } from '../types';
 import ProjectExportModal from '../components/ProjectExportModal';
+import TopNav from '../components/TopNav';
 import styles from '../styles/cockpit.module.css';
 
-// hex → {r, g, b}
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const h = hex.replace('#', '');
-  return {
-    r: parseInt(h.substring(0, 2), 16),
-    g: parseInt(h.substring(2, 4), 16),
-    b: parseInt(h.substring(4, 6), 16),
-  };
-}
-
-// YYYY-MM-DD → YYYY.MM.DD
-function fmtDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-}
+// YYYY-MM-DD → YYYY.MM.DD（本地 fmtDate 别名，复用 helpers.formatDate）
+const fmtDate = formatDate;
 
 // 状态对应的样式类
 const STATUS_BADGE_CLASS: Record<string, string> = {
@@ -47,7 +36,7 @@ export default function Cockpit() {
   const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
   const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
-  const { username, role, doLogout } = useAuth();
+  const { username, role, userId, doLogout } = useAuth();
   const isAdmin = role === 'admin';
   const isMember = role === 'member';
   const isPublic = role === 'public';
@@ -60,12 +49,12 @@ export default function Cockpit() {
       const [projs, reps, mss, tss] = await Promise.all([
         getProjects(), getAllReports(), getAllMilestones(), getAllProjectTasks(),
       ]);
-      setProjects(projs);
+      setProjects(filterVisibleProjects(projs, userId, role));
       setAllReports(reps);
       setAllMilestones(mss);
       setAllTasks(tss);
-    } catch {
-      // 静默处理
+    } catch (e) {
+      console.error('加载驾驶舱数据失败:', e);
     }
   };
 
@@ -95,7 +84,7 @@ export default function Cockpit() {
 
     if (allReports.length > 0) {
       // 找出最新一期周报
-      const latest = allReports.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
+      const latest = getLatestReport(allReports)!;
       const match = latest.weekLabel.match(/第(\d+)周/);
       if (match) {
         latestWeekNum = parseInt(match[1]);
@@ -124,8 +113,7 @@ export default function Cockpit() {
     return topProjects.map(p => {
       const childProjects = projects.filter(c => c.parentId === p.id);
       const prpts = allReports.filter(r => r.projectId === p.id);
-      const latestReport =
-        prpts.length > 0 ? prpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b)) : null;
+      const latestReport = getLatestReport(prpts);
       const hasChildren = childProjects.length > 0;
 
       // 活跃风险（未解决/持续关注的）—— 包含自身和子项目
@@ -153,28 +141,19 @@ export default function Cockpit() {
         r => r.status === '待处理' || r.status === '持续关注'
       ) || [];
 
-      // 进度：父项目取子项目平均值
-      let progress = latestReport?.progress || 0;
+      // 进度：父项目 = 自身最新周报进度 + 各子项目最新周报进度 取均值（自身填写也生效）
+      const selfReps = prpts;
+      const childRepsList = childProjects.map(c => allReports.filter(r => r.projectId === c.id));
+      let progress = calcOverallProgress(selfReps, childRepsList);
       let totalReports = prpts.length;
       if (hasChildren) {
-        let childProgressSum = 0;
-        let childWithProgress = 0;
         childProjects.forEach(c => {
-          const crpts = allReports.filter(r => r.projectId === c.id);
-          const clatest = crpts.length > 0 ? crpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b)) : null;
-          totalReports += crpts.length;
-          if (clatest && clatest.progress > 0) {
-            childProgressSum += clatest.progress;
-            childWithProgress++;
-          }
+          totalReports += allReports.filter(r => r.projectId === c.id).length;
         });
-        if (childWithProgress > 0) {
-          progress = Math.round(childProgressSum / childWithProgress);
-        }
       }
 
       // 逾期检测
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayStr();
       let isOverdue = false;
       if (p.deadline && p.deadline.trim() !== '') {
         if (p.deadline < today && progress < 100) {
@@ -271,7 +250,7 @@ export default function Cockpit() {
     projects.forEach(p => {
       const prpts = allReports.filter(r => r.projectId === p.id);
       if (prpts.length === 0) return;
-      const latest = prpts.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
+      const latest = getLatestReport(prpts)!;
       latest.plannedItems.filter(pi => !pi.carriedForward).forEach(pi => {
         remainingPlans++;
         planDetails.push({
@@ -329,12 +308,7 @@ export default function Cockpit() {
           </span>
         </div>
         <div className={styles.headerRight}>
-          <nav className={styles.topNav}>
-            <Link to="/" className={styles.topNavLink}>工作台</Link>
-            <span className={`${styles.topNavItem} ${styles.topNavActive}`}>驾驶舱</span>
-            <Link to="/trends" className={styles.topNavLink}>趋势分析</Link>
-            {isAdmin && <Link to="/admin" className={styles.topNavLink}>管理中心</Link>}
-          </nav>
+          <TopNav active="cockpit" theme="dark" styles={styles} />
           <span className={styles.userInfo}>
             {username}
             {isAdmin && <span className={styles.userRole}>(管理员)</span>}
@@ -344,7 +318,7 @@ export default function Cockpit() {
               导出PDF
             </button>
           )}
-          <button className={styles.logoutBtn} onClick={() => { doLogout(); navigate('/login'); }}>
+          <button className={styles.logoutBtn} onClick={() => { doLogout(); }}>
             退出
           </button>
         </div>
@@ -385,7 +359,7 @@ export default function Cockpit() {
             // 服务期进度
             const svcProgress = (() => {
               if (!s.project.serviceStart || !s.project.serviceEnd) return null;
-              const today = new Date().toISOString().split('T')[0];
+              const today = getTodayStr();
               const st = new Date(s.project.serviceStart + 'T00:00:00').getTime();
               const ed = new Date(s.project.serviceEnd + 'T00:00:00').getTime();
               const nw = new Date(today + 'T00:00:00').getTime();
@@ -393,7 +367,7 @@ export default function Cockpit() {
               if (nw > ed) return 100;
               return Math.round(((nw - st) / (ed - st)) * 100);
             })();
-            const svcExpired = s.project.serviceEnd ? s.project.serviceEnd < new Date().toISOString().split('T')[0] : false;
+            const svcExpired = s.project.serviceEnd ? s.project.serviceEnd < getTodayStr() : false;
 
             return (
               <div
@@ -699,7 +673,7 @@ export default function Cockpit() {
       <footer className={styles.footer}>
         {(() => {
           if (allReports.length === 0) return '暂无周报数据';
-          const latest = allReports.reduce((a, b) => (a.weekStart > b.weekStart ? a : b));
+          const latest = getLatestReport(allReports)!;
           if (!latest.updatedAt) return '暂无更新时间';
           const d = new Date(latest.updatedAt);
           const pad = (n: number) => String(n).padStart(2, '0');

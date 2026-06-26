@@ -20,6 +20,7 @@ function mapProject(row: any): Project {
     description: row.description || undefined,
     serviceStart: row.service_start || undefined,
     serviceEnd: row.service_end || undefined,
+    detailedItems: row.detailed_items || undefined,
   };
 }
 
@@ -81,6 +82,7 @@ export async function saveProject(project: Project): Promise<void> {
     description: project.description || null,
     service_start: project.serviceStart || null,
     service_end: project.serviceEnd || null,
+    detailed_items: project.detailedItems || null,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
@@ -161,7 +163,9 @@ export async function deleteReport(id: string): Promise<void> {
 }
 
 /**
- * 更新风险状态：找到指定项目中最新一期包含该风险描述的周报，更新其状态
+ * 更新风险状态：更新该项目下所有包含该风险描述的周报中对应风险的状态。
+ * 之所以更新全部而非仅最新一期：累计风险统计跨所有周报去重 status!==已解决，
+ * 若只改最新一期，历史周报中同描述风险仍计为活跃，导致"标记已解决后风险数不降"。
  * 仅 admin/member 可调用（调用方需自行校验权限）
  */
 export async function updateRiskStatus(
@@ -170,21 +174,26 @@ export async function updateRiskStatus(
   newStatus: Risk['status']
 ): Promise<void> {
   const reports = await getReports(projectId); // 已按 week_start DESC 排序
+  const key = riskDescription.trim();
+  let updated = false;
   for (const report of reports) {
-    const idx = report.risks.findIndex(
-      r => r.description.trim() === riskDescription.trim()
-    );
-    if (idx === -1) continue;
-
-    const risk = { ...report.risks[idx] };
-    risk.status = newStatus;
-    if (newStatus === '已解决') {
-      risk.resolvedAt = new Date().toISOString();
+    let changed = false;
+    const newRisks = report.risks.map(r => {
+      if (r.description.trim() === key) {
+        changed = true;
+        updated = true;
+        const next = { ...r, status: newStatus };
+        if (newStatus === '已解决') next.resolvedAt = new Date().toISOString();
+        return next;
+      }
+      return r;
+    });
+    if (changed) {
+      await saveReport({ ...report, risks: newRisks });
     }
-    report.risks[idx] = risk;
-    await saveReport(report);
-    return; // 只更新最新一期含该风险的周报
   }
+  // updated 仅用于语义标注，未命中也不报错
+  void updated;
 }
 
 export async function getAllReports(): Promise<WeeklyReport[]> {
@@ -357,7 +366,7 @@ export async function exportAllData(): Promise<string> {
   return JSON.stringify({ projects: projectsWithData }, null, 2);
 }
 
-/** 从 JSON 导入数据（会覆盖当前数据，兼容新旧格式） */
+/** 从 JSON 导入数据（先写入新数据，再删除不在新数据中的旧记录，避免中途失败丢数据） */
 export async function importAllData(jsonStr: string): Promise<{ success: boolean; message: string }> {
   try {
     const parsed = JSON.parse(jsonStr);
@@ -388,25 +397,28 @@ export async function importAllData(jsonStr: string): Promise<{ success: boolean
       allProjects = parsed.projects;
       allReports = parsed.reports;
     }
-    // 先清空再导入
-    await supabase.from('weekly_reports').delete().neq('id', '__skip__');
-    await supabase.from('milestones').delete().neq('id', '__skip__');
-    await supabase.from('project_tasks').delete().neq('id', '__skip__');
-    const { error: delProjError } = await supabase.from('projects').delete().neq('id', '__skip__');
-    if (delProjError) throw delProjError;
 
-    for (const p of allProjects) {
-      await saveProject(p);
-    }
-    for (const r of allReports) {
-      await saveReport(r);
-    }
-    for (const m of allMilestones) {
-      await saveMilestone(m);
-    }
-    for (const t of allTasks) {
-      await saveProjectTask(t);
-    }
+    // 收集新数据中存在的所有 id
+    const newProjectIds = new Set(allProjects.map(p => p.id));
+    const newReportIds = new Set(allReports.map(r => r.id));
+    const newMilestoneIds = new Set(allMilestones.map(m => m.id));
+    const newTaskIds = new Set(allTasks.map(t => t.id));
+
+    // 1. 先 upsert 新数据（覆盖同名 id）
+    for (const p of allProjects) await saveProject(p);
+    for (const r of allReports) await saveReport(r);
+    for (const m of allMilestones) await saveMilestone(m);
+    for (const t of allTasks) await saveProjectTask(t);
+
+    // 2. 删除不在新数据中的旧记录（按 id 精确删除，避免 .neq('__skip__') 的 hack）
+    const [oldReports, oldMilestones, oldTasks, oldProjects] = await Promise.all([
+      getAllReports(), getAllMilestones(), getAllProjectTasks(), getProjects(),
+    ]);
+    await Promise.all(oldReports.filter(r => !newReportIds.has(r.id)).map(r => deleteReport(r.id)));
+    await Promise.all(oldMilestones.filter(m => !newMilestoneIds.has(m.id)).map(m => deleteMilestone(m.id)));
+    await Promise.all(oldTasks.filter(t => !newTaskIds.has(t.id)).map(t => deleteProjectTask(t.id)));
+    await Promise.all(oldProjects.filter(p => !newProjectIds.has(p.id)).map(p => deleteProject(p.id)));
+
     const extra = allMilestones.length > 0 || allTasks.length > 0
       ? `，${allMilestones.length} 个里程碑，${allTasks.length} 个任务`
       : '';

@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
-import { Project } from '../types';
+import { getTodayStr, getLatestReport, COLOR_PALETTE, filterVisibleProjects, genId } from '../utils/helpers';
+import type { Project } from '../types';
 import ProjectExportModal from '../components/ProjectExportModal';
+import Toast from '../components/Toast';
 import shared from '../styles/shared.module.css';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -13,13 +16,8 @@ const STATUS_CLASS: Record<string, string> = {
   '存在风险': shared.tagDanger,
 };
 
-const COLOR_PALETTE = [
-  '#5B9EF5', '#4ADE80', '#FB923C', '#A78BFA',
-  '#2DD4BF', '#FBBF24', '#F472B6', '#60A5FA',
-];
-
 function emptyProject(): Project {
-  return { id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0, status: '正常推进', color: COLOR_PALETTE[0], parentId: undefined, description: '', serviceStart: '', serviceEnd: '' };
+  return { id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0, status: '正常推进', color: COLOR_PALETTE[0], parentId: undefined, description: '', serviceStart: '', serviceEnd: '', detailedItems: false };
 }
 
 export default function Dashboard() {
@@ -27,11 +25,12 @@ export default function Dashboard() {
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { role } = useAuth();
+  const { role, userId } = useAuth();
   const isAdmin = role === 'admin';
   const isPublic = role === 'public';
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast, showToast } = useToast();
 
   // 项目管理弹窗
   const [projectModal, setProjectModal] = useState<{ open: boolean; editing: Project | null }>({ open: false, editing: null });
@@ -44,21 +43,13 @@ export default function Dashboard() {
   const [drillDown, setDrillDown] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Toast
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (msg: string, type: 'success' | 'error') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
-
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
         if (!cancelled) {
-          setProjects(projs);
+          setProjects(filterVisibleProjects(projs, userId, role));
           setAllReports(reps);
         }
       } catch (err) {
@@ -70,7 +61,8 @@ export default function Dashboard() {
     }
     load();
     return () => { cancelled = true; };
-  }, [refreshKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, userId, role]);
 
   // 剩余计划事项：所有plannedItems中未被后续周报completedItems覆盖的
   // 逻辑：每个项目的最新plannedItems即为剩余计划事项
@@ -78,7 +70,7 @@ export default function Dashboard() {
     const prpts = allReports.filter(r => r.projectId === p.id);
     if (prpts.length === 0) return total;
     // 按时间排序，取最新一期周报的plannedItems作为剩余计划
-    const latest = prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
+    const latest = getLatestReport(prpts)!;
     // 过滤掉reason标记为已完成（已被后续周报确认完成移入completed的）
     const remaining = latest.plannedItems.filter(pi => !pi.carriedForward);
     return total + remaining.length;
@@ -118,16 +110,13 @@ export default function Dashboard() {
 
   const getProjectStats = (projectId: string) => {
     const prpts = allReports.filter(r => r.projectId === projectId);
-    const latestReport = prpts.length > 0 ? prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b) : null;
+    const latestReport = getLatestReport(prpts);
     // 风险去重：同一description只计一次
     const riskSeen = new Set<string>();
-    const uniqueRisks = prpts.reduce((count, r) => {
-      r.risks.forEach(rk => {
-        const key = rk.description.trim();
-        if (key) riskSeen.add(key);
-      });
-      return count;
-    }, 0);
+    prpts.forEach(r => r.risks.forEach(rk => {
+      const key = rk.description.trim();
+      if (key) riskSeen.add(key);
+    }));
     return {
       count: prpts.length,
       progress: latestReport?.progress || 0,
@@ -163,7 +152,7 @@ export default function Dashboard() {
     }
     const finalProject = project.id
       ? project
-      : { ...project, id: 'p_' + Date.now() };
+      : { ...project, id: genId('p_') };
     try {
       await saveProject(finalProject);
       setProjectModal({ open: false, editing: null });
@@ -245,11 +234,7 @@ export default function Dashboard() {
   return (
     <div>
       {/* Toast */}
-      {toast && (
-        <div className={`${shared.toast} ${toast.type === 'success' ? shared.toastSuccess : shared.toastError}`}>
-          {toast.msg}
-        </div>
-      )}
+      <Toast toast={toast} />
 
       {/* 工具栏 */}
       <div className={shared.toolbar}>
@@ -285,7 +270,7 @@ export default function Dashboard() {
       {(() => {
         const overdue = projects.filter(p => {
           if (!p.deadline || p.deadline.trim() === '') return false;
-          const today = new Date().toISOString().split('T')[0];
+          const today = getTodayStr();
           if (p.deadline >= today) return false;
           const stats = getProjectStats(p.id);
           return stats.progress < 100;
@@ -463,7 +448,7 @@ export default function Dashboard() {
                 } else if (drillDown === 'planned') {
                   // 剩余计划事项：取最新一期周报的plannedItems
                   if (prpts.length > 0) {
-                    const latest = prpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b);
+                    const latest = getLatestReport(prpts)!;
                     latest.plannedItems.filter(pi => !pi.carriedForward).forEach(pi => {
                       items.push(pi.title + (pi.reason ? `（未完成原因：${pi.reason}）` : ''));
                     });
@@ -641,6 +626,17 @@ export default function Dashboard() {
                     />
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className={shared.formLabel}>
+                  <input
+                    type="checkbox"
+                    checked={!!editForm.detailedItems}
+                    onChange={e => setEditForm({ ...editForm, detailedItems: e.target.checked })}
+                    style={{ marginRight: 6, accentColor: '#4F8EF7' }}
+                  />
+                  完成事项启用「子项目进展 / 验收资料进展」三字段结构
+                </label>
               </div>
             </div>
             <div className={shared.modalFooter}>

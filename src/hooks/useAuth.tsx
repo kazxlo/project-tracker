@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '../api/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -29,6 +29,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState('member');
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, []);
 
   // 加载用户的显示名称和角色（带重试）
   const loadProfile = async (uid: string, retryCount = 0): Promise<void> => {
@@ -41,12 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', uid)
         .maybeSingle();
 
+      if (!mountedRef.current) return;
+
       if (error) {
         console.warn('loadProfile error:', error.message);
         // 重试最多3次，间隔递增
         if (retryCount < 3) {
           const delay = (retryCount + 1) * 800;
-          setTimeout(() => loadProfile(uid, retryCount + 1), delay);
+          retryTimerRef.current = setTimeout(() => loadProfile(uid, retryCount + 1), delay);
         }
         return;
       }
@@ -57,12 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (retryCount < 3) {
         // profile 还没创建（触发器可能还在执行），重试
         const delay = (retryCount + 1) * 800;
-        setTimeout(() => loadProfile(uid, retryCount + 1), delay);
+        retryTimerRef.current = setTimeout(() => loadProfile(uid, retryCount + 1), delay);
       }
     } catch (err) {
       console.warn('loadProfile exception:', err);
       if (retryCount < 3) {
-        setTimeout(() => loadProfile(uid, retryCount + 1), (retryCount + 1) * 800);
+        retryTimerRef.current = setTimeout(() => loadProfile(uid, retryCount + 1), (retryCount + 1) * 800);
       }
     }
   };

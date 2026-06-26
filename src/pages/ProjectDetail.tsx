@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus, getMilestones, getProjectTasks } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
-import { Project, WeeklyReport, Risk, Milestone, ProjectTask } from '../types';
+import { useToast } from '../hooks/useToast';
+import { getLatestReport, filterVisibleProjects, genId, calcOverallProgress, COLOR_PALETTE } from '../utils/helpers';
+import type { Project, WeeklyReport, Risk, Milestone, ProjectTask } from '../types';
 import ChildProjectCard from '../components/ChildProjectCard';
 import ProjectDashboard from '../components/ProjectDashboard';
 import ProjectPlanEditor from '../components/ProjectPlanEditor';
+import Toast from '../components/Toast';
 import shared from '../styles/shared.module.css';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -18,12 +21,13 @@ type TabKey = 'dashboard' | 'children' | 'reports' | 'summary';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
-  const { role } = useAuth();
+  const { role, userId } = useAuth();
   const isAdmin = role === 'admin';
   const isMember = role === 'member';
   const isPublic = role === 'public';
   const canEdit = isAdmin || isMember;
   const navigate = useNavigate();
+  const { toast, showToast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
@@ -52,13 +56,6 @@ export default function ProjectDetail() {
   const [riskDrillDown, setRiskDrillDown] = useState<'active' | 'resolved' | null>(null);
   const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
 
-  // Toast
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const showToast = (msg: string, type: 'success' | 'error') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
-
   // 子项目数据
   const childProjects = allProjects.filter(p => p.parentId === id);
   const hasChildren = childProjects.length > 0;
@@ -72,12 +69,12 @@ export default function ProjectDetail() {
         getProject(id),
         getProjects(),
         getReports(id),
-        getReportsWithChildren(id),
+        getAllReports(),
         getMilestones(id),
         getProjectTasks(id),
       ]);
       setProject(p || null);
-      setAllProjects(projs);
+      setAllProjects(filterVisibleProjects(projs, userId, role));
       setReports(reps);
       setAllReports(allReps);
       setMilestones(ms);
@@ -96,16 +93,8 @@ export default function ProjectDetail() {
     }
     load();
     return () => { cancelled = true; };
-  }, [id, navigate]);
-
-  // 为有子项目的父项目加载所有子项目的周报
-  async function getReportsWithChildren(projectId: string): Promise<WeeklyReport[]> {
-    try {
-      return await getAllReports();
-    } catch {
-      return [];
-    }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, navigate, userId, role]);
 
   // 全局点击清除确认删除状态
   useEffect(() => {
@@ -179,7 +168,7 @@ export default function ProjectDetail() {
     try {
       const finalChild = childModal.form.id
         ? childModal.form
-        : { ...childModal.form, id: 'p_' + Date.now() };
+        : { ...childModal.form, id: genId('p_') };
       await saveProject(finalChild);
       setChildModal({ open: false, editing: null, form: emptyChildProject() });
       await loadData();
@@ -210,14 +199,12 @@ export default function ProjectDetail() {
   if (!project) return null;
 
   const statusCls = STATUS_CLASS[project.status] || shared.tagNormal;
-  const latestReport = reports.length > 0
-    ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-    : null;
+  const latestReport = getLatestReport(reports);
 
   // 子项目统计
   const getChildStats = (childId: string) => {
     const crpts = allReports.filter(r => r.projectId === childId);
-    const clatest = crpts.length > 0 ? crpts.reduce((a, b) => a.weekStart > b.weekStart ? a : b) : null;
+    const clatest = getLatestReport(crpts);
     const riskSeen = new Set<string>();
     crpts.forEach(r => r.risks.forEach(rk => {
       if (rk.status !== '已解决') {
@@ -236,11 +223,7 @@ export default function ProjectDetail() {
   if (!isChild) {
     return (
       <div>
-        {toast && (
-          <div className={`${shared.toast} ${toast.type === 'success' ? shared.toastSuccess : shared.toastError}`}>
-            {toast.msg}
-          </div>
-        )}
+        <Toast toast={toast} />
 
         {/* 返回链接 */}
         <span className={shared.backLink} onClick={() => navigate('/')}>
@@ -263,7 +246,7 @@ export default function ProjectDetail() {
         <div className={shared.kpiRow}>
           {[
             { label: '子项目数', val: childProjects.length, color: project.color },
-            { label: '综合进度', val: childProjects.length > 0 ? `${Math.round(childProjects.reduce((s, c) => s + getChildStats(c.id).progress, 0) / childProjects.length)}%` : (() => { const prLatest = reports.length > 0 ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b) : null; return prLatest ? `${prLatest.progress}%` : '--'; })(), color: project.color },
+            { label: '综合进度', val: `${calcOverallProgress(reports, childProjects.map(c => allReports.filter(r => r.projectId === c.id)))}%`, color: project.color },
             { label: '累计周报', val: childProjects.reduce((s, c) => s + getChildStats(c.id).reportCount, 0) + reports.length },
             { label: '当前风险', val: (() => {
               const rs = new Set<string>();
@@ -595,7 +578,7 @@ export default function ProjectDetail() {
                 <div>
                   <label className={shared.formLabel}>项目颜色</label>
                   <div className={shared.colorGrid}>
-                    {['#5B9EF5', '#4ADE80', '#FB923C', '#A78BFA', '#2DD4BF', '#FBBF24', '#F472B6', '#60A5FA'].map(c => (
+                    {COLOR_PALETTE.map(c => (
                       <div
                         key={c}
                         className={`${shared.colorSwatch} ${childModal.form.color === c ? shared.colorSwatchActive : ''}`}
@@ -646,11 +629,7 @@ export default function ProjectDetail() {
   // ====== 普通项目布局（无子项目） ======
   return (
     <div>
-      {toast && (
-        <div className={`${shared.toast} ${toast.type === 'success' ? shared.toastSuccess : shared.toastError}`}>
-          {toast.msg}
-        </div>
-      )}
+      <Toast toast={toast} />
 
       {/* 返回链接 */}
       {isChild && parentProject ? (
@@ -939,9 +918,7 @@ function SummaryView({
   savingRiskKey: string | null;
   handleRiskStatusChange: (desc: string, status: string) => void;
 }) {
-  const latest = reports.length > 0
-    ? reports.reduce((a, b) => a.weekStart > b.weekStart ? a : b)
-    : null;
+  const latest = getLatestReport(reports);
   const hasChildren = childProjects.length > 0;
 
   return (
@@ -1132,7 +1109,7 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
   }
 
   const latest = reports[0];
-  const isP1 = project.id === 'p1';
+  const detailed = !!project.detailedItems;
 
   return (
     <div className={shared.clientWrap}>
@@ -1168,17 +1145,17 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
               >
                 <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
                 <span style={{ fontWeight: 500 }}>{item.title}</span>
-                {isP1 && item.progress && (
+                {detailed && item.progress && (
                   <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 4, paddingLeft: 20 }}>
                     进展：{item.progress}
                   </div>
                 )}
-                {isP1 && item.acceptance && (
+                {detailed && item.acceptance && (
                   <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 2, paddingLeft: 20 }}>
                     验收：{item.acceptance}
                   </div>
                 )}
-                {!isP1 && item.detail && (
+                {!detailed && item.detail && (
                   <span style={{ color: '#6b7a93' }}> — {item.detail}</span>
                 )}
               </div>
