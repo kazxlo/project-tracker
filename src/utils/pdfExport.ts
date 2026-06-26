@@ -162,7 +162,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
 <body>
 
 <div class="header">
-  <h1>📋 项目跟踪管理系统 · 本周工作汇总（${dateRangeTitle}）</h1>
+  <h1>📋 本周工作汇总（${dateRangeTitle}）</h1>
   <div class="sub">共 ${projects.length} 个项目，${allUnresolvedRisks.length} 项未处理风险</div>
 </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjects, getAllReports, getAllProjectTasks } from '../api/db';
+import { getAllProfiles, UserProfile } from '../api/profiles';
 import { useAuth } from '../hooks/useAuth';
 import { getTodayStr, hexToRgb, getLatestReport } from '../utils/helpers';
 import { filterVisibleProjects } from '../utils/helpers';
@@ -73,21 +74,27 @@ export default function Workspace() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allTasks, setAllTasks] = useState<ProjectTask[]>([]);
   const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 管理员可切换查看指定成员的工作台
+  const [viewAsUser, setViewAsUser] = useState<string | null>(null);
+  const effectiveUser = (isAdmin && viewAsUser) ? viewAsUser : username;
 
   // 加载数据
   useEffect(() => {
     let cancelled = false;
     async function init() {
       try {
-        const [projs, tasks, reps] = await Promise.all([
+        const [projs, tasks, reps, profs] = await Promise.all([
           getProjects(), getAllProjectTasks(), getAllReports(),
+          getAllProfiles().catch(() => []),
         ]);
         if (!cancelled) {
-          // 按 viewerIds 过滤可见项目（admin 可见全部）
           setProjects(filterVisibleProjects(projs, userId, role));
           setAllTasks(tasks);
           setAllReports(reps);
+          setProfiles(Array.isArray(profs) ? profs as UserProfile[] : []);
         }
       } catch (e) {
         console.error('加载工作台数据失败:', e);
@@ -101,16 +108,16 @@ export default function Workspace() {
   // 当前日期
   const today = useMemo(() => getTodayStr(), []);
 
-  // 我的任务（分配给我 + 关联的项目）
+  // 有效用户的任务（管理员可切换查看成员）
   const myTasks = useMemo(() => {
-    return allTasks.filter(t => t.assignee === username);
-  }, [allTasks, username]);
+    return allTasks.filter(t => t.assignee === effectiveUser);
+  }, [allTasks, effectiveUser]);
 
-  // 我相关的项目组
+  // 有效用户的项目组
   const projectGroups: ProjectGroup[] = useMemo(() => {
     const myTaskProjectIds = new Set(myTasks.map(t => t.projectId));
     const myProjects = projects.filter(p =>
-      p.owner === username || myTaskProjectIds.has(p.id)
+      p.owner === effectiveUser || myTaskProjectIds.has(p.id)
     );
 
     return myProjects.map(p => {
@@ -118,11 +125,11 @@ export default function Workspace() {
       const prpts = allReports.filter(r => r.projectId === p.id);
       const latestReport = getLatestReport(prpts);
 
-      // 我是负责人 → 显示所有任务；否则只显示我的任务
-      const isOwner = p.owner === username;
+      // 是负责人 → 显示所有任务；否则只显示该用户的任务
+      const isOwner = p.owner === effectiveUser;
       const visibleTasks = isOwner
         ? projectTasks
-        : projectTasks.filter(t => t.assignee === username);
+        : projectTasks.filter(t => t.assignee === effectiveUser);
 
       return {
         project: p,
@@ -133,7 +140,7 @@ export default function Workspace() {
         latestReport,
       };
     });
-  }, [projects, allTasks, allReports, username, myTasks]);
+  }, [projects, allTasks, allReports, effectiveUser, myTasks]);
 
   // 按项目分组展示（子项目任务归集到父项目下，仅显示有任务的项目卡片）
   const displayProjectGroups = useMemo(() => {
@@ -307,19 +314,34 @@ export default function Workspace() {
       {/* 头部 */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.avatar}>{username.charAt(0)}</div>
+          <div className={styles.avatar}>{viewAsUser ? viewAsUser.charAt(0) : username.charAt(0)}</div>
           <div>
             <div className={styles.headerTitle}>
-              {username} · 个人工作台
+              {viewAsUser ? `${viewAsUser} 的工作台` : `${username} · 个人工作台`}
               {isAdmin && <span className={styles.adminBadge}>管理员</span>}
             </div>
             <div className={styles.headerDate}>
               今日 {new Date().getMonth() + 1}月{new Date().getDate()}日
+              {viewAsUser && <span style={{ marginLeft: 8, color: '#64b5f6' }}>—— 管理员视角</span>}
             </div>
           </div>
         </div>
         <div className={styles.headerRight}>
           <TopNav active="workspace" theme="dark" styles={styles} />
+          {isAdmin && (
+            <select
+              className={styles.filterSelect}
+              value={viewAsUser || ''}
+              onChange={e => setViewAsUser(e.target.value || null)}
+            >
+              <option value="">我的工作台</option>
+              {profiles
+                .filter(p => p.role === 'member')
+                .map(p => (
+                  <option key={p.id} value={p.display_name}>{p.display_name}</option>
+                ))}
+            </select>
+          )}
           <span className={styles.userInfo}>
             {username}
             {isAdmin && <span className={styles.adminBadge}>管理员</span>}
