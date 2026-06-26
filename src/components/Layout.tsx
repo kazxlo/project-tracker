@@ -49,6 +49,9 @@ export default function Layout() {
     { path: '/', label: '驾驶舱' },
     { path: '/trends', label: '趋势分析' },
   ];
+  if (!isPublic) {
+    tabs.push({ path: '/workspace', label: '工作台' });
+  }
   if (role === 'admin') {
     tabs.push({ path: '/admin', label: '管理中心' });
   }

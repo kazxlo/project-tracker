@@ -1,0 +1,789 @@
+/* ===== 个人工作台 — 深色科技风（与驾驶舱一致） ===== */
+
+/* 全屏容器 */
+.workspace {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+  color: #e0e6f0;
+  padding: 28px 40px 24px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-y: auto;
+}
+
+/* 头部 */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(100, 181, 246, 0.1);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7F77DD, #534AB7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 500;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerDate {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+.adminBadge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(100, 181, 246, 0.15);
+  color: #64b5f6;
+  font-weight: 400;
+}
+
+.filterSelect {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 0.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e6f0;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filterSelect:hover {
+  border-color: rgba(100, 181, 246, 0.35);
+}
+
+.filterSelect:focus {
+  border-color: rgba(100, 181, 246, 0.5);
+  box-shadow: 0 0 8px rgba(100, 181, 246, 0.12);
+}
+
+.filterSelect option {
+  background: #0b0f1a;
+  color: #e0e6f0;
+}
+
+.navLink {
+  font-size: 12px;
+  color: #9aaec9;
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: rgba(100, 181, 246, 0.08);
+  border: 1px solid rgba(100, 181, 246, 0.12);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  background: rgba(100, 181, 246, 0.16);
+  color: #64b5f6;
+}
+
+/* ===== KPI 卡片行 ===== */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kpiCard {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 14px;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.kpiCard:hover {
+  border-color: rgba(100, 181, 246, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 16px rgba(100, 181, 246, 0.04);
+}
+
+.kpiLabel {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 4px;
+}
+
+.kpiValue {
+  font-size: 26px;
+  font-weight: 500;
+  color: #ffffff;
+  text-shadow: 0 0 16px currentColor;
+}
+
+.kpiUnit {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.35);
+  text-shadow: none;
+}
+
+.kpiHint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 2px;
+}
+
+.kpiProgressBar {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.kpiProgressFill {
+  height: 100%;
+  background: #639922;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* ===== 主双栏 ===== */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+/* ===== 面板 ===== */
+.panel {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.panelTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.conflictBadge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(217, 90, 48, 0.2);
+  color: #F0997B;
+  font-weight: 500;
+}
+
+/* ===== 时间线 ===== */
+.timelineArea {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: visible;
+  min-height: 120px;
+}
+
+.timelineEmpty {
+  text-align: center;
+  padding: 32px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.timelineScale {
+  display: flex;
+  margin-bottom: 4px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.timelineLabelSpacer {
+  width: 100px;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.timelineLabels {
+  flex: 1;
+  display: flex;
+}
+
+.timelineLabel {
+  flex: 1;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  min-width: 30px;
+  white-space: nowrap;
+}
+
+.timelineLabelToday {
+  color: #64b5f6;
+  font-weight: 500;
+}
+
+.todayLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(100, 181, 246, 0.3);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.timelineRow {
+  display: flex;
+  position: relative;
+  height: 32px;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.timelineRowConflict {
+  background: rgba(217, 90, 48, 0.08);
+  border-radius: 6px;
+}
+
+.timelineTaskName {
+  width: 100px;
+  min-width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+}
+
+.taskDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.taskTitleText {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timelineBarArea {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.timelineBar {
+  position: absolute;
+  height: 22px;
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
+  border-left: 2px solid;
+}
+
+.timelineBarActive {
+  background: rgba(55, 138, 221, 0.25);
+  border-left-color: #378ADD;
+}
+
+.timelineBarDone {
+  background: rgba(99, 153, 34, 0.25);
+  border-left-color: #639922;
+}
+
+.timelineBarConflict {
+  background: rgba(217, 90, 48, 0.3);
+  border-left-color: #D85A30;
+}
+
+.timelineBarRisk {
+  background: rgba(217, 90, 48, 0.2);
+  border-left-color: #D85A30;
+}
+
+.timelineBarOverdue {
+  background: rgba(217, 90, 48, 0.25);
+  border-left-color: #D85A30;
+}
+
+.timelineBarTodo {
+  background: rgba(127, 119, 221, 0.2);
+  border-left-color: #7F77DD;
+  border-left-style: dashed;
+}
+
+.timelineBarLabel {
+  font-size: 9px;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timelineBarActive .timelineBarLabel {
+  color: #85B7EB;
+}
+
+.timelineBarDone .timelineBarLabel {
+  color: #97C459;
+}
+
+.timelineBarConflict .timelineBarLabel,
+.timelineBarRisk .timelineBarLabel,
+.timelineBarOverdue .timelineBarLabel {
+  color: #F0997B;
+}
+
+.timelineBarTodo .timelineBarLabel {
+  color: #AFA9EC;
+}
+
+/* ===== 工作量分布 ===== */
+.workloadChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 160px;
+  padding: 0 4px;
+}
+
+.barCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  justify-content: flex-end;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transition: height 0.4s ease;
+  min-height: 4px;
+}
+
+.barOverload {
+  background: rgba(217, 90, 48, 0.45);
+}
+
+.barNormal {
+  background: rgba(55, 138, 221, 0.3);
+}
+
+.barLight {
+  background: rgba(127, 119, 221, 0.25);
+}
+
+.barEmpty {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.barCount {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  padding-bottom: 2px;
+}
+
+.barOverload .barCount {
+  color: #F0997B;
+}
+
+.barNormal .barCount {
+  color: #85B7EB;
+}
+
+.barLight .barCount {
+  color: #AFA9EC;
+}
+
+.barPeakLabel {
+  position: absolute;
+  top: -16px;
+  font-size: 9px;
+  color: #D85A30;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.barDate {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+}
+
+.barDateToday {
+  color: #64b5f6;
+  font-weight: 500;
+}
+
+.chartLegend {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.legendDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+
+/* ===== 按项目分组 ===== */
+.projectGroups {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.projectCard {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-top: 2px solid;
+  border-radius: 12px;
+  padding: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.projectCard:hover {
+  border-color: rgba(100, 181, 246, 0.18);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardProjectName {
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.cardRoleBadge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-weight: 400;
+}
+
+.cardProgress {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.cardProgressBar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.cardProgressFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.cardTaskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cardTaskEmpty {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.cardTask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.cardTask:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cardTaskConflict {
+  background: rgba(217, 90, 48, 0.08);
+  border-left: 2px solid #D85A30;
+}
+
+.cardTaskConflict:hover {
+  background: rgba(217, 90, 48, 0.12);
+}
+
+.cardTaskDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cardTaskTitle {
+  font-size: 12px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e0e6f0;
+}
+
+.cardTaskStatus {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.taskDone {
+  background: rgba(99, 153, 34, 0.2);
+  color: #97C459;
+}
+
+.taskProgress {
+  background: rgba(55, 138, 221, 0.2);
+  color: #85B7EB;
+}
+
+.taskTodo {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.taskRisk {
+  background: rgba(217, 90, 48, 0.2);
+  color: #F0997B;
+}
+
+.cardTaskDate {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cardTaskDateConflict {
+  color: #D85A30;
+}
+
+.cardFooter {
+  font-size: 11px;
+  color: rgba(100, 181, 246, 0.7);
+  cursor: pointer;
+  text-align: center;
+  padding: 6px 0;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.06);
+  transition: color 0.15s;
+}
+
+.cardFooter:hover {
+  color: #64b5f6;
+}
+
+/* ===== 冲突提醒 ===== */
+.conflictAlert {
+  background: rgba(217, 90, 48, 0.08);
+  border: 0.5px solid rgba(217, 90, 48, 0.2);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.conflictAlertIcon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.conflictAlertBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.conflictAlertTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: #F0997B;
+  margin-bottom: 2px;
+}
+
+.conflictAlertText {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+}
+
+.conflictBtn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(217, 90, 48, 0.3);
+  color: #F0997B;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.conflictBtn:hover {
+  background: rgba(217, 90, 48, 0.5);
+}
+
+/* ===== 空状态 ===== */
+.emptyState {
+  text-align: center;
+  padding: 80px 40px;
+  color: #9aaec9;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #9aaec9;
+}
+
+/* ===== 加载 ===== */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  color: #9aaec9;
+  font-size: 14px;
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1200px) {
+  .workspace {
+    padding: 24px 24px 16px;
+  }
+  .kpiValue {
+    font-size: 22px;
+  }
+  .projectGroups {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace {
+    padding: 16px;
+  }
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .kpiCard:last-child {
+    grid-column: span 2;
+  }
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+  .projectGroups {
+    grid-template-columns: 1fr;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .headerRight {
+    flex-wrap: wrap;
+  }
+  .kpiValue {
+    font-size: 22px;
+  }
+}
