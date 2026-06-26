@@ -84,6 +84,44 @@
   border-bottom: 2px solid transparent;
 }
 
+/* ====== TopNav（深浅主题共用） ====== */
+.topNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topNavItem {
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+  color: #6b7a93;
+}
+
+.topNavLink {
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+  color: #6b7a93;
+}
+
+.topNavLink:hover {
+  background: rgba(79, 142, 247, 0.06);
+  color: #4F8EF7;
+}
+
+.topNavActive {
+  color: #1c2a44;
+  background: rgba(79, 142, 247, 0.08);
+  font-weight: 500;
+}
+
 /* ====== Cards ====== */
 .card {
   background: rgba(255, 255, 255, 0.95);
