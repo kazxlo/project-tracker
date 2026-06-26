@@ -38,12 +38,13 @@ const dateRange = (start: Date, end: Date, dayStep = 1) => {
   return dates;
 };
 const rgl = (r: number, g: number, b: number, a: number) => `rgba(${r},${g},${b},${a})`;
-const barColorClass = (status: string): { dot: string; bg: string; border?: string } => {
+/** 色块颜色：提高不透明度确保文字可读 */
+const barColorClass = (status: string): { dot: string; bg: string; text: string; border?: string } => {
   switch (status) {
-    case '已完成': return { dot: '#639922', bg: 'rgba(99,153,34,0.25)' };
-    case '有风险': return { dot: '#D85A30', bg: 'rgba(217,90,48,0.2)', border: 'solid' };
-    case '待开始': return { dot: '#7F77DD', bg: 'rgba(127,119,221,0.18)', border: 'dashed' };
-    default: return { dot: '#378ADD', bg: 'rgba(55,138,221,0.25)' };
+    case '已完成': return { dot: '#4d7a1a', bg: 'rgba(77,122,26,0.45)', text: '#c8e6a0', border: 'solid' };
+    case '有风险': return { dot: '#c04020', bg: 'rgba(192,64,32,0.42)', text: '#f0c0b0', border: 'solid' };
+    case '待开始': return { dot: '#6c62c8', bg: 'rgba(108,98,200,0.38)', text: '#c8c0f0', border: 'dashed' };
+    default: return { dot: '#2b6fc8', bg: 'rgba(43,111,200,0.42)', text: '#a0c8f0' };
   }
 };
 const getConflictTaskInfo = (taskId: string, conflicts: ConflictPair[]): ConflictPair[] => conflicts.filter(c => c.task1.id === taskId || c.task2.id === taskId);
@@ -262,28 +263,27 @@ export default function Workspace() {
     return dateRange(start, end);
   }, []);
 
-  // 时间线上的全部任务（含已完成，所有我的任务中有日期的）
+  // 时间线上的任务：仅显示时间范围与当前时间轴有交集的（起始在范围内 or 截止在范围内 or 跨越范围）
   const timelineTasks = useMemo(() => {
+    const rangeStart = timelineRange[0];
+    const rangeEnd = timelineRange[timelineRange.length - 1];
     return myTasks
-      .filter(t => t.startDate || t.deadline)
+      .filter(t => {
+        const s = t.startDate || t.deadline;
+        const e = t.deadline || t.startDate;
+        if (!s || !e) return false;
+        // 完全在范围之前（截止 < 范围开始）→ 不显示
+        if (e < rangeStart) return false;
+        // 完全在范围之后（起始 > 范围结束）→ 不显示
+        if (s > rangeEnd) return false;
+        return true;
+      })
       .sort((a, b) => {
         const aStart = a.startDate || a.deadline || '';
         const bStart = b.startDate || b.deadline || '';
         return aStart.localeCompare(bStart);
       });
-  }, [myTasks]);
-
-  // 日期刻度：在月初显示 "X月"，其他日期每7天显示 "M/D"
-  const timelineTicks = useMemo(() => {
-    return timelineRange.map(d => {
-      const dt = new Date(d + 'T00:00:00');
-      return {
-        date: d,
-        label: dt.getDate() === 1 ? fmtMonth(d) : fmtShort(d),
-        isMonthStart: dt.getDate() === 1,
-      };
-    });
-  }, [timelineRange]);
+  }, [myTasks, timelineRange]);
 
   // 冲突任务ID集合
   const conflictTaskIds = useMemo(() => {
@@ -301,12 +301,6 @@ export default function Workspace() {
   // 今天在时间线中的位置
   const totalTimelineDays = timelineRange.length;
   const todayIndex = timelineRange.indexOf(today);
-
-  // 在时间线上定位任务色块的辅助
-  const barPos = (dateStr: string) => {
-    const idx = timelineRange.indexOf(dateStr);
-    return idx >= 0 ? (idx / totalTimelineDays) * 100 : -1;
-  };
 
   return (
     <div className={styles.workspace}>
@@ -413,10 +407,14 @@ export default function Workspace() {
                 timelineTasks.map(t => {
                   const start = t.startDate || t.deadline || '';
                   const end = t.deadline || t.startDate || '';
-                  const leftPct = barPos(start);
-                  const rightPct = barPos(end);
-                  const isFixed = leftPct >= 0 && rightPct >= 0;
-                  const wPct = isFixed ? Math.max(1, rightPct - leftPct) : 4;
+                  const startIdx = timelineRange.indexOf(start);
+                  const endIdx = timelineRange.indexOf(end);
+                  // 截断到时间轴范围 [0, totalTimelineDays-1]
+                  const leftPct = startIdx >= 0 ? ((startIdx / totalTimelineDays) * 100) : 0;
+                  const rightPct = endIdx >= 0 ? (((endIdx + 1) / totalTimelineDays) * 100) : 100;
+                  const clipLeft = startIdx < 0;
+                  const clipRight = endIdx < 0 || endIdx >= totalTimelineDays;
+                  const wPct = Math.max(2, rightPct - leftPct);
                   const isConflict = conflictTaskIds.has(t.id);
                   const barStyle = barColorClass(t.status);
 
@@ -427,23 +425,24 @@ export default function Workspace() {
                         <span className={styles.taskTitleText} title={t.title}>{t.title}</span>
                       </div>
                       <div className={styles.timelineBarArea}>
-                        {/* 冲突区域背景 */}
                         {isConflict && <div className={styles.timelineConflictOverlay}>{getConflictTaskInfo(t.id, conflicts).length > 1 ? '冲突' : ''}</div>}
-                        {/* 今日竖线 */}
                         {todayIndex >= 0 && <div className={styles.todayLine} style={{ left: `${((todayIndex + 0.5) / totalTimelineDays) * 100}%` }} />}
-                        {isFixed && (
-                          <div
-                            className={styles.timelineBar2}
-                            style={{
-                              left: `${leftPct}%`,
-                              width: `${wPct}%`,
-                              background: barStyle.bg,
-                              borderLeft: barStyle.border ? `2px ${barStyle.border} ${barStyle.dot}` : 'none',
-                            }}
-                          >
-                            <span className={styles.timelineBarLabel2}>{fmtShort(start)}{end && end !== start ? ` ~ ${fmtShort(end)}` : ''}</span>
-                          </div>
-                        )}
+                        <div
+                          className={styles.timelineBar2}
+                          style={{
+                            left: `${leftPct}%`,
+                            width: `${wPct}%`,
+                            background: barStyle.bg,
+                            borderLeft: `2px ${barStyle.border || 'solid'} ${barStyle.dot}`,
+                            borderRadius: clipLeft ? '0 4px 4px 0' : clipRight ? '4px 0 0 4px' : '4px',
+                          }}
+                        >
+                          <span className={styles.timelineBarLabel3} style={{ color: barStyle.text }}>
+                            {clipLeft && <span style={{ marginRight: 2, opacity: 0.5 }}>←</span>}
+                            {fmtShort(start)}{end && end !== start ? `~${fmtShort(end)}` : ''}
+                            {clipRight && <span style={{ marginLeft: 2, opacity: 0.5 }}>→</span>}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
