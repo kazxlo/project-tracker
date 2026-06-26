@@ -73,8 +73,6 @@ export default function Workspace() {
   const [allTasks, setAllTasks] = useState<ProjectTask[]>([]);
   const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [projectFilter, setProjectFilter] = useState('全部项目');
-  const [timeRange, setTimeRange] = useState('未来30天');
 
   // 加载数据
   useEffect(() => {
@@ -158,43 +156,6 @@ export default function Workspace() {
       })
       .filter(g => g.tasks.length > 0);
   }, [projectGroups]);
-
-  // 筛选器选项（基于卡片展示的项目）
-  const projectNames = useMemo(() => {
-    return ['全部项目', ...displayProjectGroups.map(g => g.project.name)];
-  }, [displayProjectGroups]);
-
-  // 时间范围过滤后的任务（用于时间线和Gantt）
-  const timeFilteredTasks = useMemo(() => {
-    let bounds: { start: string; end: string } | null = null;
-    const now = new Date();
-    if (timeRange === '未来14天') {
-      const end = new Date(now);
-      end.setDate(end.getDate() + 14);
-      bounds = { start: today, end: end.toISOString().split('T')[0] };
-    } else if (timeRange === '未来30天') {
-      const end = new Date(now);
-      end.setDate(end.getDate() + 30);
-      bounds = { start: today, end: end.toISOString().split('T')[0] };
-    }
-
-    let tasks = myTasks.filter(t => t.status !== '已完成');
-    if (projectFilter !== '全部项目') {
-      const proj = displayProjectGroups.find(g => g.project.name === projectFilter);
-      if (proj) {
-        tasks = tasks.filter(t => t.projectId === proj.project.id);
-      }
-    }
-    if (bounds) {
-      tasks = tasks.filter(t => {
-        if (!t.startDate && !t.deadline) return false;
-        const s = t.startDate || t.deadline!;
-        const e = t.deadline || t.startDate!;
-        return s <= bounds.end && e >= bounds.start;
-      });
-    }
-    return tasks;
-  }, [myTasks, timeRange, projectFilter, projectGroups, today]);
 
   // 冲突检测
   const conflicts: ConflictPair[] = useMemo(() => {
@@ -293,12 +254,11 @@ export default function Workspace() {
     };
   }, [displayProjectGroups, myTasks, conflicts, workloadData, today]);
 
-  // 时间线日期范围（近2个月：15天前 → 45天后，共约60天等距刻度）
+  // 时间线日期范围（从今天起近1个月，约30天等距刻度）
   const timelineRange = useMemo(() => {
     const start = new Date();
-    start.setDate(start.getDate() - 15);
     const end = new Date();
-    end.setDate(end.getDate() + 45);
+    end.setDate(end.getDate() + 30);
     return dateRange(start, end);
   }, []);
 
@@ -366,24 +326,6 @@ export default function Workspace() {
         </div>
         <div className={styles.headerRight}>
           <TopNav active="workspace" theme="dark" styles={styles} />
-          <select
-            className={styles.filterSelect}
-            value={projectFilter}
-            onChange={e => setProjectFilter(e.target.value)}
-          >
-            {projectNames.map(n => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-          <select
-            className={styles.filterSelect}
-            value={timeRange}
-            onChange={e => setTimeRange(e.target.value)}
-          >
-            <option value="未来30天">未来30天</option>
-            <option value="未来14天">未来14天</option>
-            <option value="全部">全部</option>
-          </select>
           <span className={styles.userInfo}>
             {username}
             {isAdmin && <span className={styles.adminBadge}>管理员</span>}
