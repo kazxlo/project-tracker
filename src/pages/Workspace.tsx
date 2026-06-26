@@ -16,13 +16,39 @@ const STATUS_CLASS: Record<string, string> = {
   '有风险': styles.taskRisk,
 };
 
-const PRIORITY_COLOR: Record<string, string> = {
-  'P0': '#D85A30',
-  'P1': '#EF9F27',
-  'P2': '#9aaec9',
+/* ===== 日期/颜色工具（模块级） ===== */
+const fmtShort = (dateStr: string) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 };
+const fmtMonth = (dateStr: string) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getMonth() + 1}月`;
+};
+const dateRange = (start: Date, end: Date, dayStep = 1) => {
+  const dates: string[] = [];
+  const d = new Date(start);
+  while (d <= end) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    dates.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    d.setDate(d.getDate() + dayStep);
+  }
+  return dates;
+};
+const rgl = (r: number, g: number, b: number, a: number) => `rgba(${r},${g},${b},${a})`;
+const barColorClass = (status: string): { dot: string; bg: string; border?: string } => {
+  switch (status) {
+    case '已完成': return { dot: '#639922', bg: 'rgba(99,153,34,0.25)' };
+    case '有风险': return { dot: '#D85A30', bg: 'rgba(217,90,48,0.2)', border: 'solid' };
+    case '待开始': return { dot: '#7F77DD', bg: 'rgba(127,119,221,0.18)', border: 'dashed' };
+    default: return { dot: '#378ADD', bg: 'rgba(55,138,221,0.25)' };
+  }
+};
+const getConflictTaskInfo = (taskId: string, conflicts: ConflictPair[]): ConflictPair[] => conflicts.filter(c => c.task1.id === taskId || c.task2.id === taskId);
 
-// 冲突对类型
+/* ===== 类型 ===== */
 interface ConflictPair {
   task1: ProjectTask;
   task2: ProjectTask;
@@ -110,10 +136,33 @@ export default function Workspace() {
     });
   }, [projects, allTasks, allReports, username, myTasks]);
 
-  // 筛选器选项
-  const projectNames = useMemo(() => {
-    return ['全部项目', ...projectGroups.map(g => g.project.name)];
+  // 按项目分组展示（子项目任务归集到父项目下，仅显示有任务的项目卡片）
+  const displayProjectGroups = useMemo(() => {
+    const childrenByParent = new Map<string, ProjectGroup[]>();
+    const topGroups: ProjectGroup[] = [];
+    projectGroups.forEach(g => {
+      const pid = g.project.parentId;
+      if (pid && projectGroups.some(pg => pg.project.id === pid)) {
+        if (!childrenByParent.has(pid)) childrenByParent.set(pid, []);
+        childrenByParent.get(pid)!.push(g);
+      } else {
+        topGroups.push(g);
+      }
+    });
+    return topGroups
+      .map(g => {
+        const children = childrenByParent.get(g.project.id) || [];
+        if (children.length === 0) return g;
+        const mergedTasks = [...g.tasks, ...children.flatMap(c => c.tasks)];
+        return { ...g, tasks: mergedTasks, allTasks: [...g.allTasks, ...children.flatMap(c => c.allTasks)] };
+      })
+      .filter(g => g.tasks.length > 0);
   }, [projectGroups]);
+
+  // 筛选器选项（基于卡片展示的项目）
+  const projectNames = useMemo(() => {
+    return ['全部项目', ...displayProjectGroups.map(g => g.project.name)];
+  }, [displayProjectGroups]);
 
   // 时间范围过滤后的任务（用于时间线和Gantt）
   const timeFilteredTasks = useMemo(() => {
@@ -131,7 +180,7 @@ export default function Workspace() {
 
     let tasks = myTasks.filter(t => t.status !== '已完成');
     if (projectFilter !== '全部项目') {
-      const proj = projectGroups.find(g => g.project.name === projectFilter);
+      const proj = displayProjectGroups.find(g => g.project.name === projectFilter);
       if (proj) {
         tasks = tasks.filter(t => t.projectId === proj.project.id);
       }
@@ -199,9 +248,9 @@ export default function Workspace() {
     [workloadData]
   );
 
-  // KPI 统计
+  // KPI 基于 displayProjectGroups
   const kpiData = useMemo(() => {
-    const myProjectCount = projectGroups.length;
+    const myProjectCount = displayProjectGroups.length;
     const activeTasks = myTasks.filter(t => t.status !== '已完成');
     const doneTasks = myTasks.filter(t => t.status === '已完成');
     const totalTasks = myTasks.length;
@@ -242,27 +291,20 @@ export default function Workspace() {
       loadColor,
       nextPeakInfo: peakLoad > 1 ? `近两周峰值 ${peakLoad} 项` : undefined,
     };
-  }, [projectGroups, myTasks, conflicts, workloadData, today]);
+  }, [displayProjectGroups, myTasks, conflicts, workloadData, today]);
 
-  // 时间线日期范围（未来30天）
+  // 时间线日期范围（近2个月：15天前 → 45天后，共约60天等距刻度）
   const timelineRange = useMemo(() => {
     const start = new Date();
-    start.setDate(start.getDate() - 3);
+    start.setDate(start.getDate() - 15);
     const end = new Date();
-    end.setDate(end.getDate() + 27);
-    const dates: string[] = [];
-    const d = new Date(start);
-    while (d <= end) {
-      dates.push(d.toISOString().split('T')[0]);
-      d.setDate(d.getDate() + 1);
-    }
-    return dates;
+    end.setDate(end.getDate() + 45);
+    return dateRange(start, end);
   }, []);
 
-  // 时间线上的任务位置
+  // 时间线上的全部任务（含已完成，所有我的任务中有日期的）
   const timelineTasks = useMemo(() => {
-    const active = myTasks.filter(t => t.status !== '已完成');
-    return active
+    return myTasks
       .filter(t => t.startDate || t.deadline)
       .sort((a, b) => {
         const aStart = a.startDate || a.deadline || '';
@@ -271,6 +313,18 @@ export default function Workspace() {
       });
   }, [myTasks]);
 
+  // 日期刻度：在月初显示 "X月"，其他日期每7天显示 "M/D"
+  const timelineTicks = useMemo(() => {
+    return timelineRange.map(d => {
+      const dt = new Date(d + 'T00:00:00');
+      return {
+        date: d,
+        label: dt.getDate() === 1 ? fmtMonth(d) : fmtShort(d),
+        isMonthStart: dt.getDate() === 1,
+      };
+    });
+  }, [timelineRange]);
+
   // 冲突任务ID集合
   const conflictTaskIds = useMemo(() => {
     const ids = new Set<string>();
@@ -278,22 +332,21 @@ export default function Workspace() {
     return ids;
   }, [conflicts]);
 
-  // 是否有冲突
   const hasConflicts = conflicts.length > 0;
 
   if (loading) {
     return <div className={styles.loading}>加载中...</div>;
   }
 
-  // 格式化日期
-  const fmtShort = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    return `${d.getMonth() + 1}/${d.getDate()}`;
-  };
-
   // 今天在时间线中的位置
   const totalTimelineDays = timelineRange.length;
   const todayIndex = timelineRange.indexOf(today);
+
+  // 在时间线上定位任务色块的辅助
+  const barPos = (dateStr: string) => {
+    const idx = timelineRange.indexOf(dateStr);
+    return idx >= 0 ? (idx / totalTimelineDays) * 100 : -1;
+  };
 
   return (
     <div className={styles.workspace}>
@@ -390,117 +443,91 @@ export default function Workspace() {
       {/* 主体双栏 */}
       <div className={styles.mainGrid}>
         {/* 左侧：时间线 */}
-        <div className={styles.panel}>
+        <div className={styles.panel} style={{ display: 'flex', flexDirection: 'column' }}>
           <div className={styles.panelHeader}>
             <span className={styles.panelTitle}>跨项目任务时间线</span>
-            {hasConflicts && (
-              <span className={styles.conflictBadge}>{conflicts.length}项冲突</span>
-            )}
+            {hasConflicts && <span className={styles.conflictBadge}>{conflicts.length}项冲突</span>}
           </div>
-          <div className={styles.timelineArea}>
-            {/* 日期刻度 */}
-            <div className={styles.timelineScale}>
+          <div className={styles.timelineWrap}>
+            {/* 日期刻度：月初显示 "X月"，每7天显示一次 */}
+            <div className={styles.timelineScale2}>
               <div className={styles.timelineLabelSpacer} />
-              <div className={styles.timelineLabels}>
+              <div className={styles.timelineLabels2}>
                 {timelineRange.map((d, i) => {
-                  const isToday = d === today;
-                  if (i % 4 !== 0 && !isToday) return <div key={i} className={styles.timelineLabel} />;
-                  return (
-                    <div
-                      key={i}
-                      className={`${styles.timelineLabel} ${isToday ? styles.timelineLabelToday : ''}`}
-                    >
-                      {fmtShort(d)}
-                    </div>
-                  );
+                  const dt = new Date(d + 'T00:00:00');
+                  const isFirst = dt.getDate() === 1;
+                  const isWeek = dt.getDay() === 1; // 周一
+                  const show = isFirst || isWeek || d === timelineRange[0];
+                  if (!show) return <div key={i} style={{ flex: 1, minWidth: 0 }} />;
+                  return <div key={i} style={{ flex: 1, minWidth: 0, fontSize: 10, color: rgl(255,255,255,0.4), textAlign: 'center', whiteSpace: 'nowrap' }}>{isFirst ? fmtMonth(d) : fmtShort(d)}</div>;
                 })}
               </div>
             </div>
-            {/* 今日竖线 */}
-            {todayIndex >= 0 && (
-              <div className={styles.todayLine} style={{ left: `calc(${((todayIndex + 0.5) / totalTimelineDays) * 100}% + 100px)` }} />
-            )}
             {/* 任务行 */}
-            {timelineTasks.length === 0 ? (
-              <div className={styles.timelineEmpty}>暂无待完成任务</div>
-            ) : (
-              timelineTasks.map((t, ti) => {
-                const start = t.startDate || t.deadline || '';
-                const end = t.deadline || t.startDate || '';
-                const startIdx = Math.max(0, timelineRange.indexOf(start));
-                const endIdx = end ? Math.min(totalTimelineDays - 1, timelineRange.indexOf(end)) : startIdx + 3;
-                const left = `${((startIdx + 0.1) / totalTimelineDays) * 100}%`;
-                const width = `${Math.max(1, ((endIdx - startIdx + 0.8) / totalTimelineDays) * 100)}%`;
-                const isConflict = conflictTaskIds.has(t.id);
-                const isOverdue = t.deadline && t.deadline < today && t.status !== '已完成';
+            <div className={styles.timelineBody}>
+              {timelineTasks.length === 0 ? (
+                <div className={styles.timelineBarEmpty}>暂无待完成任务</div>
+              ) : (
+                timelineTasks.map(t => {
+                  const start = t.startDate || t.deadline || '';
+                  const end = t.deadline || t.startDate || '';
+                  const leftPct = barPos(start);
+                  const rightPct = barPos(end);
+                  const isFixed = leftPct >= 0 && rightPct >= 0;
+                  const wPct = isFixed ? Math.max(1, rightPct - leftPct) : 4;
+                  const isConflict = conflictTaskIds.has(t.id);
+                  const barStyle = barColorClass(t.status);
 
-                return (
-                  <div
-                    key={t.id}
-                    className={`${styles.timelineRow} ${isConflict ? styles.timelineRowConflict : ''}`}
-                  >
-                    <div className={styles.timelineTaskName}>
-                      <span
-                        className={styles.taskDot}
-                        style={{
-                          background: t.status === '已完成' ? '#639922'
-                            : t.status === '有风险' ? '#D85A30'
-                            : '#378ADD',
-                        }}
-                      />
-                      <span className={styles.taskTitleText} title={t.title}>{t.title}</span>
-                    </div>
-                    <div className={styles.timelineBarArea}>
-                      <div
-                        className={`${styles.timelineBar} ${
-                          t.status === '已完成' ? styles.timelineBarDone
-                            : isConflict ? styles.timelineBarConflict
-                            : isOverdue ? styles.timelineBarOverdue
-                            : t.status === '有风险' ? styles.timelineBarRisk
-                            : t.status === '待开始' ? styles.timelineBarTodo
-                            : styles.timelineBarActive
-                        }`}
-                        style={{ left, width }}
-                      >
-                        <span className={styles.timelineBarLabel}>
-                          {t.status === '已完成' ? `已完成` : `${t.priority}·${fmtShort(t.deadline || '')}`}
-                        </span>
+                  return (
+                    <div key={t.id} className={`${styles.timelineBarRow} ${isConflict ? styles.timelineBarRowConflict : ''}`}>
+                      <div className={styles.timelineTaskName}>
+                        <span className={styles.taskDot} style={{ background: barStyle.dot }} />
+                        <span className={styles.taskTitleText} title={t.title}>{t.title}</span>
+                      </div>
+                      <div className={styles.timelineBarArea}>
+                        {/* 冲突区域背景 */}
+                        {isConflict && <div className={styles.timelineConflictOverlay}>{getConflictTaskInfo(t.id, conflicts).length > 1 ? '冲突' : ''}</div>}
+                        {/* 今日竖线 */}
+                        {todayIndex >= 0 && <div className={styles.todayLine} style={{ left: `${((todayIndex + 0.5) / totalTimelineDays) * 100}%` }} />}
+                        {isFixed && (
+                          <div
+                            className={styles.timelineBar2}
+                            style={{
+                              left: `${leftPct}%`,
+                              width: `${wPct}%`,
+                              background: barStyle.bg,
+                              borderLeft: barStyle.border ? `2px ${barStyle.border} ${barStyle.dot}` : 'none',
+                              borderLeftStyle: barStyle.border || undefined,
+                            }}
+                          >
+                            <span className={styles.timelineBarLabel2}>{fmtShort(start)}{end && end !== start ? ` ~ ${fmtShort(end)}` : ''}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
 
-        {/* 右侧：工作量分布 */}
-        <div className={styles.panel}>
+        {/* 右侧：工作量分布 — 高度自适应与左栏等高 */}
+        <div className={styles.panel} style={{ display: 'flex', flexDirection: 'column' }}>
           <div className={styles.panelHeader}>
             <span className={styles.panelTitle}>近期工作量分布</span>
           </div>
-          <div className={styles.workloadChart}>
+          <div className={styles.workloadChartFull}>
             {workloadData.map((d, i) => {
-              const height = d.count > 0 ? Math.max(24, (d.count / maxWorkload) * 120) : 8;
+              const barH = d.count > 0 ? Math.max(8, (d.count / maxWorkload) * 100) + '%' : '4px';
               const isPeak = d.count === maxWorkload && d.count > 0;
               const isToday = d.date === today;
-              const barColor = d.count >= 4 ? styles.barOverload
-                : d.count >= 2 ? styles.barNormal
-                : d.count >= 1 ? styles.barLight
-                : styles.barEmpty;
-
+              const barColor = d.count >= 4 ? styles.barOverload : d.count >= 2 ? styles.barNormal : d.count >= 1 ? styles.barLight : styles.barEmpty;
               return (
-                <div key={i} className={styles.barCol}>
+                <div key={i} className={styles.barColFull}>
                   {isPeak && d.count >= 3 && <div className={styles.barPeakLabel}>峰值</div>}
-                  <div
-                    className={`${styles.bar} ${barColor}`}
-                    style={{ height: `${height}px` }}
-                  >
-                    <span className={styles.barCount}>{d.count > 0 ? d.count : ''}</span>
-                  </div>
-                  <span className={`${styles.barDate} ${isToday ? styles.barDateToday : ''}`}>
-                    {d.label}
-                  </span>
+                  <div className={`${styles.barFull} ${barColor}`} style={{ height: barH }}><span className={styles.barCount}>{d.count > 0 ? d.count : ''}</span></div>
+                  <span className={`${styles.barDate} ${isToday ? styles.barDateToday : ''}`}>{d.label}</span>
                 </div>
               );
             })}
@@ -512,83 +539,36 @@ export default function Workspace() {
         </div>
       </div>
 
-      {/* 按项目分组 */}
+      {/* 按项目分组 — 子项目归集到父项目，仅显示有任务的项目 */}
       <section className={styles.projectGroups}>
-        {projectGroups.map(g => {
+        {displayProjectGroups.map(g => {
           const color = g.project.color;
           const { r, g: gn, b } = hexToRgb(color);
-
           return (
-            <div
-              key={g.project.id}
-              className={styles.projectCard}
-              style={{ borderTopColor: color }}
-            >
+            <div key={g.project.id} className={styles.projectCard} style={{ borderTopColor: color }}>
               <div className={styles.cardHeader}>
                 <div className={styles.cardTitleRow}>
                   <span className={styles.cardProjectName}>{g.project.name}</span>
-                  <span
-                    className={styles.cardRoleBadge}
-                    style={{
-                      background: g.isOwner
-                        ? `rgba(${r},${gn},${b},0.18)`
-                        : 'rgba(99,153,34,0.18)',
-                      color: g.isOwner ? color : '#97C459',
-                    }}
-                  >
-                    {g.isOwner ? '负责人' : '参与'}
-                  </span>
+                  <span className={styles.cardRoleBadge} style={{ background: g.isOwner ? `rgba(${r},${gn},${b},0.18)` : 'rgba(99,153,34,0.18)', color: g.isOwner ? color : '#97C459' }}>{g.isOwner ? '负责人' : '参与'}</span>
                 </div>
                 <span className={styles.cardProgress}>进度 {g.progress}%</span>
               </div>
-              <div className={styles.cardProgressBar}>
-                <div
-                  className={styles.cardProgressFill}
-                  style={{ width: `${g.progress}%`, background: color }}
-                />
-              </div>
+              <div className={styles.cardProgressBar}><div className={styles.cardProgressFill} style={{ width: `${g.progress}%`, background: color }} /></div>
               <div className={styles.cardTaskList}>
-                {g.tasks.length === 0 ? (
-                  <div className={styles.cardTaskEmpty}>暂无任务</div>
-                ) : (
-                  g.tasks.map(t => {
-                    const statusCls = STATUS_CLASS[t.status] || styles.taskTodo;
-                    const isConflict = conflictTaskIds.has(t.id);
-                    return (
-                      <div
-                        key={t.id}
-                        className={`${styles.cardTask} ${isConflict ? styles.cardTaskConflict : ''}`}
-                      >
-                        <span
-                          className={styles.cardTaskDot}
-                          style={{
-                            background: t.status === '已完成' ? '#639922'
-                              : isConflict ? '#D85A30'
-                              : t.status === '有风险' ? '#D85A30'
-                              : t.status === '进行中' ? '#378ADD'
-                              : 'rgba(255,255,255,0.2)',
-                          }}
-                        />
-                        <span className={styles.cardTaskTitle}>{t.title}</span>
-                        <span className={`${styles.cardTaskStatus} ${statusCls}`}>
-                          {isConflict ? `${t.priority}·冲突` : t.status}
-                        </span>
-                        {t.deadline && (
-                          <span className={`${styles.cardTaskDate} ${isConflict ? styles.cardTaskDateConflict : ''}`}>
-                            {fmtShort(t.deadline)}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                {g.tasks.map(t => {
+                  const statusCls = STATUS_CLASS[t.status] || styles.taskTodo;
+                  const isConflict = conflictTaskIds.has(t.id);
+                  return (
+                    <div key={t.id} className={`${styles.cardTask} ${isConflict ? styles.cardTaskConflict : ''}`}>
+                      <span className={styles.cardTaskDot} style={{ background: t.status === '已完成' ? '#639922' : isConflict ? '#D85A30' : t.status === '有风险' ? '#D85A30' : t.status === '进行中' ? '#378ADD' : 'rgba(255,255,255,0.2)' }} />
+                      <span className={styles.cardTaskTitle}>{t.title}</span>
+                      <span className={`${styles.cardTaskStatus} ${statusCls}`}>{isConflict ? `${t.priority}·冲突` : t.status}</span>
+                      {t.deadline && <span className={`${styles.cardTaskDate} ${isConflict ? styles.cardTaskDateConflict : ''}`}>{fmtShort(t.deadline)}</span>}
+                    </div>
+                  );
+                })}
               </div>
-              <div
-                className={styles.cardFooter}
-                onClick={() => navigate(`/project/${g.project.id}`)}
-              >
-                查看项目详情 →
-              </div>
+              <div className={styles.cardFooter} onClick={() => navigate(`/project/${g.project.id}`)}>查看项目详情 →</div>
             </div>
           );
         })}
@@ -601,37 +581,16 @@ export default function Workspace() {
           <div className={styles.conflictAlertBody}>
             <div className={styles.conflictAlertTitle}>时间冲突提醒</div>
             <div className={styles.conflictAlertText}>
-              {conflicts.map((c, i) => (
-                <span key={i}>
-                  「{c.task1.title}」
-                  ({projects.find(p => p.id === c.task1.projectId)?.name || '未知项目'})
-                  与 「{c.task2.title}」
-                  ({projects.find(p => p.id === c.task2.projectId)?.name || '未知项目'})
-                  重叠 {c.overlapDays} 天
-                  {i < conflicts.length - 1 ? '；' : ''}
-                </span>
-              ))}
-              。建议与相关项目负责人协调排期。
+              {conflicts.map((c, i) => (<span key={i}>「{c.task1.title}」({projects.find(p => p.id === c.task1.projectId)?.name || '未知项目'}) 与 「{c.task2.title}」({projects.find(p => p.id === c.task2.projectId)?.name || '未知项目'}) 重叠 {c.overlapDays} 天{i < conflicts.length - 1 ? '；' : ''}</span>))}。建议与相关项目负责人协调排期。
             </div>
           </div>
-          <button
-            className={styles.conflictBtn}
-            onClick={() => {
-              const firstProj = projectGroups[0];
-              if (firstProj) navigate(`/project/${firstProj.project.id}`);
-            }}
-          >
-            查看详情
-          </button>
+          <button className={styles.conflictBtn} onClick={() => { const fp = displayProjectGroups[0]; if (fp) navigate(`/project/${fp.project.id}`); }}>查看详情</button>
         </div>
       )}
 
       {/* 空状态 */}
-      {projectGroups.length === 0 && (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyTitle}>暂未参与任何项目</div>
-          <div>你尚未被分配任何任务或负责任何项目。请联系管理员分配任务。</div>
-        </div>
+      {displayProjectGroups.length === 0 && (
+        <div className={styles.emptyState}><div className={styles.emptyTitle}>暂未参与任何项目</div><div>你尚未被分配任何任务或负责任何项目。请联系管理员分配任务。</div></div>
       )}
     </div>
   );

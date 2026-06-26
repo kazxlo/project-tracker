@@ -287,27 +287,28 @@
   font-weight: 500;
 }
 
-/* ===== 时间线 ===== */
-.timelineArea {
-  position: relative;
-  overflow-x: auto;
-  overflow-y: visible;
-  min-height: 120px;
-}
-
-.timelineEmpty {
-  text-align: center;
-  padding: 32px 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.timelineScale {
+/* ===== 时间线区域 ===== */
+.timelineWrap {
+  flex: 1;
   display: flex;
-  margin-bottom: 4px;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  flex-direction: column;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: 0;
+}
+
+/* 刻度行 */
+.timelineScale2 {
+  display: flex;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(100, 181, 246, 0.08);
+  flex-shrink: 0;
+}
+
+.timelineLabels2 {
+  flex: 1;
+  display: flex;
+  min-width: 0;
 }
 
 .timelineLabelSpacer {
@@ -316,46 +317,33 @@
   flex-shrink: 0;
 }
 
-.timelineLabels {
+/* 任务行容器 */
+.timelineBody {
   flex: 1;
-  display: flex;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 4px;
 }
 
-.timelineLabel {
-  flex: 1;
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.3);
+.timelineBarEmpty {
   text-align: center;
-  min-width: 30px;
-  white-space: nowrap;
+  padding: 24px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.3);
 }
 
-.timelineLabelToday {
-  color: #64b5f6;
-  font-weight: 500;
-}
-
-.todayLine {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(100, 181, 246, 0.3);
-  z-index: 0;
-  pointer-events: none;
-}
-
-.timelineRow {
+/* 单行 */
+.timelineBarRow {
   display: flex;
-  position: relative;
   height: 32px;
   align-items: center;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  position: relative;
 }
 
-.timelineRowConflict {
-  background: rgba(217, 90, 48, 0.08);
-  border-radius: 6px;
+.timelineBarRowConflict {
+  background: rgba(217, 90, 48, 0.1);
 }
 
 .timelineTaskName {
@@ -387,87 +375,64 @@
   flex: 1;
   position: relative;
   height: 100%;
-  display: flex;
-  align-items: center;
 }
 
-.timelineBar {
+/* 冲突区域背景遮罩 */
+.timelineConflictOverlay {
   position: absolute;
-  height: 22px;
-  border-radius: 0 4px 4px 0;
+  inset: 0;
   display: flex;
   align-items: center;
-  padding-left: 6px;
-  border-left: 2px solid;
-}
-
-.timelineBarActive {
-  background: rgba(55, 138, 221, 0.25);
-  border-left-color: #378ADD;
-}
-
-.timelineBarDone {
-  background: rgba(99, 153, 34, 0.25);
-  border-left-color: #639922;
-}
-
-.timelineBarConflict {
-  background: rgba(217, 90, 48, 0.3);
-  border-left-color: #D85A30;
-}
-
-.timelineBarRisk {
-  background: rgba(217, 90, 48, 0.2);
-  border-left-color: #D85A30;
-}
-
-.timelineBarOverdue {
-  background: rgba(217, 90, 48, 0.25);
-  border-left-color: #D85A30;
-}
-
-.timelineBarTodo {
-  background: rgba(127, 119, 221, 0.2);
-  border-left-color: #7F77DD;
-  border-left-style: dashed;
-}
-
-.timelineBarLabel {
+  justify-content: center;
   font-size: 9px;
-  color: inherit;
+  color: rgba(217, 90, 48, 0.35);
+  font-weight: 600;
+  pointer-events: none;
+  letter-spacing: 2px;
+}
+
+/* 今日竖线 */
+.todayLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(100, 181, 246, 0.3);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 任务色块 */
+.timelineBar2 {
+  position: absolute;
+  top: 4px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  z-index: 0;
+}
+
+.timelineBarLabel2 {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.timelineBarActive .timelineBarLabel {
-  color: #85B7EB;
-}
-
-.timelineBarDone .timelineBarLabel {
-  color: #97C459;
-}
-
-.timelineBarConflict .timelineBarLabel,
-.timelineBarRisk .timelineBarLabel,
-.timelineBarOverdue .timelineBarLabel {
-  color: #F0997B;
-}
-
-.timelineBarTodo .timelineBarLabel {
-  color: #AFA9EC;
-}
-
-/* ===== 工作量分布 ===== */
-.workloadChart {
+/* ===== 工作量分布 — 自适应高度 ===== */
+.workloadChartFull {
+  flex: 1;
   display: flex;
   align-items: flex-end;
   gap: 6px;
-  height: 160px;
   padding: 0 4px;
+  min-height: 100px;
 }
 
-.barCol {
+.barColFull {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -475,9 +440,10 @@
   gap: 4px;
   position: relative;
   justify-content: flex-end;
+  height: 100%;
 }
 
-.bar {
+.barFull {
   width: 100%;
   border-radius: 4px 4px 0 0;
   display: flex;
