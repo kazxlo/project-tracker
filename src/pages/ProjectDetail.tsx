@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus, getMilestones, getProjectTasks } from '../api/db';
+import { getAllProfiles } from '../api/profiles';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { getLatestReport, filterVisibleProjects, genId, calcOverallProgress, COLOR_PALETTE } from '../utils/helpers';
@@ -41,6 +42,9 @@ export default function ProjectDetail() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([]);
 
+  // 系统注册用户列表（用于任务负责人下拉）
+  const [userNames, setUserNames] = useState<string[]>([]);
+
   // 计划编辑器弹窗
   const [planEditorOpen, setPlanEditorOpen] = useState(false);
 
@@ -65,13 +69,14 @@ export default function ProjectDetail() {
   const loadData = async () => {
     if (!id) return;
     try {
-      const [p, projs, reps, allReps, ms, ts] = await Promise.all([
+      const [p, projs, reps, allReps, ms, ts, profiles] = await Promise.all([
         getProject(id),
         getProjects(),
         getReports(id),
         getAllReports(),
         getMilestones(id),
         getProjectTasks(id),
+        getAllProfiles().catch(() => []),
       ]);
       setProject(p || null);
       setAllProjects(filterVisibleProjects(projs, userId, role));
@@ -79,6 +84,8 @@ export default function ProjectDetail() {
       setAllReports(allReps);
       setMilestones(ms);
       setProjectTasks(ts);
+      // 仅取 display_name 作为下拉选项
+      setUserNames((Array.isArray(profiles) ? profiles as { display_name: string }[] : []).map(p => p.display_name).filter(Boolean));
     } catch (err) {
       console.error('加载数据失败:', err);
     }
@@ -620,6 +627,7 @@ export default function ProjectDetail() {
             }}
             toast={showToast}
             readOnly={isPublic}
+            userNames={userNames}
           />
         )}
       </div>
@@ -883,6 +891,7 @@ export default function ProjectDetail() {
           }}
           toast={showToast}
           readOnly={isPublic}
+          userNames={userNames}
         />
       )}
     </div>

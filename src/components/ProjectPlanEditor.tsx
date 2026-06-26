@@ -10,11 +10,13 @@ interface Props {
   onClose: () => void;
   toast: (msg: string, type: 'success' | 'error') => void;
   readOnly?: boolean;
+  /** 可选：下拉用户列表（系统已注册用户名），为空时退回自由输入 */
+  userNames?: string[];
 }
 
 type EditTab = 'milestones' | 'tasks';
 
-export default function ProjectPlanEditor({ projectId, open, onClose, toast, readOnly }: Props) {
+export default function ProjectPlanEditor({ projectId, open, onClose, toast, readOnly, userNames }: Props) {
   const [tab, setTab] = useState<EditTab>('milestones');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
@@ -143,6 +145,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
               reload={reload}
               toast={toast}
               readOnly={readOnly}
+              userNames={userNames}
             />
           )}
         </div>
@@ -325,7 +328,7 @@ function emptyTask(projectId: string): ProjectTask {
 }
 
 function TaskEditor({
-  tasks, setTasks, projectId, onDelete, onReorder, loading, reload, toast, readOnly,
+  tasks, setTasks, projectId, onDelete, onReorder, loading, reload, toast, readOnly, userNames,
 }: {
   tasks: ProjectTask[];
   setTasks: React.Dispatch<React.SetStateAction<ProjectTask[]>>;
@@ -336,6 +339,7 @@ function TaskEditor({
   reload: () => Promise<void>;
   toast: (msg: string, type: 'success' | 'error') => void;
   readOnly?: boolean;
+  userNames?: string[];
 }) {
   const [editing, setEditing] = useState<ProjectTask | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -469,9 +473,19 @@ function TaskEditor({
               </select>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input className={shared.formInput} value={editing.assignee}
-                onChange={e => setEditing({ ...editing, assignee: e.target.value })}
-                placeholder="负责人" style={{ flex: 1 }} />
+              {userNames && userNames.length > 0 ? (
+                <select className={shared.formSelect} style={{ flex: 1, padding: '8px 12px' }}
+                  value={editing.assignee}
+                  onChange={e => setEditing({ ...editing, assignee: e.target.value })}
+                >
+                  <option value="">选择负责人</option>
+                  {userNames.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              ) : (
+                <input className={shared.formInput} value={editing.assignee}
+                  onChange={e => setEditing({ ...editing, assignee: e.target.value })}
+                  placeholder="负责人" style={{ flex: 1 }} />
+              )}
               <input className={shared.formInput} type="date" value={editing.startDate || ''}
                 onChange={e => setEditing({ ...editing, startDate: e.target.value })} style={{ flex: 1 }} />
               <input className={shared.formInput} type="date" value={editing.deadline || ''}
