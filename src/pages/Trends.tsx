@@ -8,7 +8,6 @@ import {
 } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import TopNav from '../components/TopNav';
-import cockpitStyles from '../styles/cockpit.module.css';
 import shared from '../styles/shared.module.css';
 
 export default function Trends() {
@@ -37,8 +36,6 @@ export default function Trends() {
     return () => { cancelled = true; };
   }, [userId, role]);
 
-  // ---- 数据处理 ----
-
   const sortedWeekLabels = useMemo(() => {
     const set = new Set<string>();
     allReports.forEach(r => set.add(r.weekLabel));
@@ -49,15 +46,12 @@ export default function Trends() {
     });
   }, [allReports]);
 
-  // 活跃风险数量趋势
   const activeRiskData = useMemo(() => {
     return sortedWeekLabels.map(label => {
       const row: Record<string, string | number> = { week: label };
       const seen = new Set<string>();
       projects.forEach(p => {
-        const reportsInWeek = allReports.filter(
-          r => r.projectId === p.id && r.weekLabel === label
-        );
+        const reportsInWeek = allReports.filter(r => r.projectId === p.id && r.weekLabel === label);
         reportsInWeek.forEach(r => {
           r.risks.forEach(rk => {
             if (rk.status === '已解决') return;
@@ -71,7 +65,6 @@ export default function Trends() {
     });
   }, [sortedWeekLabels, projects, allReports]);
 
-  // 累计风险等级分布（堆叠柱状图）
   const riskLevelData = useMemo(() => {
     const topProjects = projects.filter(p => !p.parentId);
     return topProjects.map(parent => {
@@ -99,100 +92,77 @@ export default function Trends() {
   const levelColors = { '高': '#ff6b6b', '中': '#ffb347', '低': '#4ADE80' };
 
   if (loading) {
-    return <div className={cockpitStyles.loading}>加载中...</div>;
+    return <div style={{ textAlign: 'center', padding: 60, color: '#6b7a93' }}>加载中...</div>;
   }
 
   if (projects.length === 0) {
     return (
-      <div className={cockpitStyles.cockpit}>
-        <header className={cockpitStyles.header}>
-          <div className={cockpitStyles.headerLeft}>
-            <h1 className={cockpitStyles.headerTitle}>项目健康趋势</h1>
-          </div>
-          <div className={cockpitStyles.headerRight}>
-            <TopNav active="trends" theme="dark" styles={cockpitStyles} />
-            <span className={cockpitStyles.userInfo}>{username}{isAdmin && <span className={cockpitStyles.userRole}>(管理员)</span>}</span>
-            <button className={cockpitStyles.logoutBtn} onClick={() => doLogout()}>退出</button>
+      <div className={shared.pageWrap}>
+        <header className={shared.header}>
+          <div className={shared.headerLeft}><h1 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>项目健康趋势</h1></div>
+          <div className={shared.headerRight}>
+            <TopNav active="trends" theme="light" styles={shared} />
+            <span className={shared.textSmall} style={{ color: '#6b7a93' }}>{username}{isAdmin && <span style={{ fontSize: 11, color: '#4F8EF7', marginLeft: 4 }}>(管理员)</span>}</span>
+            <button className={shared.btnLogout} onClick={() => doLogout()}>退出</button>
           </div>
         </header>
-        <div className={shared.emptyState} style={{ padding: 60, color: '#9aaec9' }}>
-          <p style={{ fontSize: 15, marginBottom: 8 }}>暂无项目</p>
-          <p>请先在仪表盘中添加项目</p>
-        </div>
+        <main className={shared.main}>
+          <div className={shared.emptyState} style={{ padding: 60 }}><p style={{ fontSize: 15, marginBottom: 8 }}>暂无项目</p><p className={shared.textSmall}>请先在仪表盘中添加项目</p></div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className={cockpitStyles.cockpit}>
-      <header className={cockpitStyles.header}>
-        <div className={cockpitStyles.headerLeft}>
-          <h1 className={cockpitStyles.headerTitle}>项目健康趋势</h1>
-        </div>
-        <div className={cockpitStyles.headerRight}>
-          <TopNav active="trends" theme="dark" styles={cockpitStyles} />
-          <span className={cockpitStyles.userInfo}>{username}{isAdmin && <span className={cockpitStyles.userRole}>(管理员)</span>}</span>
-          <button className={cockpitStyles.logoutBtn} onClick={() => doLogout()}>退出</button>
+    <div className={shared.pageWrap}>
+      <header className={shared.header}>
+        <div className={shared.headerLeft}><h1 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>项目健康趋势</h1></div>
+        <div className={shared.headerRight}>
+          <TopNav active="trends" theme="light" styles={shared} />
+          <span className={shared.textSmall} style={{ color: '#6b7a93' }}>{username}{isAdmin && <span style={{ fontSize: 11, color: '#4F8EF7', marginLeft: 4 }}>(管理员)</span>}</span>
+          <button className={shared.btnLogout} onClick={() => doLogout()}>退出</button>
         </div>
       </header>
 
-      {/* 图表A：活跃风险数量趋势 */}
-      <div className={shared.section} style={{ background: 'rgba(18,28,48,0.65)', borderColor: 'rgba(100,181,246,0.12)' }}>
-        <h3 className={shared.sectionTitle} style={{ color: '#fff' }}>活跃风险数量趋势</h3>
-        {activeRiskData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={activeRiskData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
-              <XAxis dataKey="week" fontSize={12} />
-              <YAxis allowDecimals={false} fontSize={12} />
-              <Tooltip
-                formatter={(value) => [`${value} 项`, '活跃风险数']}
-                labelFormatter={(label) => `周次：${label}`}
-                contentStyle={{ fontSize: 12, borderRadius: 12 }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-              <Line
-                type="monotone"
-                dataKey="活跃风险数"
-                stroke="#ff6b6b"
-                strokeWidth={3}
-                dot={{ r: 4, fill: '#ff6b6b' }}
-                activeDot={{ r: 6 }}
-                connectNulls
-                name="活跃风险数"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className={shared.emptyState}>暂无风险数据</div>
-        )}
-      </div>
+      <main className={shared.main}>
+        <div className={shared.section}>
+          <h3 className={shared.sectionTitle}>活跃风险数量趋势</h3>
+          {activeRiskData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={activeRiskData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
+                <XAxis dataKey="week" fontSize={12} />
+                <YAxis allowDecimals={false} fontSize={12} />
+                <Tooltip formatter={(value) => [`${value} 项`, '活跃风险数']} labelFormatter={(label) => `周次：${label}`} contentStyle={{ fontSize: 12, borderRadius: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                <Line type="monotone" dataKey="活跃风险数" stroke="#ff6b6b" strokeWidth={3} dot={{ r: 4, fill: '#ff6b6b' }} activeDot={{ r: 6 }} connectNulls name="活跃风险数" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className={shared.emptyState}>暂无风险数据</div>
+          )}
+        </div>
 
-      {/* 图表B：风险等级分布（堆叠柱状图） */}
-      <div className={shared.section} style={{ background: 'rgba(18,28,48,0.65)', borderColor: 'rgba(100,181,246,0.12)' }}>
-        <h3 className={shared.sectionTitle} style={{ color: '#fff' }}>累计风险等级分布</h3>
-        {riskLevelData.some(d => d.高 + d.中 + d.低 > 0) ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={riskLevelData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
-              <XAxis dataKey="name" fontSize={12} />
-              <YAxis allowDecimals={false} fontSize={12} />
-              <Tooltip
-                formatter={(value, name) => [`${value} 项`, name]}
-                contentStyle={{ fontSize: 12, borderRadius: 12 }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-              <Bar dataKey="高" stackId="a" fill={levelColors['高']} name="高风险" />
-              <Bar dataKey="中" stackId="a" fill={levelColors['中']} name="中风险" />
-              <Bar dataKey="低" stackId="a" fill={levelColors['低']} name="低风险" />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className={shared.emptyState} style={{ padding: 30, fontSize: 13 }}>
-            所有项目均无风险记录
-          </div>
-        )}
-      </div>
+        <div className={shared.section}>
+          <h3 className={shared.sectionTitle}>累计风险等级分布</h3>
+          {riskLevelData.some(d => d.高 + d.中 + d.低 > 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={riskLevelData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
+                <XAxis dataKey="name" fontSize={12} />
+                <YAxis allowDecimals={false} fontSize={12} />
+                <Tooltip formatter={(value, name) => [`${value} 项`, name]} contentStyle={{ fontSize: 12, borderRadius: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                <Bar dataKey="高" stackId="a" fill={levelColors['高']} name="高风险" />
+                <Bar dataKey="中" stackId="a" fill={levelColors['中']} name="中风险" />
+                <Bar dataKey="低" stackId="a" fill={levelColors['低']} name="低风险" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className={shared.emptyState} style={{ padding: 30, fontSize: 13 }}>所有项目均无风险记录</div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
