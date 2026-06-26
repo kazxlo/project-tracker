@@ -7,10 +7,13 @@ import {
   BarChart, Bar, ResponsiveContainer,
 } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
+import TopNav from '../components/TopNav';
+import cockpitStyles from '../styles/cockpit.module.css';
 import shared from '../styles/shared.module.css';
 
 export default function Trends() {
-  const { userId, role } = useAuth();
+  const { username, userId, role, doLogout } = useAuth();
+  const isAdmin = role === 'admin';
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,28 +99,46 @@ export default function Trends() {
   const levelColors = { '高': '#ff6b6b', '中': '#ffb347', '低': '#4ADE80' };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: 60, color: '#6b7a93' }}>加载中...</div>;
+    return <div className={cockpitStyles.loading}>加载中...</div>;
   }
 
   if (projects.length === 0) {
     return (
-      <div>
-        <h2 className={shared.pageTitle}>项目健康趋势</h2>
-        <div className={shared.emptyState} style={{ padding: 60 }}>
+      <div className={cockpitStyles.cockpit}>
+        <header className={cockpitStyles.header}>
+          <div className={cockpitStyles.headerLeft}>
+            <h1 className={cockpitStyles.headerTitle}>项目健康趋势</h1>
+          </div>
+          <div className={cockpitStyles.headerRight}>
+            <TopNav active="trends" theme="dark" styles={cockpitStyles} />
+            <span className={cockpitStyles.userInfo}>{username}{isAdmin && <span className={cockpitStyles.userRole}>(管理员)</span>}</span>
+            <button className={cockpitStyles.logoutBtn} onClick={() => doLogout()}>退出</button>
+          </div>
+        </header>
+        <div className={shared.emptyState} style={{ padding: 60, color: '#9aaec9' }}>
           <p style={{ fontSize: 15, marginBottom: 8 }}>暂无项目</p>
-          <p className={shared.textSmall}>请先在仪表盘中添加项目</p>
+          <p>请先在仪表盘中添加项目</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h2 className={shared.pageTitle}>项目健康趋势</h2>
+    <div className={cockpitStyles.cockpit}>
+      <header className={cockpitStyles.header}>
+        <div className={cockpitStyles.headerLeft}>
+          <h1 className={cockpitStyles.headerTitle}>项目健康趋势</h1>
+        </div>
+        <div className={cockpitStyles.headerRight}>
+          <TopNav active="trends" theme="dark" styles={cockpitStyles} />
+          <span className={cockpitStyles.userInfo}>{username}{isAdmin && <span className={cockpitStyles.userRole}>(管理员)</span>}</span>
+          <button className={cockpitStyles.logoutBtn} onClick={() => doLogout()}>退出</button>
+        </div>
+      </header>
 
       {/* 图表A：活跃风险数量趋势 */}
-      <div className={shared.section}>
-        <h3 className={shared.sectionTitle}>活跃风险数量趋势</h3>
+      <div className={shared.section} style={{ background: 'rgba(18,28,48,0.65)', borderColor: 'rgba(100,181,246,0.12)' }}>
+        <h3 className={shared.sectionTitle} style={{ color: '#fff' }}>活跃风险数量趋势</h3>
         {activeRiskData.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={activeRiskData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
@@ -148,8 +169,8 @@ export default function Trends() {
       </div>
 
       {/* 图表B：风险等级分布（堆叠柱状图） */}
-      <div className={shared.section}>
-        <h3 className={shared.sectionTitle}>累计风险等级分布</h3>
+      <div className={shared.section} style={{ background: 'rgba(18,28,48,0.65)', borderColor: 'rgba(100,181,246,0.12)' }}>
+        <h3 className={shared.sectionTitle} style={{ color: '#fff' }}>累计风险等级分布</h3>
         {riskLevelData.some(d => d.高 + d.中 + d.低 > 0) ? (
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={riskLevelData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>

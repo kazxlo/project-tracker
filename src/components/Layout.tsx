@@ -37,7 +37,7 @@ export default function Layout() {
     return <Navigate to="/" replace />;
   }
 
-  const isFullscreenPage = location.pathname === '/' || location.pathname === '/cockpit';
+  const isFullscreenPage = location.pathname === '/' || location.pathname === '/cockpit' || location.pathname === '/trends' || location.pathname === '/admin';
 
   const tabs = [
     { path: '/', label: '工作台' },

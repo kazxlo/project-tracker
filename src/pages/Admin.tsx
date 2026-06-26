@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAllProfiles, UserProfile } from '../api/profiles';
 import { getProjects, saveProject } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
@@ -6,6 +7,8 @@ import { useToast } from '../hooks/useToast';
 import { filterVisibleProjects } from '../utils/helpers';
 import type { Project } from '../types';
 import Toast from '../components/Toast';
+import TopNav from '../components/TopNav';
+import cockpitStyles from '../styles/cockpit.module.css';
 import shared from '../styles/shared.module.css';
 
 // 内嵌子组件
@@ -15,36 +18,53 @@ import AdminUsers from './AdminUsers';
 type TabKey = 'overview' | 'permissions' | 'users';
 
 export default function Admin() {
-  const { role } = useAuth();
+  const { username, role, doLogout } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = role === 'admin';
   const [tab, setTab] = useState<TabKey>('overview');
 
-  // 非 admin 重定向（Layout已做，双重保险）
   if (!isAdmin) return null;
 
-  return (
-    <div>
-      <h2 className={shared.pageTitle}>管理中心</h2>
+  const tabs = [
+    { key: 'overview' as TabKey, label: '项目总览' },
+    { key: 'permissions' as TabKey, label: '项目权限' },
+    { key: 'users' as TabKey, label: '用户管理' },
+  ];
 
-      <div className={shared.tabBar}>
-        {[
-          { key: 'overview' as TabKey, label: '项目总览' },
-          { key: 'permissions' as TabKey, label: '项目权限' },
-          { key: 'users' as TabKey, label: '用户管理' },
-        ].map(t => (
+  return (
+    <div className={cockpitStyles.cockpit}>
+      <header className={cockpitStyles.header}>
+        <div className={cockpitStyles.headerLeft}>
+          <h1 className={cockpitStyles.headerTitle}>管理中心</h1>
+        </div>
+        <div className={cockpitStyles.headerRight}>
+          <TopNav active="admin" theme="dark" styles={cockpitStyles} />
+          <span className={cockpitStyles.userInfo}>{username}<span className={cockpitStyles.userRole}>(管理员)</span></span>
+          <button className={cockpitStyles.logoutBtn} onClick={() => doLogout()}>退出</button>
+        </div>
+      </header>
+
+      <div className={shared.tabBar} style={{ borderBottomColor: 'rgba(100,181,246,0.1)' }}>
+        {tabs.map(t => (
           <span
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`${shared.tab} ${tab === t.key ? shared.tabActive : shared.tabInactive}`}
+            style={{
+              color: tab === t.key ? '#fff' : '#9aaec9',
+              borderBottomColor: tab === t.key ? '#64b5f6' : 'transparent',
+            }}
           >
             {t.label}
           </span>
         ))}
       </div>
 
-      {tab === 'overview' && <Dashboard />}
-      {tab === 'permissions' && <ProjectPermissions />}
-      {tab === 'users' && <AdminUsers />}
+      <div style={{ padding: '4px 0' }}>
+        {tab === 'overview' && <Dashboard />}
+        {tab === 'permissions' && <ProjectPermissions />}
+        {tab === 'users' && <AdminUsers />}
+      </div>
     </div>
   );
 }
