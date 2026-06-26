@@ -63,6 +63,17 @@ export default function Layout() {
           <span className={shared.weekLabel}>本周: {formatDate(start)} - {formatDate(end)}</span>
         </div>
         <div className={shared.headerRight}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {tabs.map(t => (
+              <Link
+                key={t.path}
+                to={t.path}
+                className={`${shared.topNavItem} ${location.pathname === t.path ? shared.topNavActive : shared.topNavLink}`}
+              >
+                {t.label}
+              </Link>
+            ))}
+          </nav>
           <span className={shared.textSmall} style={{ color: '#6b7a93' }}>
             {username}
             {role === 'admin' && <span style={{ fontSize: 11, color: '#4F8EF7', marginLeft: 4 }}>(管理员)</span>}
@@ -71,18 +82,6 @@ export default function Layout() {
           <button className={shared.btnLogout} onClick={() => { doLogout(); }}>退出</button>
         </div>
       </header>
-
-      <nav className={shared.navbar}>
-        {tabs.map(t => (
-          <Link
-            key={t.path}
-            to={t.path}
-            className={`${shared.navTab} ${location.pathname === t.path ? shared.navTabActive : shared.navTabInactive}`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
 
       <main className={shared.main}>
         <Outlet />
