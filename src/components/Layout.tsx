@@ -43,7 +43,7 @@ export default function Layout() {
     }
   }
 
-  const isWorkspace = location.pathname === '/';
+  const isFullscreenPage = location.pathname === '/' || location.pathname === '/cockpit';
 
   const tabs = [
     { path: '/', label: '工作台' },
@@ -61,8 +61,8 @@ export default function Layout() {
   friday.setDate(monday.getDate() + 4);
   const fmt = (d: Date) => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 
-  // 工作台全屏模式：隐藏 Header 和 Navbar
-  if (isWorkspace) {
+  // 工作台 & 驾驶舱全屏模式：隐藏 Header 和 Navbar
+  if (isFullscreenPage) {
     return <Outlet />;
   }
 
