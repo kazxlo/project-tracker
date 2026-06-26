@@ -43,15 +43,13 @@ export default function Layout() {
     }
   }
 
-  const isCockpit = location.pathname === '/';
+  const isWorkspace = location.pathname === '/';
 
   const tabs = [
-    { path: '/', label: '驾驶舱' },
+    { path: '/', label: '工作台' },
+    { path: '/cockpit', label: '驾驶舱' },
     { path: '/trends', label: '趋势分析' },
   ];
-  if (!isPublic) {
-    tabs.push({ path: '/workspace', label: '工作台' });
-  }
   if (role === 'admin') {
     tabs.push({ path: '/admin', label: '管理中心' });
   }
@@ -63,8 +61,8 @@ export default function Layout() {
   friday.setDate(monday.getDate() + 4);
   const fmt = (d: Date) => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 
-  // 驾驶舱全屏模式：隐藏 Header 和 Navbar
-  if (isCockpit) {
+  // 工作台全屏模式：隐藏 Header 和 Navbar
+  if (isWorkspace) {
     return <Outlet />;
   }
 

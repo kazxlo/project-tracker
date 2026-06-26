@@ -330,9 +330,9 @@ export default function Cockpit() {
         </div>
         <div className={styles.headerRight}>
           <nav className={styles.topNav}>
+            <Link to="/" className={styles.topNavLink}>工作台</Link>
             <span className={`${styles.topNavItem} ${styles.topNavActive}`}>驾驶舱</span>
             <Link to="/trends" className={styles.topNavLink}>趋势分析</Link>
-            {!isPublic && <Link to="/workspace" className={styles.topNavLink}>工作台</Link>}
             {isAdmin && <Link to="/admin" className={styles.topNavLink}>管理中心</Link>}
           </nav>
           <span className={styles.userInfo}>

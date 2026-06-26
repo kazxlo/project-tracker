@@ -99,6 +99,67 @@
   color: #e0e6f0;
 }
 
+/* 顶部导航 */
+.topNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topNavItem,
+.topNavLink {
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.topNavItem {
+  color: #9aaec9;
+}
+
+.topNavLink {
+  color: #9aaec9;
+}
+
+.topNavLink:hover {
+  background: rgba(100, 181, 246, 0.08);
+  color: #64b5f6;
+}
+
+.topNavActive {
+  color: #ffffff;
+  background: rgba(100, 181, 246, 0.12);
+  font-weight: 500;
+}
+
+.userInfo {
+  font-size: 13px;
+  color: #9aaec9;
+  white-space: nowrap;
+}
+
+.logoutBtn {
+  font-size: 12px;
+  color: #9aaec9;
+  background: rgba(100, 181, 246, 0.08);
+  border: 1px solid rgba(100, 181, 246, 0.15);
+  border-radius: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.logoutBtn:hover {
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
 .navLink {
   font-size: 12px;
   color: #9aaec9;

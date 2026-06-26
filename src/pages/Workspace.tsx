@@ -308,6 +308,12 @@ export default function Workspace() {
           </div>
         </div>
         <div className={styles.headerRight}>
+          <nav className={styles.topNav}>
+            <span className={`${styles.topNavItem} ${styles.topNavActive}`}>工作台</span>
+            <Link to="/cockpit" className={styles.topNavLink}>驾驶舱</Link>
+            <Link to="/trends" className={styles.topNavLink}>趋势分析</Link>
+            {isAdmin && <Link to="/admin" className={styles.topNavLink}>管理中心</Link>}
+          </nav>
           <select
             className={styles.filterSelect}
             value={projectFilter}
@@ -326,7 +332,13 @@ export default function Workspace() {
             <option value="未来14天">未来14天</option>
             <option value="全部">全部</option>
           </select>
-          <Link to="/" className={styles.navLink}>驾驶舱</Link>
+          <span className={styles.userInfo}>
+            {username}
+            {isAdmin && <span className={styles.adminBadge}>管理员</span>}
+          </span>
+          <button className={styles.logoutBtn} onClick={() => { doLogout(); navigate('/login'); }}>
+            退出
+          </button>
         </div>
       </header>
 
