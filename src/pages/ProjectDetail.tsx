@@ -233,7 +233,7 @@ export default function ProjectDetail() {
         <Toast toast={toast} />
 
         {/* 返回链接 */}
-        <span className={shared.backLink} onClick={() => navigate('/')}>
+        <span className={shared.backLink} onClick={() => navigate('/cockpit')}>
           ← 返回驾驶舱
         </span>
 
@@ -645,7 +645,7 @@ export default function ProjectDetail() {
           ← 返回 {parentProject.name}
         </span>
       ) : (
-        <span className={shared.backLink} onClick={() => navigate('/')}>
+        <span className={shared.backLink} onClick={() => navigate('/cockpit')}>
           ← 返回驾驶舱
         </span>
       )}
