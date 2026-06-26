@@ -497,7 +497,6 @@ export default function Workspace() {
                               width: `${wPct}%`,
                               background: barStyle.bg,
                               borderLeft: barStyle.border ? `2px ${barStyle.border} ${barStyle.dot}` : 'none',
-                              borderLeftStyle: barStyle.border || undefined,
                             }}
                           >
                             <span className={styles.timelineBarLabel2}>{fmtShort(start)}{end && end !== start ? ` ~ ${fmtShort(end)}` : ''}</span>
