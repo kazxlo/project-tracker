@@ -21,6 +21,59 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
+/**
+ * 收集项目所有周报中待处理+持续关注的风险，区分本周新增与历史风险。
+ * 返回 { newThisWeek, historical }，均按 level 排序。
+ */
+function collectProjectUnresolvedRisks(projectId: string, allReports: WeeklyReport[]) {
+  const prpts = allReports
+    .filter(r => r.projectId === projectId)
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  if (prpts.length === 0) return { newThisWeek: [] as Risk[], historical: [] as Risk[] };
+
+  const latest = prpts[prpts.length - 1];
+  const latestStart = latest.weekStart;
+  const earlier = prpts.slice(0, -1);
+
+  // 历史风险描述集合
+  const historicalKeys = new Set<string>();
+  earlier.forEach(r => {
+    r.risks.forEach(rk => {
+      if (rk.status !== '已解决') {
+        const k = rk.description.trim();
+        if (k) historicalKeys.add(k);
+      }
+    });
+  });
+
+  const newThisWeek: Risk[] = [];
+  const historical: Risk[] = [];
+  const seen = new Set<string>();
+
+  // 遍历所有周报（最早→最新），去重收集未解决风险
+  prpts.forEach(r => {
+    r.risks.forEach(rk => {
+      if (rk.status === '已解决') return;
+      const k = rk.description.trim();
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      if (r.weekStart === latestStart && !historicalKeys.has(k)) {
+        newThisWeek.push(rk);
+      } else {
+        historical.push(rk);
+      }
+    });
+  });
+
+  // 按等级排序
+  const sortByLevel = (a: Risk, b: Risk) =>
+    (RISK_LEVEL_ORDER[a.level] ?? 9) - (RISK_LEVEL_ORDER[b.level] ?? 9);
+  newThisWeek.sort(sortByLevel);
+  historical.sort(sortByLevel);
+
+  return { newThisWeek, historical };
+}
+
 export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyReport[]) {
   // 1. 构建父子关系映射
   const childByParent = new Map<string, Project[]>();
@@ -31,7 +84,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
     }
   });
 
-  // 2. 收集所有未处理风险（来自所有选中项目含子项目，去重并排序）
+  // 2. 收集所有高风险（待处理+持续关注）（来自所有选中项目含子项目，去重并排序）
   const childProjectIds = new Set<string>();
   projects.forEach(p => {
     if (p.parentId && projects.some(pp => pp.id === p.parentId)) {
@@ -45,6 +98,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
     if (!latest) return;
     latest.risks.forEach(rk => {
       if (rk.status === '已解决') return;
+      if (rk.level !== '高') return;
       const key = rk.description.trim();
       if (key && !riskMap.has(key)) {
         riskMap.set(key, { projectName: p.name, color: p.color, risk: rk });
@@ -147,6 +201,9 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
   .risk-item { padding: 4px 12px; margin: 2px 0; background: #FFFBF5; border-left: 3px solid #f0c040; border-radius: 0 4px 4px 0; font-size: 12px; }
   .risk-item .rk-desc { font-weight: 500; }
   .risk-item .rk-sugg { font-size: 11px; color: #888; margin-top: 1px; }
+  .risk-item.new { border-left-color: #ff6b6b; background: #FFF5F5; }
+  .risk-group-label { font-size: 11px; font-weight: 600; color: #666; margin: 8px 0 4px; padding: 2px 0; }
+  .risk-group-label.new { color: #D85A30; }
   
   .empty { padding: 8px 12px; color: #bbb; font-size: 12px; font-style: italic; }
   
@@ -163,13 +220,13 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
 
 <div class="header">
   <h1>📋 本周工作汇总（${dateRangeTitle}）</h1>
-  <div class="sub">共 ${projects.length} 个项目，${allUnresolvedRisks.length} 项未处理风险</div>
+  <div class="sub">共 ${projects.length} 个项目，${allUnresolvedRisks.length} 项高风险</div>
 </div>
 
-<!-- 未处理风险汇总 -->
-<div class="section-title"><span class="icon">⚠️</span> 未处理风险汇总 <span style="font-size:11px;color:#FB923C;font-weight:400;">（待处理 + 持续关注，去重共 ${allUnresolvedRisks.length} 项）</span></div>
+<!-- 高风险汇总 -->
+<div class="section-title"><span class="icon">⚠️</span> 高风险汇总 <span style="font-size:11px;color:#FB923C;font-weight:400;">（待处理 + 持续关注，去重共 ${allUnresolvedRisks.length} 项）</span></div>
 ${allUnresolvedRisks.length === 0
-  ? '<div class="empty">🎉 当前所有项目无未处理风险，继续保持！</div>'
+  ? '<div class="empty">🎉 当前所有项目无高风险，继续保持！</div>'
   : allUnresolvedRisks.map(({ projectName, color, risk }) => `
 <div class="risk-card">
   <span class="risk-desc">${levelBadge(risk.level)} ${escapeHtml(risk.description)}</span>
@@ -248,14 +305,38 @@ ${projectReports.map(pr => {
 
   <div class="sub-title">⚡ 风险提示</div>
   ${(() => {
-    const allRisks = childReports.flatMap(cr => (cr.latestReport?.risks || []).filter(rk => rk.status !== '已解决').map(rk => ({ ...rk, childName: cr.project.name, childColor: cr.project.color })));
-    if (allRisks.length === 0) return '<div class="empty">本周无风险项</div>';
-    return allRisks.map(rk => `
-        <div class="risk-item">
-          <span class="rk-desc">${childTag(rk.childName, rk.childColor)}${levelBadge(rk.level)} ${escapeHtml(rk.description)}</span>
-          ${statusBadge(rk.status)}
-          ${rk.suggestion ? `<div class="rk-sugg">💡 ${escapeHtml(rk.suggestion)}</div>` : ''}
-        </div>`).join('');
+    // 收集所有子项目的跨周报风险
+    interface ChildRiskEntry { risk: Risk; childName: string; childColor: string; isNew: boolean; }
+    const allChildRisks: ChildRiskEntry[] = [];
+    childReports.forEach(cr => {
+      const { newThisWeek, historical } = collectProjectUnresolvedRisks(cr.project.id, allReports);
+      newThisWeek.forEach(rk => allChildRisks.push({ risk: rk, childName: cr.project.name, childColor: cr.project.color, isNew: true }));
+      historical.forEach(rk => allChildRisks.push({ risk: rk, childName: cr.project.name, childColor: cr.project.color, isNew: false }));
+    });
+    if (allChildRisks.length === 0) return '<div class="empty">所有子项目暂无待处理风险</div>';
+
+    const sortByLevel = (a: ChildRiskEntry, b: ChildRiskEntry) =>
+      (RISK_LEVEL_ORDER[a.risk.level] ?? 9) - (RISK_LEVEL_ORDER[b.risk.level] ?? 9);
+    const newRisks = allChildRisks.filter(r => r.isNew).sort(sortByLevel);
+    const oldRisks = allChildRisks.filter(r => !r.isNew).sort(sortByLevel);
+
+    const riskHtml = (entry: ChildRiskEntry) => `
+        <div class="risk-item${entry.isNew ? ' new' : ''}">
+          <span class="rk-desc">${childTag(entry.childName, entry.childColor)}${levelBadge(entry.risk.level)} ${escapeHtml(entry.risk.description)}</span>
+          ${statusBadge(entry.risk.status)}
+          ${entry.risk.suggestion ? `<div class="rk-sugg">💡 ${escapeHtml(entry.risk.suggestion)}</div>` : ''}
+        </div>`;
+
+    let html = '';
+    if (newRisks.length > 0) {
+      html += `<div class="risk-group-label new">🆕 本周新增（${newRisks.length}项）</div>`;
+      html += newRisks.map(riskHtml).join('');
+    }
+    if (oldRisks.length > 0) {
+      html += `<div class="risk-group-label">📋 历史风险（${oldRisks.length}项）</div>`;
+      html += oldRisks.map(riskHtml).join('');
+    }
+    return html;
   })()}
 </div>`;
   }
@@ -305,15 +386,28 @@ ${projectReports.map(pr => {
         </div>`).join('')}</div>`
     }
 
-    <div class="sub-title">⚡ 风险提示（${latestReport.risks.length}项）</div>
-    ${latestReport.risks.length === 0
-      ? '<div class="empty">本周无风险项</div>'
-      : latestReport.risks.map(rk => `
-        <div class="risk-item">
+    <div class="sub-title">⚡ 风险提示</div>
+    ${(() => {
+      const { newThisWeek, historical } = collectProjectUnresolvedRisks(project.id, allReports);
+      const total = newThisWeek.length + historical.length;
+      if (total === 0) return '<div class="empty">该项目暂无待处理风险</div>';
+      const riskHtml = (rk: Risk, isNew: boolean) => `
+        <div class="risk-item${isNew ? ' new' : ''}">
           <span class="rk-desc">${levelBadge(rk.level)} ${escapeHtml(rk.description)}</span>
           ${statusBadge(rk.status)}
           ${rk.suggestion ? `<div class="rk-sugg">💡 ${escapeHtml(rk.suggestion)}</div>` : ''}
-        </div>`).join('')}
+        </div>`;
+      let html = '';
+      if (newThisWeek.length > 0) {
+        html += `<div class="risk-group-label new">🆕 本周新增（${newThisWeek.length}项）</div>`;
+        html += newThisWeek.map(rk => riskHtml(rk, true)).join('');
+      }
+      if (historical.length > 0) {
+        html += `<div class="risk-group-label">📋 历史风险（${historical.length}项）</div>`;
+        html += historical.map(rk => riskHtml(rk, false)).join('');
+      }
+      return html;
+    })()}
   `}
 </div>`;
 }).join('')}
