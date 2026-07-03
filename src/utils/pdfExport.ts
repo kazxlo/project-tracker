@@ -84,7 +84,7 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
     }
   });
 
-  // 2. 收集所有高风险（待处理+持续关注）（来自所有选中项目含子项目，去重并排序）
+  // 2. 收集所有高风险（待处理+持续关注）（跨所有历史周报，去重并排序）
   const childProjectIds = new Set<string>();
   projects.forEach(p => {
     if (p.parentId && projects.some(pp => pp.id === p.parentId)) {
@@ -94,15 +94,16 @@ export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyRe
   const riskMap = new Map<string, { projectName: string; color: string; risk: Risk }>();
   projects.forEach(p => {
     const prpts = allReports.filter(r => r.projectId === p.id);
-    const latest = getLatestReport(prpts);
-    if (!latest) return;
-    latest.risks.forEach(rk => {
-      if (rk.status === '已解决') return;
-      if (rk.level !== '高') return;
-      const key = rk.description.trim();
-      if (key && !riskMap.has(key)) {
-        riskMap.set(key, { projectName: p.name, color: p.color, risk: rk });
-      }
+    // 遍历该项目所有历史周报，而非仅最新一期
+    prpts.forEach(rpt => {
+      rpt.risks.forEach(rk => {
+        if (rk.status === '已解决') return;
+        if (rk.level !== '高') return;
+        const key = rk.description.trim();
+        if (key && !riskMap.has(key)) {
+          riskMap.set(key, { projectName: p.name, color: p.color, risk: rk });
+        }
+      });
     });
   });
   const allUnresolvedRisks = Array.from(riskMap.values()).sort((a, b) =>
