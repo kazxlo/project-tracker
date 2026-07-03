@@ -14,7 +14,7 @@ interface ChildProjectCardProps {
   onDelete: (id: string) => void;
   confirmDelete: string | null;
   setConfirmDelete: (id: string | null) => void;
-  isAdmin: boolean;
+  canEdit: boolean;
 }
 
 function formatPeriod(start?: string, end?: string): string {
@@ -55,7 +55,7 @@ export default function ChildProjectCard({
   onDelete,
   confirmDelete,
   setConfirmDelete,
-  isAdmin,
+  canEdit,
 }: ChildProjectCardProps) {
   const navigate = useNavigate();
   const STATUS_CLASS: Record<string, string> = {
@@ -153,7 +153,7 @@ export default function ChildProjectCard({
           </span>
           <span className={shared.linkText}>查看详情 →</span>
         </div>
-        {isAdmin && (
+        {canEdit && (
           <div className={shared.childProjectActions}>
             <button
               className={shared.actionBtn}

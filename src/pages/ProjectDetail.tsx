@@ -320,7 +320,7 @@ export default function ProjectDetail() {
         {/* Tab: 子项目概览 */}
         {tab === 'children' && (
           <>
-            {isAdmin && (
+            {canEdit && (
               <div className={shared.childToolbar}>
                 <button type="button" className={shared.btnPrimary} onClick={openChildCreateModal}>
                   + 添加子项目
@@ -340,7 +340,7 @@ export default function ProjectDetail() {
                     onDelete={handleDeleteChild}
                     confirmDelete={confirmDeleteChild}
                     setConfirmDelete={setConfirmDeleteChild}
-                    isAdmin={isAdmin}
+                    canEdit={canEdit}
                   />
                 ))}
               </div>
