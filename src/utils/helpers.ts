@@ -138,13 +138,17 @@ export function deriveMilestoneStatus(
 
   const t = today || getTodayStr();
   const allDone = linked.every(tk => tk.status === '已完成');
+  // 与里程碑自身 targetDate 比较，而非今天：任务 deadline 超出里程碑目标日期才算逾期
+  const milestoneDeadline = milestone.targetDate || t;
   const anyOverdue = linked.some(tk => {
     if (tk.status !== '已完成' || !tk.deadline) return false;
-    return tk.deadline < t;
+    return tk.deadline > milestoneDeadline;
   });
 
   if (allDone && !anyOverdue) return '已完成';
   if (allDone && anyOverdue) return '已逾期';
+  // 里程碑目标日期已过但任务未全部完成 → 已逾期
+  if (milestone.targetDate && milestone.targetDate < t && !allDone) return '已逾期';
   if (linked.some(tk => tk.status === '进行中' || tk.status === '有风险')) return '进行中';
   return '待开始';
 }
