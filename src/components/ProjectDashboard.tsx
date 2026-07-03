@@ -82,7 +82,7 @@ export default function ProjectDashboard({
     return { color: '#D85A30', label: '滞后', lag: true };                // 橙
   };
 
-  // 里程碑数据处理
+  // 里程碑数据处理：仅基于真实里程碑数据，不合成子项目日期
   const milestoneEntries = useMemo(() => {
     if (milestones.length > 0) {
       return milestones.map(m => ({
@@ -92,32 +92,8 @@ export default function ProjectDashboard({
         description: m.description || '',
       }));
     }
-    // 无里程碑时用子项目关键日期近似
-    const entries: { type: string; name: string; date: string; description: string }[] = [];
-    // 已完成的子项目
-    childProjects.filter(c => getChildStats(c.id).progress >= 95).forEach(c => {
-      const end = c.serviceEnd || c.deadline || '';
-      entries.push({ type: '已完成', name: `${c.name} 完成`, date: end, description: `进度 ${getChildStats(c.id).progress}%` });
-    });
-    // 截止日迫近的子项目 (deadline <= 2周)
-    const twoWeeksLater = new Date();
-    twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
-    const twoWeeksLaterStr = `${twoWeeksLater.getFullYear()}-${String(twoWeeksLater.getMonth() + 1).padStart(2, '0')}-${String(twoWeeksLater.getDate()).padStart(2, '0')}`;
-    childProjects.filter(c => {
-      const dl = c.deadline || c.serviceEnd;
-      return dl && dl >= today && dl <= twoWeeksLaterStr && getChildStats(c.id).progress < 95;
-    }).forEach(c => {
-      entries.push({ type: '进行中', name: `${c.name} 截止`, date: c.deadline || c.serviceEnd || '', description: `负责人: ${c.owner}` });
-    });
-    // 待开始
-    childProjects.filter(c => c.serviceStart && c.serviceStart > today).forEach(c => {
-      entries.push({ type: '待开始', name: `${c.name} 启动`, date: c.serviceStart || '', description: `负责人: ${c.owner}` });
-    });
-    if (deliveryDate) {
-      entries.push({ type: '待开始', name: '最终交付', date: deliveryDate, description: remainingDays >= 0 ? `剩余 ${remainingDays} 天` : '' });
-    }
-    return entries;
-  }, [milestones, childProjects, getChildStats, today, deliveryDate, remainingDays]);
+    return [];
+  }, [milestones, tasks, today]);
 
   // ====== 层3数据：任务列表 ======
   const [taskFilter, setTaskFilter] = useState<string>('全部');
