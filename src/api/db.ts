@@ -21,6 +21,7 @@ function mapProject(row: any): Project {
     serviceStart: row.service_start || undefined,
     serviceEnd: row.service_end || undefined,
     detailedItems: row.detailed_items || undefined,
+    progress: row.progress ?? undefined,
   };
 }
 
@@ -83,6 +84,7 @@ export async function saveProject(project: Project): Promise<void> {
     service_start: project.serviceStart || null,
     service_end: project.serviceEnd || null,
     detailed_items: project.detailedItems || null,
+    progress: project.progress ?? null,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
