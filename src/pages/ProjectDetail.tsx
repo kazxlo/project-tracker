@@ -149,11 +149,10 @@ export default function ProjectDetail() {
     }
   };
 
-  const handleRiskStatusChange = async (description: string, newStatus: string) => {
-    if (!id) return;
+  const handleRiskStatusChange = async (projectId: string, description: string, newStatus: string) => {
     setSavingRiskKey(description);
     try {
-      await updateRiskStatus(id, description, newStatus as '待处理' | '已解决' | '持续关注');
+      await updateRiskStatus(projectId, description, newStatus as '待处理' | '已解决' | '持续关注');
       await loadData();
     } catch (err) {
       console.error('更新风险状态失败:', err);
@@ -436,7 +435,7 @@ export default function ProjectDetail() {
                 <button className={shared.drillClose} onClick={() => setRiskDrillDown(null)}>×</button>
               </div>
               {(() => {
-                const seen = new Map<string, { risk: Risk; weekLabel: string; projectName: string }>();
+                const seen = new Map<string, { risk: Risk; weekLabel: string; projectName: string; projectId: string }>();
                 const targets = [...childProjects, project];
                 targets.forEach(p => {
                   allReports.filter(r => r.projectId === p.id).forEach(r => {
@@ -445,7 +444,7 @@ export default function ProjectDetail() {
                       if (!k || seen.has(k)) return;
                       const isActive = rk.status !== '已解决';
                       if ((riskDrillDown === 'active' && isActive) || (riskDrillDown === 'resolved' && !isActive)) {
-                        seen.set(k, { risk: rk, weekLabel: r.weekLabel, projectName: p.name });
+                        seen.set(k, { risk: rk, weekLabel: r.weekLabel, projectName: p.name, projectId: p.id });
                       }
                     });
                   });
@@ -465,7 +464,7 @@ export default function ProjectDetail() {
                           className={shared.statusSelectSm}
                           value={item.risk.status}
                           disabled={savingRiskKey === item.risk.description}
-                          onChange={(e) => handleRiskStatusChange(item.risk.description, e.target.value)}
+                          onChange={(e) => handleRiskStatusChange(item.projectId, item.risk.description, e.target.value)}
                         >
                           <option value="待处理">⏳ 待处理</option>
                           <option value="持续关注">👁 持续关注</option>
@@ -847,7 +846,7 @@ export default function ProjectDetail() {
                         className={shared.statusSelectSm}
                         value={item.risk.status}
                         disabled={savingRiskKey === item.risk.description}
-                        onChange={(e) => handleRiskStatusChange(item.risk.description, e.target.value)}
+                        onChange={(e) => handleRiskStatusChange(id!, item.risk.description, e.target.value)}
                       >
                         <option value="待处理">⏳ 待处理</option>
                         <option value="持续关注">👁 持续关注</option>
@@ -925,7 +924,7 @@ function SummaryView({
   getChildStats: (id: string) => { reportCount: number; progress: number; riskCount: number };
   canEdit: boolean;
   savingRiskKey: string | null;
-  handleRiskStatusChange: (desc: string, status: string) => void;
+  handleRiskStatusChange: (projectId: string, desc: string, status: string) => void;
 }) {
   const latest = getLatestReport(reports);
   const hasChildren = childProjects.length > 0;

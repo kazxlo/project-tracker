@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getMilestones, saveMilestone, deleteMilestone, getProjectTasks, saveProjectTask, deleteProjectTask } from '../api/db';
-import { genId } from '../utils/helpers';
+import { genId, getTodayStr, deriveMilestoneStatus } from '../utils/helpers';
 import type { Milestone, ProjectTask } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -125,6 +125,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
             <MilestoneEditor
               milestones={milestones}
               setMilestones={setMilestones}
+              tasks={tasks}
               projectId={projectId}
               onDelete={handleDeleteMilestone}
               onReorder={handleReorderMilestones}
@@ -139,6 +140,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
               tasks={tasks}
               setTasks={setTasks}
               projectId={projectId}
+              milestones={milestones}
               onDelete={handleDeleteTask}
               onReorder={handleReorderTasks}
               loading={loading}
@@ -185,10 +187,11 @@ function emptyMilestone(projectId: string): Milestone {
 }
 
 function MilestoneEditor({
-  milestones, setMilestones, projectId, onDelete, onReorder, loading, reload, toast, readOnly,
+  milestones, setMilestones, tasks, projectId, onDelete, onReorder, loading, reload, toast, readOnly,
 }: {
   milestones: Milestone[];
   setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
+  tasks: ProjectTask[];
   projectId: string;
   onDelete: (id: string) => void;
   onReorder: (milestones: Milestone[]) => void;
@@ -272,9 +275,9 @@ function MilestoneEditor({
                 <span style={{ fontWeight: 500, fontSize: 13 }}>{m.name}</span>
                 <span className={shared.badge} style={{
                   fontSize: 10, padding: '1px 8px',
-                  background: m.status === '已完成' ? '#EAF3DE' : m.status === '进行中' ? '#E6F1FB' : '#f0f2f7',
-                  color: m.status === '已完成' ? '#3B6D11' : m.status === '进行中' ? '#185FA5' : '#6b7a93',
-                }}>{m.status}</span>
+                  background: m.status === '已完成' ? '#EAF3DE' : m.status === '已逾期' ? '#FAEEDA' : m.status === '进行中' ? '#E6F1FB' : '#f0f2f7',
+                  color: m.status === '已完成' ? '#3B6D11' : m.status === '已逾期' ? '#854F0B' : m.status === '进行中' ? '#185FA5' : '#6b7a93',
+                }}>{deriveMilestoneStatus(m, tasks, getTodayStr())}</span>
               </div>
               {m.targetDate && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>目标日期: {m.targetDate}</div>}
               {m.description && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>{m.description}</div>}
@@ -299,10 +302,13 @@ function MilestoneEditor({
               <input className={shared.formInput} type="date" value={editing.targetDate || ''}
                 onChange={e => setEditing({ ...editing, targetDate: e.target.value })} style={{ flex: 1 }} />
               <select className={shared.formSelect} value={editing.status}
-                onChange={e => setEditing({ ...editing, status: e.target.value as Milestone['status'] })} style={{ width: 110 }}>
+                onChange={e => setEditing({ ...editing, status: e.target.value as Milestone['status'] })} style={{ width: 110 }}
+                disabled={isNew ? false : tasks.some(t => t.milestoneId === editing.id)}
+                title={tasks.some(t => t.milestoneId === editing.id) ? '该里程碑已关联任务，状态自动计算' : ''}>
                 <option value="待开始">待开始</option>
                 <option value="进行中">进行中</option>
                 <option value="已完成">已完成</option>
+                <option value="已逾期">已逾期</option>
               </select>
             </div>
             <input className={shared.formInput} value={editing.description || ''}
@@ -328,11 +334,12 @@ function emptyTask(projectId: string): ProjectTask {
 }
 
 function TaskEditor({
-  tasks, setTasks, projectId, onDelete, onReorder, loading, reload, toast, readOnly, userNames,
+  tasks, setTasks, projectId, milestones, onDelete, onReorder, loading, reload, toast, readOnly, userNames,
 }: {
   tasks: ProjectTask[];
   setTasks: React.Dispatch<React.SetStateAction<ProjectTask[]>>;
   projectId: string;
+  milestones: Milestone[];
   onDelete: (id: string) => void;
   onReorder: (tasks: ProjectTask[]) => void;
   loading: boolean;
@@ -426,6 +433,14 @@ function TaskEditor({
                 <span style={{ fontWeight: 500, fontSize: 13 }}>{t.title}</span>
                 {statusBadge(t.status)}
                 {priorityBadge(t.priority)}
+                {t.milestoneId && (
+                  <span className={shared.badge} style={{
+                    fontSize: 10, padding: '1px 6px',
+                    background: '#EEEDFE', color: '#534AB7',
+                  }}>
+                    {milestones.find(m => m.id === t.milestoneId)?.name || '未知里程碑'}
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#6b7a93' }}>
                 {t.assignee && <span>负责人: {t.assignee}</span>}
@@ -491,6 +506,20 @@ function TaskEditor({
               <input className={shared.formInput} type="date" value={editing.deadline || ''}
                 onChange={e => setEditing({ ...editing, deadline: e.target.value })} style={{ flex: 1 }} />
             </div>
+            {milestones.length > 0 && (
+              <div>
+                <select className={shared.formSelect}
+                  value={editing.milestoneId || ''}
+                  onChange={e => setEditing({ ...editing, milestoneId: e.target.value || undefined })}
+                  style={{ width: '100%', padding: '8px 12px' }}
+                >
+                  <option value="">不关联里程碑</option>
+                  {milestones.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 12, color: '#6b7a93', whiteSpace: 'nowrap' }}>进度: {editing.progress}%</span>
               <input type="range" min={0} max={100} value={editing.progress}

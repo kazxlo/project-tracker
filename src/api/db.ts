@@ -276,6 +276,7 @@ function mapProjectTask(row: any): ProjectTask {
     deadline: row.deadline || undefined,
     progress: row.progress ?? 0,
     description: row.description || undefined,
+    milestoneId: row.milestone_id || undefined,
     sortOrder: row.sort_order ?? 0,
   };
 }
@@ -302,6 +303,7 @@ export async function saveProjectTask(t: ProjectTask): Promise<void> {
     deadline: t.deadline || null,
     progress: t.progress,
     description: t.description || null,
+    milestone_id: t.milestoneId || null,
     sort_order: t.sortOrder,
   });
   if (error) throw error;

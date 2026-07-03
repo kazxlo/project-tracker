@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTodayStr, getLatestReport, calcOverallProgress } from '../utils/helpers';
+import { getTodayStr, getLatestReport, calcOverallProgress, deriveMilestoneStatus } from '../utils/helpers';
 import type { Project, WeeklyReport, Milestone, ProjectTask } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -86,7 +86,7 @@ export default function ProjectDashboard({
   const milestoneEntries = useMemo(() => {
     if (milestones.length > 0) {
       return milestones.map(m => ({
-        type: m.status,
+        type: deriveMilestoneStatus(m, tasks, today),
         name: m.name,
         date: m.targetDate || '',
         description: m.description || '',
@@ -300,6 +300,7 @@ export default function ProjectDashboard({
                   position: 'absolute', left: -18, top: 2, width: 10, height: 10, borderRadius: '50%',
                   background:
                     entry.type === '已完成' ? '#7F77DD' :
+                    entry.type === '已逾期' ? '#D85A30' :
                     entry.type === '进行中' ? '#378ADD' : '#e5e7eb',
                   border: entry.type === '待开始' ? '1.5px solid #bfc8d6' : 'none',
                 }} />
@@ -307,12 +308,14 @@ export default function ProjectDashboard({
                   fontSize: 11, padding: '1px 6px', borderRadius: 8, fontWeight: 500,
                   background:
                     entry.type === '已完成' ? '#EEEDFE' :
+                    entry.type === '已逾期' ? '#FAEEDA' :
                     entry.type === '进行中' ? '#E6F1FB' : '#f0f2f7',
                   color:
                     entry.type === '已完成' ? '#534AB7' :
+                    entry.type === '已逾期' ? '#854F0B' :
                     entry.type === '进行中' ? '#185FA5' : '#6b7a93',
                 }}>
-                  {entry.type === '已完成' ? '已完成' : entry.type === '进行中' ? '进行中' : '待开始'}
+                  {entry.type === '已完成' ? '已完成' : entry.type === '已逾期' ? '已逾期' : entry.type === '进行中' ? '进行中' : '待开始'}
                 </span>
                 <p style={{ fontSize: 13, fontWeight: 500, margin: '4px 0 1px 0' }}>{entry.name}</p>
                 <p style={{ fontSize: 11, color: '#6b7a93', margin: 0 }}>

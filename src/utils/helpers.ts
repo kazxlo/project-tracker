@@ -1,7 +1,7 @@
 /**
  * 全局公共工具函数 — 日期/颜色/项目过滤/周报聚合等
  */
-import type { Project, WeeklyReport } from '../types';
+import type { Project, WeeklyReport, Milestone, ProjectTask } from '../types';
 
 /** 生成唯一 ID（优先 crypto.randomUUID，回退 Date.now+随机） */
 export function genId(prefix = ''): string {
@@ -118,4 +118,33 @@ export function calcOverallProgress(
   });
   if (values.length === 0) return 0;
   return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
+}
+
+/**
+ * 根据关联任务的完成情况自动推导里程碑状态。
+ * - 无关联任务 → 返回原始状态（向后兼容）
+ * - 全部完成且无逾期 → '已完成'
+ * - 全部完成但有逾期 → '已逾期'
+ * - 有进行中/有风险 → '进行中'
+ * - 全部待开始 → '待开始'
+ */
+export function deriveMilestoneStatus(
+  milestone: Milestone,
+  tasks: ProjectTask[],
+  today?: string
+): Milestone['status'] {
+  const linked = tasks.filter(t => t.milestoneId === milestone.id);
+  if (linked.length === 0) return milestone.status;
+
+  const t = today || getTodayStr();
+  const allDone = linked.every(tk => tk.status === '已完成');
+  const anyOverdue = linked.some(tk => {
+    if (tk.status !== '已完成' || !tk.deadline) return false;
+    return tk.deadline < t;
+  });
+
+  if (allDone && !anyOverdue) return '已完成';
+  if (allDone && anyOverdue) return '已逾期';
+  if (linked.some(tk => tk.status === '进行中' || tk.status === '有风险')) return '进行中';
+  return '待开始';
 }

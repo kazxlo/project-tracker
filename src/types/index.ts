@@ -70,7 +70,7 @@ export interface Milestone {
   projectId: string;
   name: string;            // "M1 需求调研与评审"
   targetDate?: string;     // 目标日期 YYYY-MM-DD
-  status: '待开始' | '进行中' | '已完成';
+  status: '待开始' | '进行中' | '已完成' | '已逾期';
   description?: string;    // "PRD已签字"
   sortOrder: number;
 }
@@ -87,6 +87,7 @@ export interface ProjectTask {
   deadline?: string;       // "2026-06-22"
   progress: number;        // 0-100，手动维护
   description?: string;
+  milestoneId?: string;     // 关联的里程碑ID
   sortOrder: number;
 }
 
