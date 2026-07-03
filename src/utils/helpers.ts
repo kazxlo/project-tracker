@@ -102,22 +102,31 @@ export function getLatestReport(reports: WeeklyReport[]): WeeklyReport | null {
 }
 
 /**
- * 计算父项目综合进度：自身最新周报进度 + 各子项目最新周报进度 取均值。
- * 无子项目时取自身最新周报进度。无任何进度数据返回 0。
+ * 计算父项目综合进度：
+ * - 有子项目时：仅聚合各子项目进度取简单算术平均，不含自身
+ * - 无子项目时：取自身最新周报进度
+ * 每个子项目的进度优先级：latest周报.progress || Project.progress || 0
  */
 export function calcOverallProgress(
   selfReports: WeeklyReport[],
-  childReportsList: WeeklyReport[][]
+  childReportsList: WeeklyReport[][],
+  childProjects: Project[] = []
 ): number {
+  // 有子项目：仅聚合子项目，不含自身
+  if (childReportsList.length > 0) {
+    const values: number[] = [];
+    childReportsList.forEach((reps, i) => {
+      const latest = getLatestReport(reps);
+      const childProject = childProjects[i];
+      const progress = latest?.progress || childProject?.progress || 0;
+      if (progress > 0) values.push(progress);
+    });
+    if (values.length === 0) return 0;
+    return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
+  }
+  // 无子项目：取自身最新周报进度
   const selfLatest = getLatestReport(selfReports);
-  const values: number[] = [];
-  if (selfLatest && selfLatest.progress > 0) values.push(selfLatest.progress);
-  childReportsList.forEach(reps => {
-    const latest = getLatestReport(reps);
-    if (latest && latest.progress > 0) values.push(latest.progress);
-  });
-  if (values.length === 0) return 0;
-  return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
+  return selfLatest?.progress || 0;
 }
 
 /**

@@ -15,6 +15,7 @@ export interface Project {
   serviceStart?: string;        // 服务开始日期 YYYY-MM-DD
   serviceEnd?: string;          // 服务结束日期 YYYY-MM-DD
   detailedItems?: boolean;      // 完成事项是否启用「子项目进展/验收资料进展」三字段结构
+  progress?: number;            // 项目完成进度 0-100，手动维护（不单独写周报时作为进度兜底）
 }
 
 /** 事项（完成/计划） */

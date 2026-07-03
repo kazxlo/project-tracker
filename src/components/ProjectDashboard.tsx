@@ -25,13 +25,14 @@ export default function ProjectDashboard({
   // ====== 层1数据 ======
   const latest = getLatestReport(reports);
 
-  // 综合进度：父项目 = 自身最新周报进度 + 各子项目最新周报进度 取均值（自身填写也生效）
+  // 综合进度：有子项目时仅聚合子项目（简单算术平均），无子项目时取自身周报进度
   const overallProgress = childProjects.length > 0
     ? calcOverallProgress(
         reports,
-        childProjects.map(c => allReports.filter(r => r.projectId === c.id))
+        childProjects.map(c => allReports.filter(r => r.projectId === c.id)),
+        childProjects
       )
-    : (latest?.progress || 0);
+    : (latest?.progress || project.progress || 0);
 
   // 本周完成数
   const weekCompleted = latest?.completedItems.length || 0;

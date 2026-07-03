@@ -207,10 +207,11 @@ export default function ProjectDetail() {
   const statusCls = STATUS_CLASS[project.status] || shared.tagNormal;
   const latestReport = getLatestReport(reports);
 
-  // 子项目统计
+  // 子项目统计（进度优先级：latest周报.progress || Project.progress || 0）
   const getChildStats = (childId: string) => {
     const crpts = allReports.filter(r => r.projectId === childId);
     const clatest = getLatestReport(crpts);
+    const childProject = childProjects.find(c => c.id === childId);
     const riskSeen = new Set<string>();
     crpts.forEach(r => r.risks.forEach(rk => {
       if (rk.status !== '已解决') {
@@ -220,7 +221,7 @@ export default function ProjectDetail() {
     }));
     return {
       reportCount: crpts.length,
-      progress: clatest?.progress || 0,
+      progress: clatest?.progress || childProject?.progress || 0,
       riskCount: riskSeen.size,
     };
   };
@@ -252,7 +253,7 @@ export default function ProjectDetail() {
         <div className={shared.kpiRow}>
           {[
             { label: '子项目数', val: childProjects.length, color: project.color },
-            { label: '综合进度', val: `${calcOverallProgress(reports, childProjects.map(c => allReports.filter(r => r.projectId === c.id)))}%`, color: project.color },
+            { label: '综合进度', val: `${calcOverallProgress(reports, childProjects.map(c => allReports.filter(r => r.projectId === c.id)), childProjects)}%`, color: project.color },
             { label: '累计周报', val: childProjects.reduce((s, c) => s + getChildStats(c.id).reportCount, 0) + reports.length },
             { label: '当前风险', val: (() => {
               const rs = new Set<string>();
@@ -559,6 +560,24 @@ export default function ProjectDetail() {
                       <option value="需关注">需关注</option>
                       <option value="存在风险">存在风险</option>
                     </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div className={shared.formGroup}>
+                    <label className={shared.formLabel}>完成进度 ({childModal.form.progress || 0}%)</label>
+                    <input
+                      className={shared.formInput}
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={childModal.form.progress || 0}
+                      onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, progress: Number(e.target.value) } }))}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7a93' }}>
+                      <span>0%</span><span>50%</span><span>100%</span>
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
@@ -903,6 +922,7 @@ function emptyChildProject(): Project {
     id: '', name: '', owner: '', startDate: '', deadline: '', deadlineExtensions: 0,
     status: '正常推进', color: '#5B9EF5', parentId: undefined,
     description: '', serviceStart: '', serviceEnd: '',
+    progress: undefined,
   };
 }
 

@@ -141,10 +141,12 @@ export default function Cockpit() {
         r => r.status === '待处理' || r.status === '持续关注'
       ) || [];
 
-      // 进度：父项目 = 自身最新周报进度 + 各子项目最新周报进度 取均值（自身填写也生效）
+      // 进度：有子项目时仅聚合子项目（简单算术平均），无子项目时取自身最新周报进度
       const selfReps = prpts;
       const childRepsList = childProjects.map(c => allReports.filter(r => r.projectId === c.id));
-      let progress = calcOverallProgress(selfReps, childRepsList);
+      let progress = hasChildren
+        ? calcOverallProgress(selfReps, childRepsList, childProjects)
+        : (latestReport?.progress || p.progress || 0);
       let totalReports = prpts.length;
       if (hasChildren) {
         childProjects.forEach(c => {
