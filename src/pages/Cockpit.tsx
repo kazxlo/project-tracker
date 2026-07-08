@@ -141,12 +141,8 @@ export default function Cockpit() {
         r => r.status === '待处理' || r.status === '持续关注'
       ) || [];
 
-      // 进度：有子项目时仅聚合子项目（简单算术平均），无子项目时取自身最新周报进度
-      const selfReps = prpts;
-      const childRepsList = childProjects.map(c => allReports.filter(r => r.projectId === c.id));
-      let progress = hasChildren
-        ? calcOverallProgress(selfReps, childRepsList, childProjects)
-        : (latestReport?.progress || p.progress || 0);
+      // 进度：有子项目时仅聚合子项目（里程碑优先），无子项目时取自身统一进度（里程碑优先）
+      let progress = calcOverallProgress(p, allReports, childProjects, projects, allMilestones, allTasks);
       let totalReports = prpts.length;
       if (hasChildren) {
         childProjects.forEach(c => {

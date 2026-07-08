@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus, getMilestones, getProjectTasks } from '../api/db';
+import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus, getMilestones, getProjectTasks, getAllMilestones, getAllProjectTasks } from '../api/db';
 import { getAllProfiles } from '../api/profiles';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { getLatestReport, filterVisibleProjects, genId, calcOverallProgress, COLOR_PALETTE } from '../utils/helpers';
+import { getLatestReport, getTodayStr, filterVisibleProjects, genId, calcOverallProgress, calcProjectProgress, COLOR_PALETTE } from '../utils/helpers';
 import type { Project, WeeklyReport, Risk, Milestone, ProjectTask } from '../types';
 import ChildProjectCard from '../components/ChildProjectCard';
 import ProjectDashboard from '../components/ProjectDashboard';
@@ -38,9 +39,11 @@ export default function ProjectDetail() {
   const [confirmDeleteReport, setConfirmDeleteReport] = useState<string | null>(null);
   const [confirmDeleteChild, setConfirmDeleteChild] = useState<string | null>(null);
 
-  // 里程碑 + 项目任务
+  // 里程碑 + 项目任务（milestones/projectTasks 为当前项目，allMilestones/allTasks 为全量，用于父/子进度聚合）
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([]);
+  const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
+  const [allTasks, setAllTasks] = useState<ProjectTask[]>([]);
 
   // 系统注册用户列表（用于任务负责人下拉）
   const [userNames, setUserNames] = useState<string[]>([]);
@@ -74,16 +77,18 @@ export default function ProjectDetail() {
         getProjects(),
         getReports(id),
         getAllReports(),
-        getMilestones(id),
-        getProjectTasks(id),
+        getAllMilestones(),
+        getAllProjectTasks(),
         getAllProfiles().catch(() => []),
       ]);
       setProject(p || null);
       setAllProjects(filterVisibleProjects(projs, userId, role));
       setReports(reps);
       setAllReports(allReps);
-      setMilestones(ms);
-      setProjectTasks(ts);
+      setMilestones(ms.filter(m => m.projectId === id));
+      setProjectTasks(ts.filter(t => t.projectId === id));
+      setAllMilestones(ms);
+      setAllTasks(ts);
       // 仅取 display_name 作为下拉选项
       setUserNames((Array.isArray(profiles) ? profiles as { display_name: string }[] : []).map(p => p.display_name).filter(Boolean));
     } catch (err) {
@@ -207,10 +212,9 @@ export default function ProjectDetail() {
   const statusCls = STATUS_CLASS[project.status] || shared.tagNormal;
   const latestReport = getLatestReport(reports);
 
-  // 子项目统计（进度优先级：latest周报.progress || Project.progress || 0）
+  // 子项目统计（进度优先级：里程碑推导 || latest周报.progress || Project.progress || 0）
   const getChildStats = (childId: string) => {
     const crpts = allReports.filter(r => r.projectId === childId);
-    const clatest = getLatestReport(crpts);
     const childProject = childProjects.find(c => c.id === childId);
     const riskSeen = new Set<string>();
     crpts.forEach(r => r.risks.forEach(rk => {
@@ -219,9 +223,12 @@ export default function ProjectDetail() {
         if (key) riskSeen.add(key);
       }
     }));
+    const progress = childProject
+      ? calcProjectProgress(childProject, allReports, allProjects, allMilestones, allTasks)
+      : 0;
     return {
       reportCount: crpts.length,
-      progress: clatest?.progress || childProject?.progress || 0,
+      progress,
       riskCount: riskSeen.size,
     };
   };
@@ -249,40 +256,24 @@ export default function ProjectDetail() {
           <span className={`${shared.badge} ${statusCls}`} style={{ padding: '4px 14px' }}>{project.status}</span>
         </div>
 
-        {/* KPI 行 */}
-        <div className={shared.kpiRow}>
-          {[
-            { label: '子项目数', val: childProjects.length, color: project.color },
-            { label: '综合进度', val: `${calcOverallProgress(reports, childProjects.map(c => allReports.filter(r => r.projectId === c.id)), childProjects)}%`, color: project.color },
-            { label: '累计周报', val: childProjects.reduce((s, c) => s + getChildStats(c.id).reportCount, 0) + reports.length },
-            { label: '当前风险', val: (() => {
-              const rs = new Set<string>();
-              childProjects.forEach(c => {
-                allReports.filter(r => r.projectId === c.id).forEach(r => r.risks.forEach(rk => {
-                  if (rk.status !== '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
-                }));
-              });
-              allReports.filter(r => r.projectId === project.id).forEach(r => r.risks.forEach(rk => {
-                if (rk.status !== '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
-              }));
-              return rs.size;
-            })(), clickable: true, drill: 'active' as const },
-            { label: '已处理风险', val: (() => {
-              const rs = new Set<string>();
-              [...childProjects, project].forEach(p => {
-                allReports.filter(r => r.projectId === p.id).forEach(r => r.risks.forEach(rk => {
-                  if (rk.status === '已解决') { const k = rk.description.trim(); if (k) rs.add(k); }
-                }));
-              });
-              return rs.size;
-            })(), clickable: true, drill: 'resolved' as const },
-          ].map((m, i) => (
-            <div key={i} className={shared.kpiBox} style={m.clickable ? { cursor: 'pointer' } : undefined} onClick={() => { if (m.drill) setRiskDrillDown(m.drill); }}>
-              <div className={shared.kpiVal} style={'color' in m ? { color: (m as { color?: string }).color } : undefined}>{m.val}</div>
-              <div className={shared.kpiLbl}>{m.label}</div>
-            </div>
-          ))}
-        </div>
+        {/* 统一顶部栏 */}
+        {(() => {
+          const d = buildSummaryData({ project, isChild: false, parentProject, childProjects, allReports, reports, allMilestones, allTasks, allProjects, latestReport });
+          return (
+            <DetailSummaryBar
+              progress={d.progress}
+              subLabel={d.subLabel}
+              subValue={d.subValue}
+              totalReports={d.totalReports}
+              weekCompleted={d.weekCompleted}
+              activeRisk={d.activeRisk}
+              resolvedRisk={d.resolvedRisk}
+              delivery={d.delivery}
+              remainingDays={d.remainingDays}
+              onDrill={(t) => setRiskDrillDown(t)}
+            />
+          );
+        })()}
 
         {/* Tabs */}
         <div className={shared.tabBar}>
@@ -311,6 +302,9 @@ export default function ProjectDetail() {
             allReports={allReports}
             milestones={milestones}
             tasks={projectTasks}
+            allMilestones={allMilestones}
+            allTasks={allTasks}
+            allProjects={allProjects}
             onOpenPlanEditor={() => setPlanEditorOpen(true)}
             getChildStats={getChildStats}
             isPublic={isPublic}
@@ -636,13 +630,18 @@ export default function ProjectDetail() {
             open={planEditorOpen}
             onClose={async () => {
               setPlanEditorOpen(false);
-              // 重新加载里程碑和任务
+              // 重新加载里程碑和任务（含归属到子项目的项）
               try {
-                const [ms, ts] = await Promise.all([getMilestones(id!), getProjectTasks(id!)]);
-                setMilestones(ms);
-                setProjectTasks(ts);
+                const [ms, ts] = await Promise.all([getAllMilestones(), getAllProjectTasks()]);
+                setAllMilestones(ms);
+                setAllTasks(ts);
+                const pid = id!;
+                setMilestones(ms.filter(m => m.projectId === pid));
+                setProjectTasks(ts.filter(t => t.projectId === pid));
               } catch { /* ignore */ }
             }}
+            childProjects={childProjects}
+            projectName={project?.name}
             toast={showToast}
             readOnly={isPublic}
             userNames={userNames}
@@ -683,20 +682,24 @@ export default function ProjectDetail() {
         <span className={`${shared.badge} ${statusCls}`} style={{ padding: '4px 14px' }}>{project.status}</span>
       </div>
 
-      <div className={shared.kpiRow}>
-        {[
-          { label: '当前进度', val: latestReport?.progress ? `${latestReport.progress}%` : '--', color: project.color },
-          { label: '累计周报', val: reports.length },
-          { label: '完成事项', val: reports.reduce((s, r) => s + r.completedItems.length, 0) },
-          { label: '当前风险', val: (() => { const s = new Map<string, Risk>(); reports.forEach(r => r.risks.forEach(rk => { const k = rk.description.trim(); if (k && rk.status !== '已解决' && !s.has(k)) s.set(k, rk); })); return s.size; })(), clickable: true, drill: 'active' as const },
-          { label: '已处理风险', val: (() => { const s = new Map<string, Risk>(); reports.forEach(r => r.risks.forEach(rk => { const k = rk.description.trim(); if (k && rk.status === '已解决' && !s.has(k)) s.set(k, rk); })); return s.size; })(), clickable: true, drill: 'resolved' as const },
-        ].map((m, i) => (
-          <div key={i} className={shared.kpiBox} style={m.clickable ? { cursor: 'pointer' } : undefined} onClick={() => { if (m.drill) setRiskDrillDown(m.drill); }}>
-            <div className={shared.kpiVal} style={'color' in m ? { color: (m as { color?: string }).color } : undefined}>{m.val}</div>
-            <div className={shared.kpiLbl}>{m.label}</div>
-          </div>
-        ))}
-      </div>
+      {(() => {
+        const d = buildSummaryData({ project, isChild: true, parentProject, childProjects, allReports, reports, allMilestones, allTasks, allProjects, latestReport, onSubClick: () => parentProject && navigate(`/project/${parentProject.id}`) });
+        return (
+          <DetailSummaryBar
+            progress={d.progress}
+            subLabel={d.subLabel}
+            subValue={d.subValue}
+            subClick={d.subClick}
+            totalReports={d.totalReports}
+            weekCompleted={d.weekCompleted}
+            activeRisk={d.activeRisk}
+            resolvedRisk={d.resolvedRisk}
+            delivery={d.delivery}
+            remainingDays={d.remainingDays}
+            onDrill={(t) => setRiskDrillDown(t)}
+          />
+        );
+      })()}
 
       <div className={shared.tabBar}>
         {[
@@ -734,6 +737,9 @@ export default function ProjectDetail() {
           allReports={allReports}
           milestones={milestones}
           tasks={projectTasks}
+          allMilestones={allMilestones}
+          allTasks={allTasks}
+          allProjects={allProjects}
           onOpenPlanEditor={() => setPlanEditorOpen(true)}
           getChildStats={() => ({ reportCount: 0, progress: 0, riskCount: 0 })}
           isPublic={isPublic}
@@ -902,16 +908,154 @@ export default function ProjectDetail() {
           onClose={async () => {
             setPlanEditorOpen(false);
             try {
-              const [ms, ts] = await Promise.all([getMilestones(id!), getProjectTasks(id!)]);
-              setMilestones(ms);
-              setProjectTasks(ts);
+              const [ms, ts] = await Promise.all([getAllMilestones(), getAllProjectTasks()]);
+              setAllMilestones(ms);
+              setAllTasks(ts);
+              const pid = id!;
+              setMilestones(ms.filter(m => m.projectId === pid));
+              setProjectTasks(ts.filter(t => t.projectId === pid));
             } catch { /* ignore */ }
           }}
+          childProjects={childProjects}
+          projectName={project?.name}
           toast={showToast}
           readOnly={isPublic}
           userNames={userNames}
         />
       )}
+    </div>
+  );
+}
+
+/** 统一顶部栏：根据父/子项目计算各指标值 */
+type SummaryData = {
+  progress: number;
+  subLabel: string;
+  subValue: string;
+  subClick?: () => void;
+  totalReports: number;
+  weekCompleted: number;
+  activeRisk: number;
+  resolvedRisk: number;
+  delivery: string;
+  remainingDays: number;
+};
+
+function buildSummaryData(params: {
+  project: Project;
+  isChild: boolean;
+  parentProject: Project | null;
+  childProjects: Project[];
+  allReports: WeeklyReport[];
+  reports: WeeklyReport[];
+  allMilestones: Milestone[];
+  allTasks: ProjectTask[];
+  allProjects: Project[];
+  latestReport: WeeklyReport | null;
+  onSubClick?: () => void;
+}): SummaryData {
+  const { project, isChild, parentProject, childProjects, allReports, reports, allMilestones, allTasks, allProjects, latestReport, onSubClick } = params;
+
+  const progress = isChild
+    ? calcProjectProgress(project, allReports, allProjects, allMilestones, allTasks)
+    : calcOverallProgress(project, allReports, childProjects, allProjects, allMilestones, allTasks);
+
+  const scopeIds = isChild ? [project.id] : [project.id, ...childProjects.map(c => c.id)];
+
+  const countRisk = (resolved: boolean) => {
+    const s = new Set<string>();
+    allReports
+      .filter(r => scopeIds.includes(r.projectId))
+      .forEach(r => r.risks.forEach(rk => {
+        const k = rk.description.trim();
+        if (!k) return;
+        if (resolved ? rk.status === '已解决' : rk.status !== '已解决') s.add(k);
+      }));
+    return s.size;
+  };
+
+  const totalReports = allReports.filter(r => scopeIds.includes(r.projectId)).length;
+  const weekCompleted = latestReport?.completedItems.length || 0;
+  const deliveryDate = project.serviceEnd || project.deadline || '';
+  const remainingDays = deliveryDate
+    ? Math.max(0, Math.ceil((new Date(deliveryDate + 'T00:00:00').getTime() - new Date(getTodayStr() + 'T00:00:00').getTime()) / 86400000))
+    : -1;
+
+  return {
+    progress,
+    subLabel: isChild ? '归属项目' : '子项目数',
+    subValue: isChild ? (parentProject?.name || '--') : String(childProjects.length),
+    subClick: isChild ? onSubClick : undefined,
+    totalReports,
+    weekCompleted,
+    activeRisk: countRisk(false),
+    resolvedRisk: countRisk(true),
+    delivery: deliveryDate,
+    remainingDays,
+  };
+}
+
+/** 圆环进度（与 ProjectDashboard 保持一致） */
+function RingProgress({ pct, size = 56 }: { pct: number; size?: number }) {
+  const deg = (pct / 100) * 360;
+  const color = pct >= 80 ? '#639922' : pct >= 50 ? '#378ADD' : '#D85A30';
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: `conic-gradient(${color} 0deg ${deg}deg, #e5e7eb ${deg}deg 360deg)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        width: size - 12, height: size - 12, borderRadius: '50%',
+        background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontSize: size * 0.27, fontWeight: 500, color }}>{pct}%</span>
+      </div>
+    </div>
+  );
+}
+
+/** 统一顶部栏：一栏展示，进度仅一个（圆环=综合进度） */
+function DetailSummaryBar({
+  progress, subLabel, subValue, subClick,
+  totalReports, weekCompleted, activeRisk, resolvedRisk,
+  delivery, remainingDays, onDrill,
+}: {
+  progress: number; subLabel: string; subValue: string; subClick?: () => void;
+  totalReports: number; weekCompleted: number; activeRisk: number; resolvedRisk: number;
+  delivery: string; remainingDays: number; onDrill: (t: 'active' | 'resolved') => void;
+}) {
+  const item = (label: string, value: ReactNode, onClick?: () => void, color?: string) => (
+    <div key={label} onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+      <div style={{ fontSize: 22, fontWeight: 500, color: color || '#1c2a44' }}>{value}</div>
+      <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>{label}</div>
+    </div>
+  );
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 24, background: '#fff',
+      border: '0.5px solid rgba(0,0,0,0.06)', borderRadius: 16, padding: '18px 22px', marginBottom: 16,
+    }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 80 }}>
+        <RingProgress pct={progress} />
+        <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 6 }}>综合进度</div>
+      </div>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 14 }}>
+        {item(subLabel, subClick ? <span style={{ color: '#185FA5' }}>{subValue}</span> : subValue, subClick)}
+        {item('累计周报', totalReports)}
+        {item('本周完成', `${weekCompleted} 项`)}
+        {item('当前风险', activeRisk, () => onDrill('active'), activeRisk > 0 ? '#D85A30' : undefined)}
+        {item('已处理风险', resolvedRisk, () => onDrill('resolved'))}
+        {item('预计交付', delivery ? delivery.slice(5) : '--')}
+        {remainingDays >= 0 && (
+          <div>
+            <div style={{ fontSize: 11, color: remainingDays <= 14 ? '#D85A30' : '#6b7a93' }}>
+              剩余 {remainingDays} 天
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

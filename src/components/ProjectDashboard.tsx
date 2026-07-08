@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTodayStr, getLatestReport, calcOverallProgress, deriveMilestoneStatus } from '../utils/helpers';
+import { getTodayStr, getLatestReport, calcOverallProgress, calcProjectProgress, deriveMilestoneStatus } from '../utils/helpers';
 import type { Project, WeeklyReport, Milestone, ProjectTask } from '../types';
 import shared from '../styles/shared.module.css';
 
@@ -11,60 +11,34 @@ interface Props {
   allReports: WeeklyReport[];
   milestones: Milestone[];
   tasks: ProjectTask[];
+  allMilestones: Milestone[];
+  allTasks: ProjectTask[];
+  allProjects: Project[];
   onOpenPlanEditor: () => void;
   getChildStats: (childId: string) => { reportCount: number; progress: number; riskCount: number };
   isPublic?: boolean;
 }
 
 export default function ProjectDashboard({
-  project, reports, childProjects, allReports, milestones, tasks, onOpenPlanEditor, getChildStats, isPublic,
+  project, reports, childProjects, allReports, milestones, tasks, allMilestones, allTasks, allProjects, onOpenPlanEditor, getChildStats, isPublic,
 }: Props) {
   const navigate = useNavigate();
   const today = getTodayStr();
 
-  // ====== 层1数据 ======
-  const latest = getLatestReport(reports);
+  // 视图范围：自身 + 子项目（仅顶层项目纵览其子项目；方案A 子项目不再向上继承父项目规划）
+  const viewScopeIds = useMemo(() => {
+    const ids = new Set<string>([project.id]);
+    // 仅顶层项目（无 parentId）纵览其直接子项目；子项目只看自身规划，不向上继承父规划
+    if (!project.parentId) {
+      childProjects.forEach(c => ids.add(c.id));
+    }
+    return ids;
+  }, [project, childProjects]);
 
-  // 综合进度：有子项目时仅聚合子项目（简单算术平均），无子项目时取自身周报进度
+  // 综合进度：有子项目时仅聚合子项目（里程碑优先，仅各自自身规划），无子项目时取自身统一进度（仅自身规划）
   const overallProgress = childProjects.length > 0
-    ? calcOverallProgress(
-        reports,
-        childProjects.map(c => allReports.filter(r => r.projectId === c.id)),
-        childProjects
-      )
-    : (latest?.progress || project.progress || 0);
-
-  // 本周完成数
-  const weekCompleted = latest?.completedItems.length || 0;
-  const prevWeekCompleted = (() => {
-    if (reports.length < 2) return 0;
-    const sorted = [...reports].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-    return sorted[1]?.completedItems.length || 0;
-  })();
-  const weekDelta = weekCompleted - prevWeekCompleted;
-
-  // 活跃风险数（全部子项目+自身，去重）
-  const activeRisks = useMemo(() => {
-    const seen = new Set<string>();
-    const targets = [...childProjects, project];
-    targets.forEach(p => {
-      allReports.filter(r => r.projectId === p.id).forEach(r => {
-        r.risks.forEach(rk => {
-          if (rk.status !== '已解决') {
-            const key = rk.description.trim();
-            if (key) seen.add(key);
-          }
-        });
-      });
-    });
-    return seen.size;
-  }, [childProjects, allReports, project]);
-
-  // 预计交付日 + 剩余天数
-  const deliveryDate = project.serviceEnd || project.deadline || '';
-  const remainingDays = deliveryDate
-    ? Math.max(0, Math.ceil((new Date(deliveryDate + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000))
-    : -1;
+    ? calcOverallProgress(project, allReports, childProjects, allProjects, allMilestones, allTasks)
+    : calcProjectProgress(project, allReports, allProjects, allMilestones, allTasks);
 
   // ====== 层2数据：子项目颜色判断 ======
   const getProgressColor = (childProgress: number, childStart?: string, childEnd?: string) => {
@@ -83,25 +57,29 @@ export default function ProjectDashboard({
     return { color: '#D85A30', label: '滞后', lag: true };                // 橙
   };
 
-  // 里程碑数据处理：仅基于真实里程碑数据，不合成子项目日期
+  // 里程碑数据处理：合并「自身 + 子项目（仅顶层项目纵览子）」范围内的里程碑（不再向上继承父规划）
   const milestoneEntries = useMemo(() => {
-    if (milestones.length > 0) {
-      return milestones.map(m => ({
-        type: deriveMilestoneStatus(m, tasks, today),
+    const nameMap = new Map(allProjects.map(p => [p.id, p.name]));
+    const ms = allMilestones.filter(m => viewScopeIds.has(m.projectId));
+    if (ms.length === 0) return [];
+    return ms
+      .slice()
+      .sort((a, b) => (a.targetDate || '').localeCompare(b.targetDate || ''))
+      .map(m => ({
+        type: deriveMilestoneStatus(m, allTasks, today),
         name: m.name,
         date: m.targetDate || '',
         description: m.description || '',
+        sourceName: nameMap.get(m.projectId) || '',
       }));
-    }
-    return [];
-  }, [milestones, tasks, today]);
+  }, [viewScopeIds, allMilestones, allTasks, allProjects, today]);
 
   // ====== 层3数据：任务列表 ======
   const [taskFilter, setTaskFilter] = useState<string>('全部');
 
   const displayTasks = useMemo(() => {
-    // 始终基于新数组，避免 mutate props 传入的 tasks
-    let list: ProjectTask[] = [...tasks];
+    // 合并视图范围内任务：自身 + 子项目（仅顶层项目纵览子；不再向上继承父规划）
+    let list: ProjectTask[] = allTasks.filter(t => viewScopeIds.has(t.projectId));
 
     // 无任务时用子项目最新周报数据近似
     if (list.length === 0 && childProjects.length > 0) {
@@ -144,62 +122,10 @@ export default function ProjectDashboard({
     if (taskFilter === '全部') return list;
     if (taskFilter === '有风险') return list.filter(t => t.status === '有风险');
     return list.filter(t => t.status === taskFilter);
-  }, [tasks, childProjects, allReports, taskFilter]);
+  }, [allTasks, viewScopeIds, childProjects, allReports, taskFilter]);
 
   return (
     <div style={{ maxWidth: 900 }}>
-      {/* ====== 层1: 标题 + 环形进度 + KPI卡 ====== */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div>
-          <span style={{ fontWeight: 500, fontSize: 15 }}>{project.name} · 项目驾驶舱</span>
-          <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 2 }}>
-            {latest ? `${latest.weekLabel} · ${latest.weekEnd} 更新` : '暂无周报'}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: '#6b7a93' }}>总体进度</div>
-            <div style={{ fontSize: 24, fontWeight: 500, color: overallProgress >= 80 ? '#639922' : overallProgress >= 50 ? '#378ADD' : '#D85A30' }}>
-              {overallProgress}%
-            </div>
-          </div>
-          <RingProgress pct={overallProgress} />
-        </div>
-      </div>
-
-      {/* KPI 卡片 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 16 }}>
-        <KpiCard
-          label="综合进度"
-          value={overallProgress}
-          unit="%"
-          sub={overallProgress >= 70 ? '进度正常' : overallProgress >= 40 ? '持续跟进' : '需重点关注'}
-          subColor={overallProgress >= 70 ? '#639922' : overallProgress >= 40 ? '#378ADD' : '#D85A30'}
-        />
-        <KpiCard
-          label="本周完成"
-          value={weekCompleted}
-          unit="项"
-          sub={weekDelta > 0 ? `较上周 +${weekDelta}` : weekDelta < 0 ? `较上周 ${weekDelta}` : '与上周持平'}
-          subColor="#639922"
-        />
-        <KpiCard
-          label="风险/阻塞"
-          value={activeRisks}
-          unit=""
-          sub={activeRisks > 0 ? '需管理层关注' : '无活跃风险'}
-          subColor={activeRisks > 0 ? '#D85A30' : '#639922'}
-          valueColor={activeRisks > 0 ? '#D85A30' : undefined}
-        />
-        <KpiCard
-          label="预计交付"
-          value={deliveryDate ? deliveryDate.slice(5) : '--'}
-          unit=""
-          sub={remainingDays >= 0 ? `剩余 ${remainingDays} 天` : deliveryDate ? '' : '未设置'}
-          subColor={remainingDays <= 14 && remainingDays >= 0 ? '#D85A30' : '#6b7a93'}
-        />
-      </div>
-
       {/* ====== 层2: 子项目进度(左) + 里程碑(右) ====== */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
         {/* 左列: 子项目进度 */}
@@ -294,7 +220,14 @@ export default function ProjectDashboard({
                 }}>
                   {entry.type === '已完成' ? '已完成' : entry.type === '已逾期' ? '已逾期' : entry.type === '进行中' ? '进行中' : '待开始'}
                 </span>
-                <p style={{ fontSize: 13, fontWeight: 500, margin: '4px 0 1px 0' }}>{entry.name}</p>
+                <p style={{ fontSize: 13, fontWeight: 500, margin: '4px 0 1px 0' }}>
+                  {entry.name}
+                  {entry.sourceName && entry.sourceName !== project.name && (
+                    <span style={{ fontSize: 10, fontWeight: 400, color: '#9aaec9', marginLeft: 6, background: '#f0f2f7', padding: '1px 6px', borderRadius: 8 }}>
+                      来自 {entry.sourceName}
+                    </span>
+                  )}
+                </p>
                 <p style={{ fontSize: 11, color: '#6b7a93', margin: 0 }}>
                   {entry.date ? `目标 ${entry.date}` : ''}{entry.description ? ` · ${entry.description}` : ''}
                 </p>
@@ -404,53 +337,8 @@ export default function ProjectDashboard({
 
       {/* 信息层级说明 */}
       <p style={{ fontSize: 11, color: '#9aaec9', marginTop: 14, lineHeight: 1.6 }}>
-        信息层级：顶部环形进度 + KPI卡 → PMO/管理层快速扫读 → 中部子项目进度 + 里程碑 → 中层管理者追踪 → 底部任务清单 → 团队每日执行。一页打通三层视角。
+        信息层级：顶部综合进度（见详情页统一栏）→ PMO/管理层快速扫读 → 中部子项目进度 + 里程碑 → 中层管理者追踪 → 底部任务清单 → 团队每日执行。一页打通三层视角。
       </p>
-    </div>
-  );
-}
-
-/** 环形进度圈 */
-function RingProgress({ pct }: { pct: number }) {
-  const deg = (pct / 100) * 360;
-  const color = pct >= 80 ? '#639922' : pct >= 50 ? '#378ADD' : '#D85A30';
-  return (
-    <div style={{
-      width: 44, height: 44, borderRadius: '50%',
-      background: `conic-gradient(${color} 0deg ${deg}deg, #e5e7eb ${deg}deg 360deg)`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        width: 34, height: 34, borderRadius: '50%',
-        background: '#fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color }}>{pct}%</span>
-      </div>
-    </div>
-  );
-}
-
-/** KPI 卡片 */
-function KpiCard({ label, value, unit, sub, subColor, valueColor }: {
-  label: string; value: number | string; unit?: string;
-  sub: string; subColor: string; valueColor?: string;
-}) {
-  return (
-    <div style={{
-      background: '#f8fafd', borderRadius: 16, padding: 14,
-      border: '0.5px solid rgba(0,0,0,0.04)',
-    }}>
-      <p style={{ fontSize: 11, color: '#6b7a93', margin: '0 0 2px 0' }}>{label}</p>
-      <p style={{
-        fontSize: 26, fontWeight: 500, margin: '0 0 2px 0', color: valueColor || '#1c2a44',
-      }}>
-        {value}
-        {unit && (
-          <span style={{ fontSize: 15, color: '#6b7a93', fontWeight: 400 }}>{unit}</span>
-        )}
-      </p>
-      <p style={{ fontSize: 11, color: subColor, margin: 0 }}>{sub}</p>
     </div>
   );
 }

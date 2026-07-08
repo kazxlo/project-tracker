@@ -102,31 +102,100 @@ export function getLatestReport(reports: WeeklyReport[]): WeeklyReport | null {
 }
 
 /**
+ * 单条里程碑进度：
+ * - 有关联任务 → 关联任务 progress 的算术平均（最客观）
+ * - 无关联任务 → 按 status 兜底映射（待开始0 / 进行中50 / 已完成100 / 已逾期100）
+ */
+export function calcMilestoneProgress(m: Milestone, tasks: ProjectTask[]): number {
+  const linked = tasks.filter(t => t.milestoneId === m.id);
+  if (linked.length > 0) {
+    const avg = linked.reduce((s, t) => s + (t.progress || 0), 0) / linked.length;
+    return Math.round(avg);
+  }
+  switch (m.status) {
+    case '已完成':
+    case '已逾期':
+      return 100;
+    case '进行中':
+      return 50;
+    default:
+      return 0; // 待开始
+  }
+}
+
+/**
+ * 取某项目的「有效里程碑集合」：仅返回该项目自身的里程碑（方案A：不再沿 parentId 向上继承祖先项目的里程碑）。
+ * 子项目只看自身规划，父规划不再向下继承到子项目。
+ * 任务通过 milestoneId 关联、不卡 projectId，因此进入集合的里程碑其下任务自动生效。
+ */
+export function getEffectiveMilestones(
+  projectId: string,
+  _allProjects: Project[],
+  allMilestones: Milestone[]
+): Milestone[] {
+  // 方案A：仅取自身里程碑，不再向上累计祖先里程碑
+  return allMilestones.filter(m => m.projectId === projectId);
+}
+
+/**
+ * 单个项目（父或子）的里程碑整体进度：
+ * 取「有效里程碑集合」（仅自身）所有里程碑进度的平均；若集合为空，返回 null（无法推导）
+ */
+export function calcProjectMilestoneProgress(
+  projectId: string,
+  allProjects: Project[],
+  milestones: Milestone[],
+  tasks: ProjectTask[]
+): number | null {
+  const ms = getEffectiveMilestones(projectId, allProjects, milestones);
+  if (ms.length === 0) return null;
+  const avg = ms.reduce((s, m) => s + calcMilestoneProgress(m, tasks), 0) / ms.length;
+  return Math.round(avg);
+}
+
+/**
+ * 单个项目的统一进度入口（里程碑优先）：
+ * 1. 该项目有关联里程碑 → 直接取里程碑推导进度（由关联任务 progress 平均）
+ * 2. 否则退化为：自身最新周报 progress || project.progress || 0
+ */
+export function calcProjectProgress(
+  project: Project,
+  allReports: WeeklyReport[],
+  allProjects: Project[],
+  milestones: Milestone[],
+  tasks: ProjectTask[]
+): number {
+  const ms = calcProjectMilestoneProgress(project.id, allProjects, milestones, tasks);
+  if (ms !== null) return ms;
+  const reps = allReports.filter(r => r.projectId === project.id);
+  const latest = getLatestReport(reps);
+  return latest?.progress || project.progress || 0;
+}
+
+/**
  * 计算父项目综合进度：
- * - 有子项目时：仅聚合各子项目进度取简单算术平均，不含自身
- * - 无子项目时：取自身最新周报进度
- * 每个子项目的进度优先级：latest周报.progress || Project.progress || 0
+ * - 有子项目时：仅聚合各子项目进度（里程碑优先，仅各自自身规划）取简单算术平均，不含自身
+ * - 无子项目时：取自身统一进度（里程碑优先）
+ * 注意：milestones / tasks 需为全量数据（含子项目），progress 计算才能正确纳入各项目自身里程碑
  */
 export function calcOverallProgress(
-  selfReports: WeeklyReport[],
-  childReportsList: WeeklyReport[][],
-  childProjects: Project[] = []
+  project: Project,
+  allReports: WeeklyReport[],
+  childProjects: Project[],
+  allProjects: Project[],
+  milestones: Milestone[],
+  tasks: ProjectTask[]
 ): number {
-  // 有子项目：仅聚合子项目，不含自身
-  if (childReportsList.length > 0) {
+  if (childProjects.length > 0) {
     const values: number[] = [];
-    childReportsList.forEach((reps, i) => {
-      const latest = getLatestReport(reps);
-      const childProject = childProjects[i];
-      const progress = latest?.progress || childProject?.progress || 0;
-      if (progress > 0) values.push(progress);
+    childProjects.forEach(c => {
+      const progress = calcProjectProgress(c, allReports, allProjects, milestones, tasks);
+      values.push(progress);
     });
     if (values.length === 0) return 0;
     return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
   }
-  // 无子项目：取自身最新周报进度
-  const selfLatest = getLatestReport(selfReports);
-  return selfLatest?.progress || 0;
+  return calcProjectProgress(project, allReports, allProjects, milestones, tasks);
 }
 
 /**

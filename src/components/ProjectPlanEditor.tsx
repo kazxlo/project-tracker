@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { getMilestones, saveMilestone, deleteMilestone, getProjectTasks, saveProjectTask, deleteProjectTask } from '../api/db';
 import { genId, getTodayStr, deriveMilestoneStatus } from '../utils/helpers';
-import type { Milestone, ProjectTask } from '../types';
+import type { Milestone, ProjectTask, Project } from '../types';
 import shared from '../styles/shared.module.css';
 
 interface Props {
@@ -12,26 +12,40 @@ interface Props {
   readOnly?: boolean;
   /** 可选：下拉用户列表（系统已注册用户名），为空时退回自由输入 */
   userNames?: string[];
+  /** 可选：当前项目的直接子项目，用于把计划项归属到指定子项目 */
+  childProjects?: Project[];
+  /** 可选：当前项目名称，用于归属下拉的「本项目」文案 */
+  projectName?: string;
 }
 
 type EditTab = 'milestones' | 'tasks';
 
-export default function ProjectPlanEditor({ projectId, open, onClose, toast, readOnly, userNames }: Props) {
+export default function ProjectPlanEditor({ projectId, open, onClose, toast, readOnly, userNames, childProjects, projectName }: Props) {
   const [tab, setTab] = useState<EditTab>('milestones');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
   const reqIdRef = useRef(0);
 
+  // 可归属的目标项目：本项目 + 直接子项目（仅当其存在）。用于把计划项指派到指定子项目
+  const targetOptions = useMemo(() => {
+    const opts: { id: string; name: string }[] = [{ id: projectId, name: projectName || '本项目' }];
+    (childProjects || []).forEach(c => opts.push({ id: c.id, name: c.name }));
+    return opts;
+  }, [projectId, projectName, childProjects]);
+
   const load = async (reqId: number) => {
     try {
-      const [ms, ts] = await Promise.all([
-        getMilestones(projectId),
-        getProjectTasks(projectId),
+      // 方案A：子项目不再继承父规划，但父项目仍可把计划项归属到子项目；
+      // 因此加载「本项目 + 各子项目」的计划数据，便于统一编辑与指派
+      const pids = [projectId, ...(childProjects || []).map(c => c.id)];
+      const [msArr, tsArr] = await Promise.all([
+        Promise.all(pids.map(pid => getMilestones(pid))),
+        Promise.all(pids.map(pid => getProjectTasks(pid))),
       ]);
       if (reqId !== reqIdRef.current) return; // 过时响应丢弃，防竞态
-      setMilestones(ms);
-      setTasks(ts);
+      setMilestones(msArr.flat());
+      setTasks(tsArr.flat());
     } catch {
       if (reqId === reqIdRef.current) toast('加载计划数据失败', 'error');
     } finally {
@@ -127,6 +141,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
               setMilestones={setMilestones}
               tasks={tasks}
               projectId={projectId}
+              targetOptions={targetOptions}
               onDelete={handleDeleteMilestone}
               onReorder={handleReorderMilestones}
               loading={loading}
@@ -141,6 +156,7 @@ export default function ProjectPlanEditor({ projectId, open, onClose, toast, rea
               setTasks={setTasks}
               projectId={projectId}
               milestones={milestones}
+              targetOptions={targetOptions}
               onDelete={handleDeleteTask}
               onReorder={handleReorderTasks}
               loading={loading}
@@ -187,12 +203,13 @@ function emptyMilestone(projectId: string): Milestone {
 }
 
 function MilestoneEditor({
-  milestones, setMilestones, tasks, projectId, onDelete, onReorder, loading, reload, toast, readOnly,
+  milestones, setMilestones, tasks, projectId, targetOptions, onDelete, onReorder, loading, reload, toast, readOnly,
 }: {
   milestones: Milestone[];
   setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
   tasks: ProjectTask[];
   projectId: string;
+  targetOptions: { id: string; name: string }[];
   onDelete: (id: string) => void;
   onReorder: (milestones: Milestone[]) => void;
   loading: boolean;
@@ -278,6 +295,12 @@ function MilestoneEditor({
                   background: m.status === '已完成' ? '#EAF3DE' : m.status === '已逾期' ? '#FAEEDA' : m.status === '进行中' ? '#E6F1FB' : '#f0f2f7',
                   color: m.status === '已完成' ? '#3B6D11' : m.status === '已逾期' ? '#854F0B' : m.status === '进行中' ? '#185FA5' : '#6b7a93',
                 }}>{deriveMilestoneStatus(m, tasks, getTodayStr())}</span>
+                {m.projectId !== projectId && (
+                  <span className={shared.badge} style={{
+                    fontSize: 10, padding: '1px 8px',
+                    background: '#E6F1FB', color: '#185FA5',
+                  }}>归属: {targetOptions.find(o => o.id === m.projectId)?.name || '未知'}</span>
+                )}
               </div>
               {m.targetDate && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>目标日期: {m.targetDate}</div>}
               {m.description && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>{m.description}</div>}
@@ -314,6 +337,16 @@ function MilestoneEditor({
             <input className={shared.formInput} value={editing.description || ''}
               onChange={e => setEditing({ ...editing, description: e.target.value })}
               placeholder="描述，如: PRD已签字" />
+            {targetOptions.length > 1 && (
+              <select className={shared.formSelect}
+                value={editing.projectId || projectId}
+                onChange={e => setEditing({ ...editing, projectId: e.target.value })}
+                style={{ width: '100%', padding: '8px 12px' }}>
+                {targetOptions.map(o => (
+                  <option key={o.id} value={o.id}>归属项目: {o.name}</option>
+                ))}
+              </select>
+            )}
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
               <button className={shared.btnToolbar} onClick={cancel}>取消</button>
               <button className={shared.btnPrimary} onClick={save} disabled={!editing.name.trim()}>{isNew ? '添加' : '保存'}</button>
@@ -334,12 +367,13 @@ function emptyTask(projectId: string): ProjectTask {
 }
 
 function TaskEditor({
-  tasks, setTasks, projectId, milestones, onDelete, onReorder, loading, reload, toast, readOnly, userNames,
+  tasks, setTasks, projectId, milestones, targetOptions, onDelete, onReorder, loading, reload, toast, readOnly, userNames,
 }: {
   tasks: ProjectTask[];
   setTasks: React.Dispatch<React.SetStateAction<ProjectTask[]>>;
   projectId: string;
   milestones: Milestone[];
+  targetOptions: { id: string; name: string }[];
   onDelete: (id: string) => void;
   onReorder: (tasks: ProjectTask[]) => void;
   loading: boolean;
@@ -441,6 +475,12 @@ function TaskEditor({
                     {milestones.find(m => m.id === t.milestoneId)?.name || '未知里程碑'}
                   </span>
                 )}
+                {t.projectId !== projectId && (
+                  <span className={shared.badge} style={{
+                    fontSize: 10, padding: '1px 6px',
+                    background: '#E6F1FB', color: '#185FA5',
+                  }}>归属: {targetOptions.find(o => o.id === t.projectId)?.name || '未知'}</span>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#6b7a93' }}>
                 {t.assignee && <span>负责人: {t.assignee}</span>}
@@ -519,6 +559,17 @@ function TaskEditor({
                   ))}
                 </select>
               </div>
+            )}
+            {targetOptions.length > 1 && (
+              <select className={shared.formSelect}
+                value={editing.projectId || projectId}
+                onChange={e => setEditing({ ...editing, projectId: e.target.value })}
+                style={{ width: '100%', padding: '8px 12px' }}
+              >
+                {targetOptions.map(o => (
+                  <option key={o.id} value={o.id}>归属项目: {o.name}</option>
+                ))}
+              </select>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 12, color: '#6b7a93', whiteSpace: 'nowrap' }}>进度: {editing.progress}%</span>
