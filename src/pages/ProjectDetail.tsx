@@ -944,7 +944,7 @@ type SummaryData = {
 function buildSummaryData(params: {
   project: Project;
   isChild: boolean;
-  parentProject: Project | null;
+  parentProject: Project | null | undefined;
   childProjects: Project[];
   allReports: WeeklyReport[];
   reports: WeeklyReport[];
