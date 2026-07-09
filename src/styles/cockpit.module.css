@@ -3,9 +3,9 @@
 /* 全屏容器 */
 .cockpit {
   min-height: 100vh;
-  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
-  color: #ffffff;
-  padding: 32px 40px 24px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: var(--space-11) var(--space-12) var(--space-9);
   font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-y: auto;
 }
@@ -15,41 +15,41 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 32px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(100, 181, 246, 0.1);
+  margin-bottom: var(--space-11);
+  padding-bottom: var(--space-7);
+  border-bottom: 1px solid var(--color-border-light);
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-5);
   position: sticky;
   top: 0;
   z-index: 50;
-  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+  background: var(--color-bg);
 }
 
 .headerLeft {
   display: flex;
   align-items: baseline;
-  gap: 16px;
+  gap: var(--space-7);
 }
 
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-7);
 }
 
 .headerTitle {
-  font-size: 22px;
+  font-size: var(--text-3xl);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   letter-spacing: 0.5px;
   margin: 0;
-  text-shadow: 0 0 20px rgba(100, 181, 246, 0.3);
+  text-shadow: none;
 }
 
 .headerWeek {
-  font-size: 14px;
-  color: #9aaec9;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
   letter-spacing: 0.3px;
 }
 
@@ -57,123 +57,123 @@
 .topNav {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .topNavItem,
 .topNavLink {
-  font-size: 13px;
-  padding: 5px 12px;
-  border-radius: 6px;
+  font-size: var(--text-base);
+  padding: 5px var(--space-5);
+  border-radius: var(--radius-sm);
   text-decoration: none;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
   white-space: nowrap;
 }
 
 .topNavItem {
-  color: #9aaec9;
+  color: var(--color-text-secondary);
 }
 
 .topNavLink {
-  color: #9aaec9;
+  color: var(--color-text-secondary);
 }
 
 .topNavLink:hover {
-  background: rgba(100, 181, 246, 0.08);
-  color: #64b5f6;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .topNavActive {
-  color: #ffffff;
-  background: rgba(100, 181, 246, 0.12);
+  color: var(--color-text);
+  background: var(--color-primary-bg);
   font-weight: 500;
 }
 
 .userInfo {
-  font-size: 13px;
-  color: #9aaec9;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .userRole {
-  font-size: 11px;
-  color: #64b5f6;
-  margin-left: 4px;
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+  margin-left: var(--space-1);
 }
 
 .pdfBtn {
-  font-size: 12px;
-  color: #9aaec9;
-  background: rgba(100, 181, 246, 0.08);
-  border: 1px solid rgba(100, 181, 246, 0.15);
-  border-radius: 6px;
-  padding: 4px 12px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-5);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
   white-space: nowrap;
 }
 
 .pdfBtn:hover {
-  background: rgba(100, 181, 246, 0.18);
-  color: #64b5f6;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
   border-color: rgba(100, 181, 246, 0.35);
 }
 
 .logoutBtn {
-  font-size: 12px;
-  color: #9aaec9;
-  background: rgba(100, 181, 246, 0.08);
-  border: 1px solid rgba(100, 181, 246, 0.15);
-  border-radius: 6px;
-  padding: 4px 12px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-5);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
   white-space: nowrap;
 }
 
 .logoutBtn:hover {
-  background: rgba(255, 107, 107, 0.12);
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.3);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
 }
 
 /* ===== KPI 横条 ===== */
 .kpiRow {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
+  gap: var(--space-7);
+  margin-bottom: var(--space-10);
 }
 
 .kpiCard {
-  background: rgba(18, 28, 48, 0.65);
+  background: var(--color-surface);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(100, 181, 246, 0.12);
-  border-radius: 16px;
-  padding: 20px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8) var(--space-7);
   text-align: center;
-  transition: border-color 0.25s, box-shadow 0.25s;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 181, 246, 0.06);
+  transition: border-color var(--transition-slow), box-shadow var(--transition-slow);
+  box-shadow: var(--shadow-md);
 }
 
 .kpiCard:hover {
   border-color: rgba(100, 181, 246, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 181, 246, 0.1), 0 0 24px rgba(100, 181, 246, 0.06);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(100, 181, 246, 0.1), none;
 }
 
 .kpiValue {
-  font-size: 46px;
+  font-size: var(--text-kpi-lg);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -1px;
-  margin-bottom: 6px;
-  text-shadow: 0 0 24px currentColor;
+  margin-bottom: var(--space-2);
+  text-shadow: none;
 }
 
 .kpiLabel {
-  font-size: 13px;
-  color: #9aaec9;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
   font-weight: 500;
   letter-spacing: 0.5px;
 }
@@ -182,15 +182,15 @@
 .projectGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--space-7);
+  margin-bottom: var(--space-9);
 }
 
 .projectCard {
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: var(--radius-2xl);
+  padding: var(--space-9);
   cursor: pointer;
-  transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+  transition: border-color var(--transition-slow), box-shadow var(--transition-slow), transform var(--transition-normal);
   position: relative;
   min-height: 170px;
   display: flex;
@@ -198,12 +198,12 @@
   justify-content: space-between;
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(100, 181, 246, 0.06);
+  box-shadow: var(--shadow-lg);
 }
 
 .projectCard:hover {
-  border-color: rgba(100, 181, 246, 0.25);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(100, 181, 246, 0.1), 0 0 30px rgba(100, 181, 246, 0.05);
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(100, 181, 246, 0.1), 0 0 30px rgba(100, 181, 246, 0.05);
   transform: translateY(-2px);
 }
 
@@ -211,76 +211,76 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-7);
 }
 
 .projectDot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  margin-right: 10px;
+  margin-right: var(--space-4);
   flex-shrink: 0;
   box-shadow: 0 0 8px currentColor;
 }
 
 .projectName {
-  font-size: 17px;
+  font-size: var(--text-xl);
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text);
   display: flex;
   align-items: center;
 }
 
 .statusBadge {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 10px;
+  padding: 3px var(--space-4);
+  border-radius: var(--radius-md);
   letter-spacing: 0.3px;
   white-space: nowrap;
 }
 
 .statusNormal {
-  background: rgba(74, 222, 128, 0.12);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border);
 }
 
 .statusWarning {
-  background: rgba(255, 179, 71, 0.12);
-  color: #ffb347;
-  border: 1px solid rgba(255, 179, 71, 0.2);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
 }
 
 .statusDanger {
-  background: rgba(255, 107, 107, 0.12);
-  color: #ff6b6b;
-  border: 1px solid rgba(255, 107, 107, 0.2);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
 }
 
 .projectMeta {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 13px;
-  color: #9aaec9;
-  margin-bottom: 14px;
+  gap: var(--space-7);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-6);
 }
 
 /* 进度条 */
 .progressSection {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-5);
 }
 
 .progressLabel {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .progressPercent {
-  font-size: 32px;
+  font-size: var(--space-11);
   font-weight: 700;
   letter-spacing: -0.5px;
   text-shadow: 0 0 16px currentColor;
@@ -289,7 +289,7 @@
 .progressBar {
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-surface-muted);
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
@@ -304,110 +304,110 @@
 /* 卡片底部统计 */
 .projectStats {
   display: flex;
-  gap: 20px;
-  font-size: 12px;
-  color: #9aaec9;
+  gap: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .projectStatItem {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .projectStatValue {
   font-weight: 600;
-  color: #c0d0e4;
+  color: var(--color-text-accent);
 }
 
 /* 逾期标记 */
 .overdueBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255, 107, 107, 0.12);
-  color: #ff6b6b;
-  font-size: 11px;
+  gap: var(--space-1);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: var(--text-xs);
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 107, 107, 0.2);
-  margin-left: 8px;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-danger-border);
+  margin-left: var(--space-3);
 }
 
 /* ===== 活跃风险快照 ===== */
 .riskSection {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-9);
 }
 
 .riskHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: var(--space-6);
 }
 
 .riskTitle {
-  font-size: 16px;
+  font-size: var(--text-2xl);
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text);
   margin: 0;
 }
 
 .riskCount {
-  font-size: 13px;
-  color: #9aaec9;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
 }
 
 .riskList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
 .riskItem {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
-  padding: 14px 18px;
-  border-radius: 12px;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--radius-lg);
   background: rgba(18, 28, 48, 0.5);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(100, 181, 246, 0.08);
-  transition: border-color 0.2s;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border-light);
+  transition: border-color var(--transition-normal);
+  box-shadow: var(--shadow-sm);
 }
 
 .riskItem:hover {
-  border-color: rgba(100, 181, 246, 0.18);
+  border-color: var(--color-border-hover);
 }
 
 .riskLevelBadge {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
   letter-spacing: 0.3px;
   line-height: 1.4;
 }
 
 .riskLevelHigh {
-  background: rgba(255, 107, 107, 0.15);
-  color: #ff6b6b;
-  border: 1px solid rgba(255, 107, 107, 0.25);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
 }
 
 .riskLevelMid {
-  background: rgba(255, 179, 71, 0.12);
-  color: #ffb347;
-  border: 1px solid rgba(255, 179, 71, 0.2);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
 }
 
 .riskLevelLow {
   background: rgba(154, 174, 201, 0.1);
-  color: #9aaec9;
+  color: var(--color-text-secondary);
   border: 1px solid rgba(154, 174, 201, 0.15);
 }
 
@@ -417,23 +417,23 @@
 }
 
 .riskDescription {
-  font-size: 14px;
-  color: #e0e8f2;
+  font-size: var(--text-md);
+  color: var(--color-text);
   font-weight: 500;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .riskSuggestion {
-  font-size: 12px;
-  color: #9aaec9;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
 .riskProjectTag {
-  font-size: 11px;
-  color: #9aaec9;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  padding: 2px var(--space-3);
+  border-radius: var(--space-1);
   white-space: nowrap;
   flex-shrink: 0;
   margin-top: 2px;
@@ -443,35 +443,35 @@
 .riskMeta {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 6px;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
   flex-wrap: wrap;
 }
 
 .riskWeekTag {
-  font-size: 11px;
-  color: #9aaec9;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .riskStatusTag {
-  font-size: 11px;
-  color: #9aaec9;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 /* 风险状态下拉（驾驶舱深色主题） */
 .statusSelect {
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: var(--text-xs);
+  padding: 2px var(--space-2);
+  border-radius: var(--space-1);
   background: rgba(100, 181, 246, 0.06);
-  border: 1px solid rgba(100, 181, 246, 0.12);
-  color: #c0d0e4;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-accent);
   cursor: pointer;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-fast);
 }
 
 .statusSelect:hover {
@@ -489,28 +489,28 @@
 }
 
 .savingHint {
-  font-size: 10px;
-  color: #64b5f6;
+  font-size: var(--text-xs);
+  color: var(--color-primary);
   white-space: nowrap;
 }
 
 /* KPI 可点击 */
 .kpiClickable {
   cursor: pointer;
-  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+  transition: border-color var(--transition-slow), box-shadow var(--transition-slow), background var(--transition-slow);
 }
 
 .kpiClickable:hover {
   border-color: rgba(100, 181, 246, 0.4);
-  background: rgba(18, 28, 48, 0.8);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 181, 246, 0.12), 0 0 30px rgba(100, 181, 246, 0.08);
+  background: var(--color-surface-hover);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(100, 181, 246, 0.12), 0 0 30px rgba(100, 181, 246, 0.08);
 }
 
 /* ===== 下钻弹窗 ===== */
 .drillOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--color-overlay);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   display: flex;
@@ -520,62 +520,62 @@
 }
 
 .drillPanel {
-  background: rgba(14, 22, 40, 0.92);
+  background: var(--color-surface);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(100, 181, 246, 0.12);
-  border-radius: 16px;
-  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-9);
   max-width: 700px;
   width: 90%;
   max-height: 70vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(100, 181, 246, 0.06);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
 .drillHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(100, 181, 246, 0.1);
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .drillTitle {
-  font-size: 17px;
+  font-size: var(--text-xl);
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text);
   margin: 0;
 }
 
 .drillClose {
   background: none;
   border: none;
-  color: #9aaec9;
+  color: var(--color-text-secondary);
   font-size: 22px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   line-height: 1;
 }
 
 .drillClose:hover {
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .drillEmpty {
   text-align: center;
-  padding: 32px;
-  color: #9aaec9;
-  font-size: 14px;
+  padding: var(--space-11);
+  color: var(--color-text-secondary);
+  font-size: var(--text-md);
 }
 
 .drillRiskItem {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(100, 181, 246, 0.06);
+  gap: var(--space-5);
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .drillRiskItem:last-child {
@@ -588,30 +588,30 @@
 }
 
 .drillRiskDesc {
-  font-size: 14px;
-  color: #e0e8f2;
+  font-size: var(--text-md);
+  color: var(--color-text);
   font-weight: 500;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .drillRiskMeta {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
+  gap: var(--space-5);
+  margin-bottom: var(--space-1);
   flex-wrap: wrap;
 }
 
 .drillRiskSuggestion {
-  font-size: 12px;
-  color: #9aaec9;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   line-height: 1.5;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .drillPlanNum {
-  font-size: 12px;
-  color: #9aaec9;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   min-width: 20px;
   text-align: right;
   padding-top: 2px;
@@ -620,23 +620,23 @@
 /* ===== 底部 ===== */
 .footer {
   text-align: center;
-  padding: 16px 0 8px;
-  font-size: 12px;
-  color: #5a7090;
-  border-top: 1px solid rgba(100, 181, 246, 0.06);
+  padding: var(--space-7) 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border-light);
 }
 
 /* 空状态 */
 .emptyState {
   text-align: center;
-  padding: 80px 40px;
-  color: #9aaec9;
+  padding: 80px var(--space-12);
+  color: var(--color-text-secondary);
 }
 
 .emptyTitle {
-  font-size: 16px;
-  margin-bottom: 8px;
-  color: #9aaec9;
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-3);
+  color: var(--color-text-secondary);
 }
 
 /* 加载状态 */
@@ -645,39 +645,39 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
-  color: #9aaec9;
-  font-size: 14px;
-  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+  color: var(--color-text-secondary);
+  font-size: var(--text-md);
+  background: var(--color-bg);
 }
 
 /* ===== 父项目聚合信息 ===== */
 .parentBadge {
-  font-size: 11px;
-  color: #64b5f6;
+  font-size: var(--text-xs);
+  color: var(--color-primary);
   background: rgba(100, 181, 246, 0.1);
   border: 1px solid rgba(100, 181, 246, 0.2);
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
 .parentProgressLabel {
-  font-size: 12px;
-  color: #9aaec9;
-  margin-bottom: 4px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
 }
 
 /* ===== 服务期时间线（深色主题） ===== */
 .serviceTimeline {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
 .serviceTimelineLabel {
-  font-size: 11px;
-  color: #9aaec9;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   min-width: 36px;
 }
@@ -699,8 +699,8 @@
 }
 
 .serviceTimelineDate {
-  font-size: 11px;
-  color: #9aaec9;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -711,7 +711,7 @@
 
 /* ===== 卡片内最近里程碑 & 近15天任务 ===== */
 .sectionHeader {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: #5a7d9e;
   text-transform: uppercase;
@@ -720,23 +720,23 @@
 }
 
 .milestoneSection {
-  margin-bottom: 8px;
-  padding: 6px 8px;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   background: rgba(100, 181, 246, 0.05);
-  border: 1px solid rgba(100, 181, 246, 0.08);
-  border-radius: 6px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
 }
 
 .milestoneRow {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
 }
 
 .milestoneIcon {
-  font-size: 10px;
-  color: #64b5f6;
+  font-size: var(--text-xs);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -745,11 +745,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #c0d0e4;
+  color: var(--color-text-accent);
 }
 
 .milestoneDate {
-  color: #64b5f6;
+  color: var(--color-primary);
   white-space: nowrap;
   flex-shrink: 0;
   font-weight: 500;
@@ -758,20 +758,20 @@
 .taskSection {
   display: flex;
   flex-direction: column;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-3);
 }
 
 .taskItem {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #9aaec9;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
   padding: 1px 0;
 }
 
 .taskBullet {
-  color: #64b5f6;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -780,7 +780,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #9aaec9;
+  color: var(--color-text-secondary);
 }
 
 .taskDate {
@@ -793,28 +793,57 @@
 @media (max-width: 1200px) {
   .kpiRow {
     grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+    gap: var(--space-4);
   }
   .kpiValue {
     font-size: 36px;
   }
   .cockpit {
-    padding: 24px 24px 16px;
+    padding: var(--space-9) var(--space-9) var(--space-7);
   }
 }
 
 @media (max-width: 768px) {
   .kpiRow {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: var(--space-4);
   }
   .projectGrid {
     grid-template-columns: 1fr;
   }
   .kpiValue {
-    font-size: 32px;
+    font-size: var(--space-11);
   }
   .cockpit {
-    padding: 16px;
+    padding: var(--space-7);
   }
+}
+
+/* ═══════ 深色模式专属效果 ═══════ */
+[data-theme="dark"] .cockpit {
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+}
+
+[data-theme="dark"] .header {
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+}
+
+[data-theme="dark"] .loading {
+  background: radial-gradient(ellipse at 50% 0%, #0b1a3a 0%, #0b0f1a 60%, #000 100%);
+}
+
+[data-theme="dark"] .headerTitle {
+  text-shadow: 0 0 20px rgba(100, 181, 246, 0.3);
+}
+
+[data-theme="dark"] .kpiValue {
+  text-shadow: 0 0 24px currentColor;
+}
+
+[data-theme="dark"] .progressBar {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .progressFill {
+  box-shadow: 0 0 10px currentColor;
 }

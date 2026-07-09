@@ -6,7 +6,6 @@ import { useToast } from '../hooks/useToast';
 import { filterVisibleProjects } from '../utils/helpers';
 import type { Project } from '../types';
 import Toast from '../components/Toast';
-import TopNav from '../components/TopNav';
 import shared from '../styles/shared.module.css';
 
 import Dashboard from './Dashboard';
@@ -15,7 +14,7 @@ import AdminUsers from './AdminUsers';
 type TabKey = 'overview' | 'permissions' | 'users';
 
 export default function Admin() {
-  const { username, role, doLogout } = useAuth();
+  const { role } = useAuth();
   const isAdmin = role === 'admin';
   const [tab, setTab] = useState<TabKey>('overview');
 
@@ -29,15 +28,6 @@ export default function Admin() {
 
   return (
     <div className={shared.pageWrap}>
-      <header className={shared.header}>
-        <div className={shared.headerLeft}><h1 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>管理中心</h1></div>
-        <div className={shared.headerRight}>
-          <TopNav active="admin" theme="light" styles={shared} />
-          <span className={shared.textSmall} style={{ color: '#6b7a93' }}>{username}<span style={{ fontSize: 11, color: '#4F8EF7', marginLeft: 4 }}>(管理员)</span></span>
-          <button className={shared.btnLogout} onClick={() => doLogout()}>退出</button>
-        </div>
-      </header>
-
       <main className={shared.main}>
         <div className={shared.tabBar}>
           {tabs.map(t => (
@@ -115,7 +105,7 @@ function ProjectPermissions() {
 
   const topProjects = projects.filter(p => !p.parentId);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#6b7a93' }}>加载中...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>加载中...</div>;
 
   return (
     <div>
@@ -133,23 +123,23 @@ function ProjectPermissions() {
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color }} />
                   <h3 className={shared.sectionTitle} style={{ margin: 0, flex: 1 }}>
                     {p.name}
-                    {childCount > 0 && <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7a93', marginLeft: 8 }}>({childCount}个子项目自动继承)</span>}
+                    {childCount > 0 && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-secondary)', marginLeft: 8 }}>({childCount}个子项目自动继承)</span>}
                   </h3>
-                  <span className={shared.textSmall} style={{ color: '#6b7a93' }}>{viewerIds.length === 0 ? '所有人可见' : `${viewerIds.length}人可见`}</span>
+                  <span className={shared.textSmall} style={{ color: 'var(--color-text-secondary)' }}>{viewerIds.length === 0 ? '所有人可见' : `${viewerIds.length}人可见`}</span>
                   <button className={shared.btnPrimary} style={{ fontSize: 12, padding: '4px 14px' }} onClick={() => handleSave(p)} disabled={saving === p.id}>{saving === p.id ? '保存中...' : '保存'}</button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {profiles.map(prof => {
                     const checked = viewerIds.includes(prof.id);
                     return (
-                      <label key={prof.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 6, background: checked ? 'rgba(79,142,247,0.06)' : '#f8f9fc', border: checked ? '1px solid rgba(79,142,247,0.2)' : '1px solid #e8ecf2', cursor: 'pointer', fontSize: 13, color: checked ? '#4F8EF7' : '#6b7a93', userSelect: 'none', transition: 'all 0.15s' }}>
-                        <input type="checkbox" checked={checked} onChange={() => toggleViewer(p.id, prof.id)} style={{ accentColor: '#4F8EF7' }} />
+                      <label key={prof.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 6, background: checked ? 'var(--color-primary-light)' : 'var(--color-bg-alt)', border: checked ? '1px solid rgba(79,142,247,0.2)' : '1px solid #e8ecf2', cursor: 'pointer', fontSize: 13, color: checked ? 'var(--color-primary)' : 'var(--color-text-secondary)', userSelect: 'none', transition: 'all 0.15s' }}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleViewer(p.id, prof.id)} style={{ accentColor: 'var(--color-primary)' }} />
                         {prof.display_name}
                       </label>
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 11, color: '#9aa3b2', marginTop: 10 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 10 }}>
                   {viewerIds.length === 0 ? '未勾选任何人 = 所有用户可见' : '仅勾选的成员 + 管理员本人 可见此项目'}
                   {childCount > 0 && ' · 保存后子项目自动继承相同权限'}
                 </div>

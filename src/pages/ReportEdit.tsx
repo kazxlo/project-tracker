@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getWeekRange, genId } from '../utils/helpers';
 import type { WeeklyReport, ReportItem, Risk } from '../types';
 import shared from '../styles/shared.module.css';
+import Icon from '../components/Icon';
 
 /** 上一周计划确认项 */
 interface PlanConfirmItem {
@@ -255,7 +256,7 @@ export default function ReportEdit() {
 
   if (pageLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: 60, color: '#6b7a93' }}>
+      <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)' }}>
         加载中...
       </div>
     );
@@ -303,11 +304,11 @@ export default function ReportEdit() {
 
       {/* 上一周计划确认区（仅新建时且有上一周计划） */}
       {!isEdit && planConfirm.length > 0 && (
-        <div className={shared.section} style={{ border: '1px solid #4F8EF7', background: '#f0f5ff' }}>
-          <h3 className={shared.sectionTitle} style={{ color: '#4F8EF7' }}>
+        <div className={shared.section} style={{ border: '1px solid #4F8EF7', background: 'var(--color-primary-bg)' }}>
+          <h3 className={shared.sectionTitle} style={{ color: 'var(--color-primary)' }}>
             上一周计划事项完成确认
           </h3>
-          <p className={shared.textSmall} style={{ color: '#6b7a93', marginBottom: 12 }}>
+          <p className={shared.textSmall} style={{ color: 'var(--color-text-secondary)', marginBottom: 12 }}>
             请确认上一周计划的事项哪些已完成（将自动纳入本周完成事项），未完成的将自动带入本周计划事项并附上未完成原因。
           </p>
           {planConfirm.map(pc => (
@@ -318,7 +319,7 @@ export default function ReportEdit() {
                   checked={pc.done}
                   onChange={() => togglePlanDone(pc.item.id)}
                 />
-                <span style={{ marginLeft: 8, fontSize: 13, textDecoration: pc.done ? 'line-through' : 'none', color: pc.done ? '#6b7a93' : '#1c2a44' }}>
+                <span style={{ marginLeft: 8, fontSize: 13, textDecoration: pc.done ? 'line-through' : 'none', color: pc.done ? 'var(--color-text-secondary)' : 'var(--color-text)' }}>
                   {pc.item.title || '(空标题)'}
                 </span>
               </label>
@@ -338,18 +339,18 @@ export default function ReportEdit() {
             onClick={confirmCompletedPlans}
             style={{ marginTop: 12 }}
           >
-            ✓ 确认并继续填写周报
+            <Icon name="check" size={14} /> 确认并继续填写周报
           </button>
         </div>
       )}
 
       {/* 上一周风险确认区（仅新建时且有上一周风险） */}
       {!isEdit && riskConfirm.length > 0 && (
-        <div className={shared.section} style={{ border: '1px solid #FB923C', background: '#fff8f0' }}>
-          <h3 className={shared.sectionTitle} style={{ color: '#FB923C' }}>
+        <div className={shared.section} style={{ border: '1px solid #FB923C', background: 'var(--color-warning-bg)' }}>
+          <h3 className={shared.sectionTitle} style={{ color: 'var(--color-danger-light)' }}>
             上一周风险确认
           </h3>
-          <p className={shared.textSmall} style={{ color: '#6b7a93', marginBottom: 12 }}>
+          <p className={shared.textSmall} style={{ color: 'var(--color-text-secondary)', marginBottom: 12 }}>
             请确认上一周的风险事项是否仍属于风险。已不属于风险的将标记为"已解决"并记录处理时间。
           </p>
           {riskConfirm.map(rc => (
@@ -360,12 +361,12 @@ export default function ReportEdit() {
                   checked={rc.stillRisk}
                   onChange={() => toggleRiskStillRisk(rc.risk.id)}
                 />
-                <span style={{ marginLeft: 8, fontSize: 13, textDecoration: rc.stillRisk ? 'none' : 'line-through', color: rc.stillRisk ? '#1c2a44' : '#6b7a93' }}>
+                <span style={{ marginLeft: 8, fontSize: 13, textDecoration: rc.stillRisk ? 'none' : 'line-through', color: rc.stillRisk ? 'var(--color-text)' : 'var(--color-text-secondary)' }}>
                   [{rc.risk.level}] {rc.risk.description || '(空描述)'}
                 </span>
               </label>
               {!rc.stillRisk && (
-                <span style={{ fontSize: 12, color: '#4ADE80', marginLeft: 12 }}>✓ 将标记为已解决</span>
+                <span style={{ fontSize: 12, color: 'var(--color-success)', marginLeft: 12 }}><Icon name="check" size={12} color="#10B981" /> 将标记为已解决</span>
               )}
             </div>
           ))}
@@ -374,7 +375,7 @@ export default function ReportEdit() {
             onClick={confirmRisks}
             style={{ marginTop: 12 }}
           >
-            ✓ 确认风险状态并继续
+            <Icon name="check" size={14} /> 确认风险状态并继续
           </button>
         </div>
       )}
@@ -485,13 +486,13 @@ export default function ReportEdit() {
             </div>
             {item.reason !== undefined && (
               <div style={{ paddingLeft: 24, marginBottom: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ color: '#FB923C', whiteSpace: 'nowrap' }}>📎 上周未完成原因：</span>
+                <span style={{ color: 'var(--color-danger-light)', whiteSpace: 'nowrap' }}><Icon name="paperclip" size={12} color="#D85A30" /> 上周未完成原因：</span>
                 <input
                   className={shared.formInput}
                   value={item.reason}
                   onChange={e => updateItemField(planned, setPlanned, item.id, 'reason', e.target.value)}
                   placeholder="未完成原因..."
-                  style={{ flex: 1, fontSize: 12, color: '#FB923C' }}
+                  style={{ flex: 1, fontSize: 12, color: 'var(--color-danger-light)' }}
                   readOnly={readOnly}
                 />
               </div>
@@ -549,7 +550,7 @@ export default function ReportEdit() {
               value={risk.suggestion || ''}
               onChange={e => updateRisk(risk.id, 'suggestion', e.target.value)}
               placeholder="解决建议"
-              style={{ fontSize: 12, color: '#6b7a93' }}
+              style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}
               readOnly={readOnly}
             />
           </div>

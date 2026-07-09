@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getTodayStr, getLatestReport, calcOverallProgress, calcProjectProgress, deriveMilestoneStatus } from '../utils/helpers';
 import type { Project, WeeklyReport, Milestone, ProjectTask } from '../types';
 import shared from '../styles/shared.module.css';
+import Icon from './Icon';
 
 interface Props {
   project: Project;
@@ -50,11 +51,11 @@ export default function ProjectDashboard({
       const elapsedDays = (new Date(today + 'T00:00:00').getTime() - new Date(childStart + 'T00:00:00').getTime()) / 86400000;
       if (totalDays > 0) {
         const expectedPct = Math.min(100, (elapsedDays / totalDays) * 100);
-        if (childProgress < expectedPct * 0.7) return { color: '#D85A30', label: '滞后', lag: true };
+        if (childProgress < expectedPct * 0.7) return { color: 'var(--color-danger-light)', label: '滞后', lag: true };
       }
     }
     if (childProgress >= 30) return { color: '#639922', label: '平稳' };   // 绿
-    return { color: '#D85A30', label: '滞后', lag: true };                // 橙
+    return { color: 'var(--color-danger-light)', label: '滞后', lag: true };                // 橙
   };
 
   // 里程碑数据处理：合并「自身 + 子项目（仅顶层项目纵览子）」范围内的里程碑（不再向上继承父规划）
@@ -125,22 +126,22 @@ export default function ProjectDashboard({
   }, [allTasks, viewScopeIds, childProjects, allReports, taskFilter]);
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div>
       {/* ====== 层2: 子项目进度(左) + 里程碑(右) ====== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16, alignItems: 'start' }}>
         {/* 左列: 子项目进度 */}
-        <div style={{ background: '#fff', border: '0.5px solid rgba(0,0,0,0.06)', borderRadius: 16, padding: 16 }}>
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontWeight: 500, fontSize: 13 }}>
               {childProjects.length > 0 ? '子项目进度' : '项目进度'}
             </span>
             {childProjects.length > 0 && (
-              <span style={{ fontSize: 11, color: '#6b7a93', cursor: 'pointer' }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
                 点击查看详情 →
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {(childProjects.length > 0 ? childProjects : [project]).map(p => {
               const progressVal = childProjects.length > 0 ? getChildStats(p.id).progress : overallProgress;
               const cInfo = getProgressColor(progressVal, p.serviceStart, p.serviceEnd);
@@ -152,16 +153,17 @@ export default function ProjectDashboard({
                     <span style={{
                       color: cInfo.color, fontWeight: cInfo.lag ? 500 : 400,
                     }}>
-                      {progressVal}%{cInfo.lag ? ' ⚠' : ''}
+                      {progressVal}%{cInfo.lag ? ' ' : ''}
+                      {cInfo.lag && <Icon name="alert" size={12} color="#F59E0B" />}
                     </span>
                   </div>
-                  <div style={{ height: 6, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{
                       width: `${progressVal}%`, height: '100%',
                       background: cInfo.color, borderRadius: 3, transition: 'width 0.3s',
                     }} />
                   </div>
-                  <div style={{ fontSize: 11, color: cInfo.lag ? '#D85A30' : '#6b7a93', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: cInfo.lag ? 'var(--color-danger-light)' : 'var(--color-text-secondary)', marginTop: 2 }}>
                     {p.owner}{deadline ? ` · 预计${deadline}` : ''}
                     {cInfo.lag && ` · ${cInfo.label}`}
                   </div>
@@ -172,7 +174,7 @@ export default function ProjectDashboard({
         </div>
 
         {/* 右列: 里程碑时间轴 */}
-        <div style={{ background: '#fff', border: '0.5px solid rgba(0,0,0,0.06)', borderRadius: 16, padding: 16 }}>
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontWeight: 500, fontSize: 13 }}>里程碑路线图</span>
             {!isPublic && (
@@ -187,13 +189,13 @@ export default function ProjectDashboard({
               </div>
             )}
           </div>
-          <div style={{ position: 'relative', paddingLeft: 20 }}>
+          <div style={{ position: 'relative', paddingLeft: 20, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
             <div style={{
               position: 'absolute', left: 5, top: 6, bottom: 6,
-              width: 1.5, background: '#e5e7eb',
+              width: 1.5, background: 'var(--color-border)',
             }} />
             {milestoneEntries.length === 0 && (
-              <div style={{ padding: 20, textAlign: 'center', color: '#6b7a93', fontSize: 13 }}>
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
                 暂无里程碑，点击右上角添加
               </div>
             )}
@@ -203,32 +205,32 @@ export default function ProjectDashboard({
                   position: 'absolute', left: -18, top: 2, width: 10, height: 10, borderRadius: '50%',
                   background:
                     entry.type === '已完成' ? '#7F77DD' :
-                    entry.type === '已逾期' ? '#D85A30' :
-                    entry.type === '进行中' ? '#378ADD' : '#e5e7eb',
+                    entry.type === '已逾期' ? 'var(--color-danger-light)' :
+                    entry.type === '进行中' ? '#378ADD' : 'var(--color-border)',
                   border: entry.type === '待开始' ? '1.5px solid #bfc8d6' : 'none',
                 }} />
                 <span style={{
                   fontSize: 11, padding: '1px 6px', borderRadius: 8, fontWeight: 500,
                   background:
                     entry.type === '已完成' ? '#EEEDFE' :
-                    entry.type === '已逾期' ? '#FAEEDA' :
-                    entry.type === '进行中' ? '#E6F1FB' : '#f0f2f7',
+                    entry.type === '已逾期' ? 'var(--color-warning-bg)' :
+                    entry.type === '进行中' ? '#E6F1FB' : 'var(--color-bg-alt)',
                   color:
                     entry.type === '已完成' ? '#534AB7' :
-                    entry.type === '已逾期' ? '#854F0B' :
-                    entry.type === '进行中' ? '#185FA5' : '#6b7a93',
+                    entry.type === '已逾期' ? 'var(--color-warning)' :
+                    entry.type === '进行中' ? 'var(--color-primary-hover)' : 'var(--color-text-secondary)',
                 }}>
                   {entry.type === '已完成' ? '已完成' : entry.type === '已逾期' ? '已逾期' : entry.type === '进行中' ? '进行中' : '待开始'}
                 </span>
                 <p style={{ fontSize: 13, fontWeight: 500, margin: '4px 0 1px 0' }}>
                   {entry.name}
                   {entry.sourceName && entry.sourceName !== project.name && (
-                    <span style={{ fontSize: 10, fontWeight: 400, color: '#9aaec9', marginLeft: 6, background: '#f0f2f7', padding: '1px 6px', borderRadius: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--color-text-secondary)', marginLeft: 6, background: 'var(--color-bg-alt)', padding: '1px 6px', borderRadius: 8 }}>
                       来自 {entry.sourceName}
                     </span>
                   )}
                 </p>
-                <p style={{ fontSize: 11, color: '#6b7a93', margin: 0 }}>
+                <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0 }}>
                   {entry.date ? `目标 ${entry.date}` : ''}{entry.description ? ` · ${entry.description}` : ''}
                 </p>
               </div>
@@ -238,7 +240,7 @@ export default function ProjectDashboard({
       </div>
 
       {/* ====== 层3: 任务清单 ====== */}
-      <div style={{ background: '#fff', border: '0.5px solid rgba(0,0,0,0.06)', borderRadius: 16, padding: 16 }}>
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <span style={{ fontWeight: 500, fontSize: 13 }}>当前任务清单</span>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -248,9 +250,9 @@ export default function ProjectDashboard({
                 onClick={() => setTaskFilter(f)}
                 style={{
                   padding: '3px 10px', borderRadius: 8,
-                  border: `0.5px solid ${taskFilter === f ? '#4F8EF7' : 'rgba(0,0,0,0.08)'}`,
-                  background: taskFilter === f ? '#f0f5ff' : 'transparent',
-                  color: taskFilter === f ? '#4F8EF7' : '#6b7a93',
+                  border: `0.5px solid ${taskFilter === f ? 'var(--color-primary)' : 'var(--color-border-hover)'}`,
+                  background: taskFilter === f ? 'var(--color-primary-bg)' : 'transparent',
+                  color: taskFilter === f ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                   fontSize: 11, cursor: 'pointer', fontWeight: taskFilter === f ? 500 : 400,
                 }}
               >
@@ -270,7 +272,7 @@ export default function ProjectDashboard({
         </div>
 
         {displayTasks.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: '#6b7a93', fontSize: 13 }}>
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
             暂无任务数据
             {tasks.length === 0 && (
               <div style={{ marginTop: 8 }}>
@@ -281,7 +283,7 @@ export default function ProjectDashboard({
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ color: '#6b7a93', fontSize: 11, textAlign: 'left' }}>
+              <tr style={{ color: 'var(--color-text-secondary)', fontSize: 11, textAlign: 'left' }}>
                 <th style={{ padding: '8px 8px', fontWeight: 500, width: '26%' }}>任务</th>
                 <th style={{ padding: '8px 8px', fontWeight: 500, width: '10%' }}>状态</th>
                 <th style={{ padding: '8px 8px', fontWeight: 500, width: '8%' }}>优先级</th>
@@ -293,7 +295,7 @@ export default function ProjectDashboard({
             </thead>
             <tbody>
               {displayTasks.map((t) => (
-                <tr key={t.id} style={{ borderTop: '0.5px solid rgba(0,0,0,0.04)' }}>
+                <tr key={t.id} style={{ borderTop: '1px solid var(--color-border-light)' }}>
                   <td style={{ padding: '10px 8px', fontWeight: 500 }}>{t.title}</td>
                   <td style={{ padding: '10px 8px' }}>
                     <TaskStatusBadge status={t.status} />
@@ -301,28 +303,28 @@ export default function ProjectDashboard({
                   <td style={{ padding: '10px 8px' }}>
                     <TaskPriorityBadge priority={t.priority} />
                   </td>
-                  <td style={{ padding: '10px 8px', color: '#6b7a93' }}>{t.assignee}</td>
-                  <td style={{ padding: '10px 8px', color: '#6b7a93', fontSize: 11 }}>
+                  <td style={{ padding: '10px 8px', color: 'var(--color-text-secondary)' }}>{t.assignee}</td>
+                  <td style={{ padding: '10px 8px', color: 'var(--color-text-secondary)', fontSize: 11 }}>
                     {t.startDate || '--'}
                   </td>
                   <td style={{
                     padding: '10px 8px',
-                    color: t.deadline && t.deadline < today && t.status !== '已完成' ? '#D85A30' : '#6b7a93',
+                    color: t.deadline && t.deadline < today && t.status !== '已完成' ? 'var(--color-danger-light)' : 'var(--color-text-secondary)',
                   }}>
                     {t.deadline || '--'}
                   </td>
                   <td style={{ padding: '10px 8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ flex: 1, height: 4, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, height: 4, background: 'var(--color-border)', borderRadius: 2, overflow: 'hidden' }}>
                         <div style={{
                           width: `${t.progress}%`, height: '100%',
-                          background: t.status === '有风险' ? '#D85A30' : t.status === '已完成' ? '#639922' : '#378ADD',
+                          background: t.status === '有风险' ? 'var(--color-danger-light)' : t.status === '已完成' ? '#639922' : '#378ADD',
                           borderRadius: 2,
                         }} />
                       </div>
                       <span style={{
                         fontSize: 11,
-                        color: t.status === '有风险' ? '#D85A30' : '#6b7a93',
+                        color: t.status === '有风险' ? 'var(--color-danger-light)' : 'var(--color-text-secondary)',
                       }}>
                         {t.status === '待开始' ? '--' : `${t.progress}%`}
                       </span>
@@ -336,7 +338,7 @@ export default function ProjectDashboard({
       </div>
 
       {/* 信息层级说明 */}
-      <p style={{ fontSize: 11, color: '#9aaec9', marginTop: 14, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 14, lineHeight: 1.6 }}>
         信息层级：顶部综合进度（见详情页统一栏）→ PMO/管理层快速扫读 → 中部子项目进度 + 里程碑 → 中层管理者追踪 → 底部任务清单 → 团队每日执行。一页打通三层视角。
       </p>
     </div>
@@ -346,10 +348,10 @@ export default function ProjectDashboard({
 /** 任务状态 Badge */
 function TaskStatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; color: string; text: string }> = {
-    '已完成': { bg: '#EAF3DE', color: '#3B6D11', text: '已完成' },
-    '进行中': { bg: '#E1F5EE', color: '#0F6E56', text: '进行中' },
-    '有风险': { bg: '#FAEEDA', color: '#854F0B', text: '有风险' },
-    '待开始': { bg: '#f0f2f7', color: '#6b7a93', text: '待开始' },
+    '已完成': { bg: 'var(--color-success-bg)', color: '#3B6D11', text: '已完成' },
+    '进行中': { bg: 'var(--color-success-bg)', color: 'var(--color-success)', text: '进行中' },
+    '有风险': { bg: 'var(--color-warning-bg)', color: 'var(--color-warning)', text: '有风险' },
+    '待开始': { bg: 'var(--color-bg-alt)', color: 'var(--color-text-secondary)', text: '待开始' },
   };
   const s = map[status] || map['待开始'];
   return (
@@ -367,8 +369,8 @@ function TaskPriorityBadge({ priority }: { priority: string }) {
   return (
     <span style={{
       padding: '2px 6px', borderRadius: 4, fontSize: 11,
-      background: priority === 'P0' ? '#FCEBEB' : priority === 'P1' ? '#FAEEDA' : '#f0f2f7',
-      color: priority === 'P0' ? '#A32D2D' : priority === 'P1' ? '#854F0B' : '#6b7a93',
+      background: priority === 'P0' ? 'var(--color-danger-bg)' : priority === 'P1' ? 'var(--color-warning-bg)' : 'var(--color-bg-alt)',
+      color: priority === 'P0' ? 'var(--color-danger)' : priority === 'P1' ? 'var(--color-warning)' : 'var(--color-text-secondary)',
     }}>
       {priority}
     </span>

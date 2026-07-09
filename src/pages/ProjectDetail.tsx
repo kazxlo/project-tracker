@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast';
 import { getLatestReport, getTodayStr, filterVisibleProjects, genId, calcOverallProgress, calcProjectProgress, COLOR_PALETTE } from '../utils/helpers';
 import type { Project, WeeklyReport, Risk, Milestone, ProjectTask } from '../types';
 import ChildProjectCard from '../components/ChildProjectCard';
+import Icon from '../components/Icon';
 import ProjectDashboard from '../components/ProjectDashboard';
 import ProjectPlanEditor from '../components/ProjectPlanEditor';
 import Toast from '../components/Toast';
@@ -201,7 +202,7 @@ export default function ProjectDetail() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 60, color: '#6b7a93' }}>
+      <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)' }}>
         加载中...
       </div>
     );
@@ -373,7 +374,7 @@ export default function ProjectDetail() {
                       <div className={shared.reportRowStats}>
                         完成{r.completedItems.length}项 · 计划{r.plannedItems.length}项 · 风险{r.risks.length}项
                         {updatedTime && (
-                          <span style={{ marginLeft: 12, fontSize: 11, color: '#9aaec9' }}>最后修改 {updatedTime}</span>
+                          <span style={{ marginLeft: 12, fontSize: 11, color: 'var(--color-text-secondary)' }}>最后修改 {updatedTime}</span>
                         )}
                       </div>
                     </div>
@@ -446,14 +447,14 @@ export default function ProjectDetail() {
                 });
                 const items = Array.from(seen.values());
                 if (items.length === 0) {
-                  return <div className={shared.drillItem} style={{ color: '#6b7a93', textAlign: 'center', padding: 24 }}>暂无数据</div>;
+                  return <div className={shared.drillItem} style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: 24 }}>暂无数据</div>;
                 }
                 return items.map((item, j) => (
                   <div key={j} className={shared.drillItem} style={{ padding: '8px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#2d8a4e' }}>{item.risk.level}</span>
+                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? 'var(--color-danger-bg)' : item.risk.level === '中' ? 'var(--color-warning-bg)' : 'var(--color-success-bg)', color: item.risk.level === '高' ? 'var(--color-danger)' : item.risk.level === '中' ? 'var(--color-warning)' : 'var(--color-success)' }}>{item.risk.level}</span>
                       <span style={{ fontWeight: 500, fontSize: 13 }}>{item.risk.description}</span>
-                      <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f2f7', color: '#6b7a93' }}>{item.projectName}</span>
+                      <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: 'var(--color-bg-alt)', color: 'var(--color-text-secondary)' }}>{item.projectName}</span>
                       {canEdit ? (
                         <select
                           className={shared.statusSelectSm}
@@ -461,21 +462,25 @@ export default function ProjectDetail() {
                           disabled={savingRiskKey === item.risk.description}
                           onChange={(e) => handleRiskStatusChange(item.projectId, item.risk.description, e.target.value)}
                         >
-                          <option value="待处理">⏳ 待处理</option>
-                          <option value="持续关注">👁 持续关注</option>
-                          <option value="已解决">✓ 已解决</option>
+                          <option value="待处理">待处理</option>
+                          <option value="持续关注">持续关注</option>
+                          <option value="已解决">已解决</option>
                         </select>
                       ) : (
-                        <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f2f7', color: '#6b7a93' }}>{item.risk.status}</span>
+                        <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: 'var(--color-bg-alt)', color: 'var(--color-text-secondary)' }}>{item.risk.status}</span>
                       )}
                     </div>
                     {item.risk.suggestion && (
-                      <div style={{ fontSize: 12, color: '#6b7a93', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', paddingLeft: 48, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="lightbulb" size={12} color="#F59E0B" /> 建议：{item.risk.suggestion}
+                      </div>
                     )}
                     {riskDrillDown === 'resolved' && item.risk.resolvedAt && (
-                      <div style={{ fontSize: 12, color: '#4ADE80', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-success)', paddingLeft: 48, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="check" size={12} color="#10B981" /> 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}
+                      </div>
                     )}
-                    <div style={{ fontSize: 11, color: '#6b7a93', paddingLeft: 48 }}>来源：{item.projectName} · {item.weekLabel}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', paddingLeft: 48 }}>来源：{item.projectName} · {item.weekLabel}</div>
                   </div>
                 ));
               })()}
@@ -569,7 +574,7 @@ export default function ProjectDetail() {
                       onChange={e => setChildModal(prev => ({ ...prev, form: { ...prev.form, progress: Number(e.target.value) } }))}
                       style={{ width: '100%' }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7a93' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-secondary)' }}>
                       <span>0%</span><span>50%</span><span>100%</span>
                     </div>
                   </div>
@@ -768,7 +773,7 @@ export default function ProjectDetail() {
                 <div className={shared.reportRowStats}>
                   完成{r.completedItems.length}项 · 计划{r.plannedItems.length}项 · 风险{r.risks.length}项
                   {updatedTime && (
-                    <span style={{ marginLeft: 12, fontSize: 11, color: '#9aaec9' }}>最后修改 {updatedTime}</span>
+                    <span style={{ marginLeft: 12, fontSize: 11, color: 'var(--color-text-secondary)' }}>最后修改 {updatedTime}</span>
                   )}
                 </div>
               </div>
@@ -813,12 +818,12 @@ export default function ProjectDetail() {
                 const h = Math.max(8, r.completedItems.length * 30);
                 return (
                   <div key={r.id} className={shared.barCol}>
-                    <div className={shared.barValue} style={{ color: '#4F8EF7' }}>{r.completedItems.length}</div>
+                    <div className={shared.barValue} style={{ color: 'var(--color-primary)' }}>{r.completedItems.length}</div>
                     <div
                       className={shared.barBody}
                       style={{
                         height: h,
-                        background: '#4F8EF7',
+                        background: 'var(--color-primary)',
                         opacity: 0.4 + (i / reports.length) * 0.6,
                       }}
                     />
@@ -859,12 +864,12 @@ export default function ProjectDetail() {
               });
               const items = Array.from(seen.values());
               if (items.length === 0) {
-                return <div className={shared.drillItem} style={{ color: '#6b7a93', textAlign: 'center', padding: 24 }}>暂无数据</div>;
+                return <div className={shared.drillItem} style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: 24 }}>暂无数据</div>;
               }
               return items.map((item, j) => (
                 <div key={j} className={shared.drillItem} style={{ padding: '8px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#2d8a4e' }}>{item.risk.level}</span>
+                    <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: item.risk.level === '高' ? 'var(--color-danger-bg)' : item.risk.level === '中' ? 'var(--color-warning-bg)' : 'var(--color-success-bg)', color: item.risk.level === '高' ? 'var(--color-danger)' : item.risk.level === '中' ? 'var(--color-warning)' : 'var(--color-success)' }}>{item.risk.level}</span>
                     <span style={{ fontWeight: 500, fontSize: 13 }}>{item.risk.description}</span>
                     {canEdit ? (
                       <select
@@ -878,21 +883,25 @@ export default function ProjectDetail() {
                         <option value="已解决">✓ 已解决</option>
                       </select>
                     ) : (
-                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f2f7', color: '#6b7a93' }}>
+                      <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: 'var(--color-bg-alt)', color: 'var(--color-text-secondary)' }}>
                         {item.risk.status}
                       </span>
                     )}
                     {savingRiskKey === item.risk.description && (
-                      <span style={{ fontSize: 11, color: '#6b7a93' }}>保存中…</span>
+                      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>保存中…</span>
                     )}
                   </div>
                   {item.risk.suggestion && (
-                    <div style={{ fontSize: 12, color: '#6b7a93', paddingLeft: 48 }}>💡 建议：{item.risk.suggestion}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', paddingLeft: 48, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="lightbulb" size={12} color="#F59E0B" /> 建议：{item.risk.suggestion}
+                      </div>
                   )}
                   {riskDrillDown === 'resolved' && item.risk.resolvedAt && (
-                    <div style={{ fontSize: 12, color: '#4ADE80', paddingLeft: 48 }}>✓ 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-success)', paddingLeft: 48, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="check" size={12} color="#10B981" /> 处理时间：{new Date(item.risk.resolvedAt).toLocaleDateString('zh-CN')}
+                      </div>
                   )}
-                  <div style={{ fontSize: 11, color: '#6b7a93', paddingLeft: 48 }}>来源：{item.weekLabel}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', paddingLeft: 48 }}>来源：{item.weekLabel}</div>
                 </div>
               ));
             })()}
@@ -998,7 +1007,7 @@ function buildSummaryData(params: {
 /** 圆环进度（与 ProjectDashboard 保持一致） */
 function RingProgress({ pct, size = 56 }: { pct: number; size?: number }) {
   const deg = (pct / 100) * 360;
-  const color = pct >= 80 ? '#639922' : pct >= 50 ? '#378ADD' : '#D85A30';
+  const color = pct >= 80 ? '#639922' : pct >= 50 ? '#378ADD' : 'var(--color-danger-light)';
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
@@ -1007,7 +1016,7 @@ function RingProgress({ pct, size = 56 }: { pct: number; size?: number }) {
     }}>
       <div style={{
         width: size - 12, height: size - 12, borderRadius: '50%',
-        background: '#fff',
+        background: 'var(--color-surface)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <span style={{ fontSize: size * 0.27, fontWeight: 500, color }}>{pct}%</span>
@@ -1028,29 +1037,29 @@ function DetailSummaryBar({
 }) {
   const item = (label: string, value: ReactNode, onClick?: () => void, color?: string) => (
     <div key={label} onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
-      <div style={{ fontSize: 22, fontWeight: 500, color: color || '#1c2a44' }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 500, color: color || 'var(--color-text)' }}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{label}</div>
     </div>
   );
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 24, background: '#fff',
-      border: '0.5px solid rgba(0,0,0,0.06)', borderRadius: 16, padding: '18px 22px', marginBottom: 16,
+      display: 'flex', alignItems: 'center', gap: 24, background: 'var(--color-surface)',
+      border: '1px solid var(--color-border)', borderRadius: 16, padding: '18px 22px', marginBottom: 16,
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 80 }}>
         <RingProgress pct={progress} />
-        <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 6 }}>综合进度</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6 }}>综合进度</div>
       </div>
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 14 }}>
-        {item(subLabel, subClick ? <span style={{ color: '#185FA5' }}>{subValue}</span> : subValue, subClick)}
+        {item(subLabel, subClick ? <span style={{ color: 'var(--color-primary-hover)' }}>{subValue}</span> : subValue, subClick)}
         {item('累计周报', totalReports)}
         {item('本周完成', `${weekCompleted} 项`)}
-        {item('当前风险', activeRisk, () => onDrill('active'), activeRisk > 0 ? '#D85A30' : undefined)}
+        {item('当前风险', activeRisk, () => onDrill('active'), activeRisk > 0 ? 'var(--color-danger-light)' : undefined)}
         {item('已处理风险', resolvedRisk, () => onDrill('resolved'))}
         {item('预计交付', delivery ? delivery.slice(5) : '--')}
         {remainingDays >= 0 && (
           <div>
-            <div style={{ fontSize: 11, color: remainingDays <= 14 ? '#D85A30' : '#6b7a93' }}>
+            <div style={{ fontSize: 11, color: remainingDays <= 14 ? 'var(--color-danger-light)' : 'var(--color-text-secondary)' }}>
               剩余 {remainingDays} 天
             </div>
           </div>
@@ -1120,10 +1129,10 @@ function SummaryView({
         <div className={shared.summarySection}>
           <h3 className={shared.summarySectionTitle}>本周重点工作</h3>
           {latest?.completedItems.length === 0
-            ? <p className={shared.summaryText} style={{ color: '#6b7a93' }}>暂无记录</p>
+            ? <p className={shared.summaryText} style={{ color: 'var(--color-text-secondary)' }}>暂无记录</p>
             : latest?.completedItems.map((item, i) => (
                 <div key={item.id} className={`${shared.clientItem} ${i < (latest?.completedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
-                  <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
+                  <span style={{ color: 'var(--color-text-secondary)', marginRight: 8 }}>{item.order}.</span>
                   <span style={{ fontWeight: 500 }}>{item.title}</span>
                 </div>
               ))
@@ -1135,10 +1144,10 @@ function SummaryView({
         <div className={shared.summarySection}>
           <h3 className={shared.summarySectionTitle}>下周工作计划</h3>
           {latest?.plannedItems.length === 0
-            ? <p className={shared.summaryText} style={{ color: '#6b7a93' }}>暂无计划</p>
+            ? <p className={shared.summaryText} style={{ color: 'var(--color-text-secondary)' }}>暂无计划</p>
             : latest?.plannedItems.map((item, i) => (
                 <div key={item.id} className={`${shared.clientItem} ${i < (latest?.plannedItems.length || 0) - 1 ? shared.clientItemBorder : ''}`}>
-                  <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
+                  <span style={{ color: 'var(--color-text-secondary)', marginRight: 8 }}>{item.order}.</span>
                   {item.title}
                 </div>
               ))
@@ -1162,7 +1171,7 @@ function SummaryView({
                 <div className={shared.summarySubProjectName}>
                   <span className={shared.summarySubProjectDot} style={{ background: c.color }} />
                   {c.name}
-                  <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#EAF3DE', color: '#2d8a4e' }}>
+                  <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
                     {c.status} · {stats.progress}%
                   </span>
                 </div>
@@ -1173,23 +1182,23 @@ function SummaryView({
                   <div className={shared.summarySubProjectItems}>
                     {hasChildren ? (
                       <>
-                        <div className={shared.summarySubProjectItem} style={{ color: '#6b7a93', fontWeight: 500, marginTop: 4 }}>
+                        <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-secondary)', fontWeight: 500, marginTop: 4 }}>
                           周报时间：{clatest.weekLabel}（{clatest.weekStart} - {clatest.weekEnd}）
                         </div>
                         {clatest.goals ? (
                           <>
-                            <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>建设目标:</div>
-                            <div className={shared.summarySubProjectItem} style={{ color: '#6b7a93' }}>{clatest.goals}</div>
+                            <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-accent)', fontWeight: 500, marginTop: 4 }}>建设目标:</div>
+                            <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-secondary)' }}>{clatest.goals}</div>
                           </>
                         ) : null}
                         {clatest.highlights ? (
                           <>
-                            <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>重点内容:</div>
-                            <div className={shared.summarySubProjectItem} style={{ color: '#6b7a93' }}>{clatest.highlights}</div>
+                            <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-accent)', fontWeight: 500, marginTop: 4 }}>重点内容:</div>
+                            <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-secondary)' }}>{clatest.highlights}</div>
                           </>
                         ) : null}
                         {clatest.plannedItems.length > 0 && (
-                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>下周工作计划:</div>
+                          <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-accent)', fontWeight: 500, marginTop: 4 }}>下周工作计划:</div>
                         )}
                         {clatest.plannedItems.map(pi => (
                           <div key={pi.id} className={shared.summarySubProjectItem}>• {pi.title}</div>
@@ -1198,22 +1207,22 @@ function SummaryView({
                     ) : (
                       <>
                         {clatest.completedItems.length > 0 && (
-                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>本周完成:</div>
+                          <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-accent)', fontWeight: 500, marginTop: 4 }}>本周完成:</div>
                         )}
                         {clatest.completedItems.slice(0, 3).map(ci => (
                           <div key={ci.id} className={shared.summarySubProjectItem}>• {ci.title}</div>
                         ))}
                         {clatest.plannedItems.length > 0 && (
-                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>下周计划:</div>
+                          <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-accent)', fontWeight: 500, marginTop: 4 }}>下周计划:</div>
                         )}
                         {clatest.plannedItems.slice(0, 3).map(pi => (
                           <div key={pi.id} className={shared.summarySubProjectItem}>• {pi.title}</div>
                         ))}
                         {clatest.risks.filter(rk => rk.status !== '已解决').length > 0 && (
-                          <div className={shared.summarySubProjectItem} style={{ color: '#3d5a80', fontWeight: 500, marginTop: 4 }}>当前风险:</div>
+                          <div className={shared.summarySubProjectItem} style={{ color: 'var(--color-text-accent)', fontWeight: 500, marginTop: 4 }}>当前风险:</div>
                         )}
                         {clatest.risks.filter(rk => rk.status !== '已解决').slice(0, 3).map(rk => (
-                          <div key={rk.id} className={shared.summarySubProjectItem} style={{ color: '#FB923C' }}>• [{rk.level}] {rk.description}</div>
+                          <div key={rk.id} className={shared.summarySubProjectItem} style={{ color: 'var(--color-danger-light)' }}>• [{rk.level}] {rk.description}</div>
                         ))}
                       </>
                     )}
@@ -1245,13 +1254,13 @@ function SummaryView({
               return (order[a.risk.level] ?? 9) - (order[b.risk.level] ?? 9);
             });
             if (items.length === 0) {
-              return <p className={shared.summaryText} style={{ color: '#6b7a93' }}>暂无风险</p>;
+              return <p className={shared.summaryText} style={{ color: 'var(--color-text-secondary)' }}>暂无风险</p>;
             }
             return items.map((item, i) => (
               <div key={i} className={shared.summaryRiskItem}>
                 <span className={shared.summaryRiskLevel} style={{
-                  background: item.risk.level === '高' ? '#FCEBEB' : item.risk.level === '中' ? '#FAEEDA' : '#EAF3DE',
-                  color: item.risk.level === '高' ? '#A32D2D' : item.risk.level === '中' ? '#854F0B' : '#2d8a4e',
+                  background: item.risk.level === '高' ? 'var(--color-danger-bg)' : item.risk.level === '中' ? 'var(--color-warning-bg)' : 'var(--color-success-bg)',
+                  color: item.risk.level === '高' ? 'var(--color-danger)' : item.risk.level === '中' ? 'var(--color-warning)' : 'var(--color-success)',
                 }}>
                   {item.risk.level}
                 </span>
@@ -1259,7 +1268,7 @@ function SummaryView({
                   {item.risk.description}
                   {item.risk.suggestion ? ` — ${item.risk.suggestion}` : ''}
                 </span>
-                <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: '#f0f2f7', color: '#6b7a93' }}>
+                <span className={shared.badge} style={{ fontSize: 10, padding: '1px 6px', background: 'var(--color-bg-alt)', color: 'var(--color-text-secondary)' }}>
                   {item.projectName}
                 </span>
               </div>
@@ -1294,14 +1303,14 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
 
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>建设目标</h3>
-        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: '#3d5a80' }}>
+        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: 'var(--color-text-accent)' }}>
           {latest.goals || latest.summary || '暂无'}
         </p>
       </div>
 
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>重点内容</h3>
-        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: '#3d5a80' }}>
+        <p className={shared.clientItem} style={{ lineHeight: 1.8, color: 'var(--color-text-accent)' }}>
           {latest.highlights || '暂无'}
         </p>
       </div>
@@ -1309,26 +1318,26 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>本周工作情况</h3>
         {latest.completedItems.length === 0
-          ? <p className={shared.clientItem} style={{ color: '#6b7a93' }}>暂无记录</p>
+          ? <p className={shared.clientItem} style={{ color: 'var(--color-text-secondary)' }}>暂无记录</p>
           : latest.completedItems.map((item, i) => (
               <div
                 key={item.id}
                 className={`${shared.clientItem} ${i < latest.completedItems.length - 1 ? shared.clientItemBorder : ''}`}
               >
-                <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
+                <span style={{ color: 'var(--color-text-secondary)', marginRight: 8 }}>{item.order}.</span>
                 <span style={{ fontWeight: 500 }}>{item.title}</span>
                 {detailed && item.progress && (
-                  <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 4, paddingLeft: 20 }}>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4, paddingLeft: 20 }}>
                     进展：{item.progress}
                   </div>
                 )}
                 {detailed && item.acceptance && (
-                  <div style={{ fontSize: 12, color: '#6b7a93', marginTop: 2, paddingLeft: 20 }}>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2, paddingLeft: 20 }}>
                     验收：{item.acceptance}
                   </div>
                 )}
                 {!detailed && item.detail && (
-                  <span style={{ color: '#6b7a93' }}> — {item.detail}</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}> — {item.detail}</span>
                 )}
               </div>
             ))
@@ -1338,13 +1347,13 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
       <div className={shared.clientSection}>
         <h3 className={shared.clientH3}>下周工作计划</h3>
         {latest.plannedItems.length === 0
-          ? <p className={shared.clientItem} style={{ color: '#6b7a93' }}>暂无计划</p>
+          ? <p className={shared.clientItem} style={{ color: 'var(--color-text-secondary)' }}>暂无计划</p>
           : latest.plannedItems.map((item, i) => (
               <div
                 key={item.id}
                 className={`${shared.clientItem} ${i < latest.plannedItems.length - 1 ? shared.clientItemBorder : ''}`}
               >
-                <span style={{ color: '#6b7a93', marginRight: 8 }}>{item.order}.</span>
+                <span style={{ color: 'var(--color-text-secondary)', marginRight: 8 }}>{item.order}.</span>
                 {item.title}
               </div>
             ))
@@ -1353,23 +1362,23 @@ function ClientViewPanel({ project, reports }: { project: Project; reports: Week
 
       <h3 className={shared.clientH3}>风险提示</h3>
       {latest.risks.length === 0
-        ? <p className={shared.clientItem} style={{ color: '#6b7a93' }}>本周无风险项</p>
+        ? <p className={shared.clientItem} style={{ color: 'var(--color-text-secondary)' }}>本周无风险项</p>
         : latest.risks.map((risk, i) => (
             <div
               key={risk.id}
               className={`${shared.clientItem} ${i < latest.risks.length - 1 ? shared.clientItemBorder : ''}`}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: risk.level === '高' ? '#FCEBEB' : risk.level === '中' ? '#FAEEDA' : '#EAF3DE', color: risk.level === '高' ? '#A32D2D' : risk.level === '中' ? '#854F0B' : '#2d8a4e' }}>{risk.level}</span>
-                <span style={{ color: '#6b7a93', fontSize: 12 }}>{risk.order}.</span>
+                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: risk.level === '高' ? 'var(--color-danger-bg)' : risk.level === '中' ? 'var(--color-warning-bg)' : 'var(--color-success-bg)', color: risk.level === '高' ? 'var(--color-danger)' : risk.level === '中' ? 'var(--color-warning)' : 'var(--color-success)' }}>{risk.level}</span>
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{risk.order}.</span>
                 <span style={{ fontSize: 13 }}>{risk.description}</span>
-                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: '#f0f2f7', color: '#6b7a93' }}>
+                <span className={shared.badge} style={{ fontSize: 11, padding: '1px 8px', background: 'var(--color-bg-alt)', color: 'var(--color-text-secondary)' }}>
                   {risk.status}
                 </span>
               </div>
               {risk.suggestion && (
-                <div style={{ fontSize: 12, color: '#6b7a93', paddingLeft: 60 }}>
-                  💡 建议：{risk.suggestion}
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', paddingLeft: 60, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="lightbulb" size={12} color="#F59E0B" /> 建议：{risk.suggestion}
                 </div>
               )}
             </div>

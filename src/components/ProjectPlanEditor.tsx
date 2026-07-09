@@ -298,12 +298,12 @@ function MilestoneEditor({
                 {m.projectId !== projectId && (
                   <span className={shared.badge} style={{
                     fontSize: 10, padding: '1px 8px',
-                    background: '#E6F1FB', color: '#185FA5',
+                    background: 'var(--color-primary-bg)', color: 'var(--color-primary-hover)',
                   }}>归属: {targetOptions.find(o => o.id === m.projectId)?.name || '未知'}</span>
                 )}
               </div>
-              {m.targetDate && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>目标日期: {m.targetDate}</div>}
-              {m.description && <div style={{ fontSize: 11, color: '#6b7a93', marginTop: 2 }}>{m.description}</div>}
+              {m.targetDate && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>目标日期: {m.targetDate}</div>}
+              {m.description && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{m.description}</div>}
             </div>
             {!readOnly && (
               <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -434,9 +434,9 @@ function TaskEditor({
 
   const statusBadge = (status: string) => {
     const map: Record<string, { bg: string; color: string }> = {
-      '待开始': { bg: '#f0f2f7', color: '#6b7a93' },
-      '进行中': { bg: '#E1F5EE', color: '#0F6E56' },
-      '已完成': { bg: '#EAF3DE', color: '#3B6D11' },
+      '待开始': { bg: '#f0f2f7', color: 'var(--color-text-secondary)' },
+      '进行中': { bg: '#E1F5EE', color: 'var(--color-success)' },
+      '已完成': { bg: '#EAF3DE', color: 'var(--color-success)' },
       '有风险': { bg: '#FAEEDA', color: '#854F0B' },
     };
     const s = map[status] || map['待开始'];
@@ -470,7 +470,7 @@ function TaskEditor({
                 {t.milestoneId && (
                   <span className={shared.badge} style={{
                     fontSize: 10, padding: '1px 6px',
-                    background: '#EEEDFE', color: '#534AB7',
+                    background: 'var(--color-primary-bg)', color: '#534AB7',
                   }}>
                     {milestones.find(m => m.id === t.milestoneId)?.name || '未知里程碑'}
                   </span>
@@ -478,17 +478,17 @@ function TaskEditor({
                 {t.projectId !== projectId && (
                   <span className={shared.badge} style={{
                     fontSize: 10, padding: '1px 6px',
-                    background: '#E6F1FB', color: '#185FA5',
+                    background: 'var(--color-primary-bg)', color: 'var(--color-primary-hover)',
                   }}>归属: {targetOptions.find(o => o.id === t.projectId)?.name || '未知'}</span>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#6b7a93' }}>
+              <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--color-text-secondary)' }}>
                 {t.assignee && <span>负责人: {t.assignee}</span>}
                 {t.startDate && <span>开始: {t.startDate}</span>}
                 {t.deadline && <span>截止: {t.deadline}</span>}
                 <span>进度: {t.progress}%</span>
               </div>
-              <div style={{ marginTop: 4, height: 3, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ marginTop: 4, height: 3, background: 'var(--color-border)', borderRadius: 2, overflow: 'hidden' }}>
                 <div style={{
                   width: `${t.progress}%`, height: '100%',
                   background: t.status === '有风险' ? '#D85A30' : t.status === '已完成' ? '#639922' : '#378ADD',
@@ -572,10 +572,10 @@ function TaskEditor({
               </select>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12, color: '#6b7a93', whiteSpace: 'nowrap' }}>进度: {editing.progress}%</span>
+              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>进度: {editing.progress}%</span>
               <input type="range" min={0} max={100} value={editing.progress}
                 onChange={e => setEditing({ ...editing, progress: Number(e.target.value) })}
-                style={{ flex: 1, height: 4, accentColor: '#4F8EF7' }} />
+                style={{ flex: 1, height: 4, accentColor: 'var(--color-primary)' }} />
             </div>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
               <button className={shared.btnToolbar} onClick={cancel}>取消</button>

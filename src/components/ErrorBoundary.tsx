@@ -1,4 +1,5 @@
 import { Component, ReactNode } from 'react';
+import Icon from './Icon';
 
 interface Props {
   children: ReactNode;
@@ -27,12 +28,12 @@ export default class ErrorBoundary extends Component<Props, State> {
           justifyContent: 'center',
           padding: 40,
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          color: '#333',
-          background: '#f5f5f5',
+          color: 'var(--color-text)',
+          background: 'var(--color-bg)',
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠</div>
+          <Icon name="alert" size={48} color="#EF4444" />
           <h2 style={{ fontSize: 20, fontWeight: 500, marginBottom: 12 }}>页面出现错误</h2>
-          <p style={{ fontSize: 14, color: '#999', marginBottom: 24 }}>
+          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 24 }}>
             {this.state.error?.message || '未知错误'}
           </p>
           <button
@@ -40,8 +41,8 @@ export default class ErrorBoundary extends Component<Props, State> {
               window.location.href = '/';
             }}
             style={{
-              background: '#4F8EF7',
-              color: '#fff',
+              background: 'var(--color-primary)',
+              color: 'var(--color-text-inverse)',
               border: 'none',
               borderRadius: 8,
               padding: '10px 24px',

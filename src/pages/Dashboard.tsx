@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import Icon from '../components/Icon';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { getTodayStr, getLatestReport, COLOR_PALETTE, filterVisibleProjects, genId } from '../utils/helpers';
 import type { Project } from '../types';
@@ -225,7 +226,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-muted)' }}>
         加载中...
       </div>
     );
@@ -245,7 +246,7 @@ export default function Dashboard() {
           )}
           {!isPublic && (
             <button className={shared.btnToolbar} onClick={() => setShowExportModal(true)}>
-              📄 导出PDF
+              <Icon name="download" size={14} /> 导出PDF
             </button>
           )}
           {isAdmin && (
@@ -287,8 +288,8 @@ export default function Dashboard() {
                 : '';
               return (
                 <div key={p.id} style={{
-                  background: '#FFF3E0',
-                  border: '1px solid #FF9800',
+                  background: 'var(--color-danger-bg)',
+                  border: '1px solid var(--color-warning)',
                   borderRadius: 8,
                   padding: '10px 16px',
                   display: 'flex',
@@ -296,8 +297,8 @@ export default function Dashboard() {
                   gap: 8,
                   fontSize: 13,
                 }}>
-                  <span style={{ fontSize: 16 }}>⚠️</span>
-                  <span style={{ flex: 1, color: '#E65100' }}>
+                  <Icon name="alert" size={16} color="#D85A30" />
+                  <span style={{ flex: 1, color: 'var(--color-danger)' }}>
                     <strong>{p.name}</strong> 项目已超过预估截止时间（{deadlineStr}），请核实并控制交付质量。{extInfo}
                   </span>
                 </div>
@@ -335,7 +336,7 @@ export default function Dashboard() {
                   <div className={shared.statLabel}>周报(期)</div>
                 </div>
                 <div>
-                  <div className={shared.statValue} style={{ color: stats.risks > 0 ? '#FB923C' : '#1c2a44' }}>
+                  <div className={shared.statValue} style={{ color: stats.risks > 0 ? 'var(--color-danger-light)' : 'var(--color-text)' }}>
                     {stats.risks}
                   </div>
                   <div className={shared.statLabel}>风险项</div>
@@ -389,9 +390,9 @@ export default function Dashboard() {
           <h3 className={shared.sectionTitle}>整体汇总</h3>
           <div className={shared.summaryGrid}>
             {[
-              { key: 'completed', val: totalCompleted, label: '累计完成事项', color: '#4F8EF7' },
-              { key: 'planned', val: remainingPlanned, label: '剩余计划事项', color: '#4ADE80' },
-              { key: 'risks', val: totalRisks, label: '累计风险项', color: '#FB923C' },
+              { key: 'completed', val: totalCompleted, label: '累计完成事项', color: 'var(--color-primary)' },
+              { key: 'planned', val: remainingPlanned, label: '剩余计划事项', color: 'var(--color-success)' },
+              { key: 'risks', val: totalRisks, label: '累计风险项', color: 'var(--color-danger-light)' },
               { key: 'members', val: projects.filter(p => !p.parentId).length, label: '协作成员', color: '#7F77DD' },
             ].map((item, i) => (
               <div
@@ -427,7 +428,7 @@ export default function Dashboard() {
                     {p.name}
                   </div>
                   <div className={shared.drillItem}>
-                    负责人：<span style={{ fontWeight: 500, color: '#333' }}>{p.owner}</span>
+                    负责人：<span style={{ fontWeight: 500, color: 'var(--color-text)' }}>{p.owner}</span>
                     <span className={shared.drillOwner}> · 状态：{p.status} · 启动：{p.startDate}</span>
                   </div>
                 </div>
@@ -482,7 +483,7 @@ export default function Dashboard() {
               })
             )}
             {drillDown !== 'members' && (
-              <div className={shared.drillItem} style={{ color: '#999', textAlign: 'center', marginTop: 12 }}>
+              <div className={shared.drillItem} style={{ color: 'var(--color-text-muted)', textAlign: 'center', marginTop: 12 }}>
                 — 共 {drillDown === 'completed' ? totalCompleted : drillDown === 'planned' ? remainingPlanned : totalRisks} 项 —
               </div>
             )}
@@ -541,15 +542,15 @@ export default function Dashboard() {
                 </div>
                 <div className={shared.formGroup}>
                   {editForm.deadlineExtensions && editForm.deadlineExtensions > 0 ? (
-                    <div style={{ fontSize: 12, color: '#FB923C', paddingTop: 20 }}>
-                      ⚠ 已延期{editForm.deadlineExtensions}次
+                    <div style={{ fontSize: 12, color: 'var(--color-danger-light)', paddingTop: 20 }}>
+                      <Icon name="alert" size={12} color="#D85A30" /> 已延期{editForm.deadlineExtensions}次
                       {editForm.lastDeadline ? `，上一次截止时间：${(() => {
                         const ld = new Date(editForm.lastDeadline + 'T00:00:00');
                         return `${ld.getFullYear()}年${String(ld.getMonth() + 1).padStart(2, '0')}月${String(ld.getDate()).padStart(2, '0')}日`;
                       })()}` : ''}
                     </div>
                   ) : (
-                    <div style={{ fontSize: 12, color: '#999', paddingTop: 20 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', paddingTop: 20 }}>
                       设定后若逾期且进度未达100%将提示
                     </div>
                   )}
@@ -633,7 +634,7 @@ export default function Dashboard() {
                     type="checkbox"
                     checked={!!editForm.detailedItems}
                     onChange={e => setEditForm({ ...editForm, detailedItems: e.target.checked })}
-                    style={{ marginRight: 6, accentColor: '#4F8EF7' }}
+                    style={{ marginRight: 6, accentColor: 'var(--color-primary)' }}
                   />
                   完成事项启用「子项目进展 / 验收资料进展」三字段结构
                 </label>

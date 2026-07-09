@@ -124,18 +124,18 @@ export default function ChildProjectCard({
               className={shared.serviceTimelineFill}
               style={{
                 width: `${remainingRatio}%`,
-                background: expired ? '#FB923C' : remainingRatio <= 20 ? '#FBBF24' : project.color,
+                background: expired ? 'var(--color-danger-light)' : remainingRatio <= 20 ? 'var(--color-warning)' : project.color,
               }}
             />
           </div>
           <span className={shared.serviceTimelineDate}>
             {formatPeriod(project.serviceStart, project.serviceEnd)}
             {remainingDays !== null && !expired && remainingDays <= 30 && (
-              <span style={{ color: remainingDays <= 0 ? '#FB923C' : '#FBBF24', marginLeft: 6, fontWeight: 500 }}>
+              <span style={{ color: remainingDays <= 0 ? 'var(--color-danger-light)' : 'var(--color-warning)', marginLeft: 6, fontWeight: 500 }}>
                 剩余{remainingDays}天
               </span>
             )}
-            {expired && <span style={{ color: '#FB923C', marginLeft: 6, fontWeight: 500 }}>已到期</span>}
+            {expired && <span style={{ color: 'var(--color-danger-light)', marginLeft: 6, fontWeight: 500 }}>已到期</span>}
           </span>
         </div>
       )}
@@ -146,7 +146,7 @@ export default function ChildProjectCard({
           <span>周报 <strong>{stats.reportCount}</strong>期</span>
           <span>
             风险{' '}
-            <strong style={{ color: stats.riskCount > 0 ? '#FB923C' : undefined }}>
+            <strong style={{ color: stats.riskCount > 0 ? 'var(--color-danger-light)' : undefined }}>
               {stats.riskCount}
             </strong>
             项

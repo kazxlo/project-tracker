@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getTodayStr, hexToRgb, formatDate, getLatestReport, calcOverallProgress, filterVisibleProjects } from '../utils/helpers';
 import type { Project, Milestone, ProjectTask, WeeklyReport } from '../types';
 import ProjectExportModal from '../components/ProjectExportModal';
-import TopNav from '../components/TopNav';
+import Icon from '../components/Icon';
 import styles from '../styles/cockpit.module.css';
 
 // YYYY-MM-DD → YYYY.MM.DD（本地 fmtDate 别名，复用 helpers.formatDate）
@@ -36,10 +36,9 @@ export default function Cockpit() {
   const [drillDown, setDrillDown] = useState<'risks' | 'plans' | null>(null);
   const [savingRiskKey, setSavingRiskKey] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
-  const { username, role, userId, doLogout } = useAuth();
+  const { username, role, userId } = useAuth();
   const isAdmin = role === 'admin';
   const isMember = role === 'member';
-  const isPublic = role === 'public';
   const canEdit = isAdmin || isMember;
   const navigate = useNavigate();
 
@@ -68,44 +67,8 @@ export default function Cockpit() {
     return () => { cancelled = true; };
   }, []);
 
-  // 计算当前周（基于最新周报的 weekLabel 推算）
-  const weekInfo = useMemo(() => {
-    const today = new Date();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-    const friday = new Date(monday);
-    friday.setDate(monday.getDate() + 4);
-    const fmt = (d: Date) =>
-      `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 
-    // 从所有周报中找最新一期，解析其 weekLabel 获取周数基准
-    let latestWeekNum = 1;
-    let latestMonday: Date | null = null;
 
-    if (allReports.length > 0) {
-      // 找出最新一期周报
-      const latest = getLatestReport(allReports)!;
-      const match = latest.weekLabel.match(/第(\d+)周/);
-      if (match) {
-        latestWeekNum = parseInt(match[1]);
-      }
-      if (latest.weekStart) {
-        latestMonday = new Date(latest.weekStart + 'T00:00:00');
-      }
-    }
-
-    // 基于最新周报推算当前周数
-    let currentWeekNum = latestWeekNum;
-    if (latestMonday) {
-      const weeksDiff = Math.floor((monday.getTime() - latestMonday.getTime()) / (7 * 86400000));
-      currentWeekNum = latestWeekNum + weeksDiff;
-    }
-
-    return {
-      label: `第${Math.max(1, currentWeekNum)}周`,
-      range: `${fmt(monday)} - ${fmt(friday)}`,
-    };
-  }, [allReports]);
 
   // 各项目统计（仅顶层项目）
   const projectStats = useMemo(() => {
@@ -263,10 +226,10 @@ export default function Cockpit() {
 
     const kpis = [
       { key: 'projects', value: totalProjects, label: '在建项目', color: '#5B9EF5', clickable: false },
-      { key: 'progress', value: `${overallProgress}%`, label: '整体进度', color: '#4ADE80', clickable: false },
-      { key: 'risks', value: cumulativeRiskSet.size, label: '当前累计风险', color: '#ff6b6b', clickable: true },
-      { key: 'plans', value: remainingPlans, label: '剩余计划', color: '#A78BFA', clickable: true },
-      { key: 'overdue', value: overdueCount, label: '已逾期', color: '#ffb347', clickable: false },
+      { key: 'progress', value: `${overallProgress}%`, label: '整体进度', color: 'var(--color-success)', clickable: false },
+      { key: 'risks', value: cumulativeRiskSet.size, label: '当前累计风险', color: 'var(--color-danger)', clickable: true },
+      { key: 'plans', value: remainingPlans, label: '剩余计划', color: 'var(--color-primary)', clickable: true },
+      { key: 'overdue', value: overdueCount, label: '已逾期', color: 'var(--color-warning)', clickable: false },
     ];
 
     return { kpis, cumulativeRiskDetails, planDetails };
@@ -297,30 +260,12 @@ export default function Cockpit() {
 
   return (
     <div className={styles.cockpit}>
-      {/* 头部：标题 + 导航 + 用户 */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1 className={styles.headerTitle}>项目跟踪管理系统</h1>
-          <span className={styles.headerWeek}>
-            {weekInfo.label} · {weekInfo.range}
-          </span>
-        </div>
-        <div className={styles.headerRight}>
-          <TopNav active="cockpit" theme="dark" styles={styles} />
-          <span className={styles.userInfo}>
-            {username}
-            {isAdmin && <span className={styles.userRole}>(管理员)</span>}
-          </span>
-          {!isPublic && (
-            <button className={styles.pdfBtn} onClick={() => setShowExportModal(true)}>
-              导出PDF
-            </button>
-          )}
-          <button className={styles.logoutBtn} onClick={() => { doLogout(); }}>
-            退出
-          </button>
-        </div>
-      </header>
+      {/* 导出按钮 */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button className={styles.pdfBtn} onClick={() => setShowExportModal(true)}>
+          导出PDF
+        </button>
+      </div>
 
       {/* 顶部 KPI 横条 */}
       <section className={styles.kpiRow}>
@@ -405,7 +350,7 @@ export default function Cockpit() {
                 {/* 进度条 */}
                 <div className={styles.progressSection}>
                   <div className={styles.progressLabel}>
-                    <span className={styles.progressLabel} style={{ color: '#9aaec9', fontSize: 12 }}>
+                    <span className={styles.progressLabel} style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
                       {s.hasChildren ? '子项目综合进度' : '完成进度'}
                     </span>
                     <span
@@ -456,7 +401,7 @@ export default function Cockpit() {
                   <div className={styles.milestoneSection}>
                     <div className={styles.sectionHeader}>最近里程碑</div>
                     <div className={styles.milestoneRow}>
-                      <span className={styles.milestoneIcon}>&#9670;</span>
+                      <span className={styles.milestoneIcon}><Icon name="diamond" size={10} /></span>
                       <span className={styles.milestoneText}>{s.nearestMilestone.name}</span>
                       <span className={styles.milestoneDate}>目标 {fmtDate(s.nearestMilestone.targetDate)}</span>
                     </div>
@@ -501,7 +446,7 @@ export default function Cockpit() {
       {highRisks.length > 0 && (
         <section className={styles.riskSection}>
           <div className={styles.riskHeader}>
-            <h2 className={styles.riskTitle}>⚡ 高风险项</h2>
+            <h2 className={styles.riskTitle}><Icon name="zap" size={16} color="#ffb347" /> 高风险项</h2>
             <span className={styles.riskCount}>共 {highRisks.length} 项</span>
           </div>
           <div className={styles.riskList}>
@@ -524,7 +469,7 @@ export default function Cockpit() {
                   <div className={styles.riskBody}>
                     <div className={styles.riskDescription}>{risk.description}</div>
                     {risk.suggestion && (
-                      <div className={styles.riskSuggestion}>💡 {risk.suggestion}</div>
+                      <div className={styles.riskSuggestion}><Icon name="lightbulb" size={13} color="#ffb347" /> {risk.suggestion}</div>
                     )}
                     <div className={styles.riskMeta}>
                       <span className={styles.riskProjectTag}
@@ -540,13 +485,13 @@ export default function Cockpit() {
                           disabled={savingRiskKey === savingKey}
                           onChange={(e) => handleRiskStatusChange(risk.projectId, risk.description, e.target.value)}
                         >
-                          <option value="待处理">⏳ 待处理</option>
-                          <option value="持续关注">👁 持续关注</option>
-                          <option value="已解决">✓ 已解决</option>
+                          <option value="待处理">待处理</option>
+                          <option value="持续关注">持续关注</option>
+                          <option value="已解决">已解决</option>
                         </select>
                       ) : (
                         <span className={styles.riskStatusTag}>
-                          {risk.status === '待处理' ? '⏳ 待处理' : risk.status === '持续关注' ? '👁 持续关注' : risk.status}
+                          {risk.status === '待处理' ? <><Icon name="clock" size={12} color="#ff6b6b" /> 待处理</> : risk.status === '持续关注' ? <><Icon name="eye" size={12} color="#ffb347" /> 持续关注</> : risk.status}
                         </span>
                       )}
                       {savingRiskKey === savingKey && <span className={styles.savingHint}>保存中…</span>}
@@ -593,7 +538,7 @@ export default function Cockpit() {
                           <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: risk.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
                             {risk.projectName}
                           </span>
-                          <span style={{ color: '#9aaec9', fontSize: 12 }}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
+                          <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{risk.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
                           {canEdit ? (
                             <select
                               className={styles.statusSelect}
@@ -601,9 +546,9 @@ export default function Cockpit() {
                               disabled={savingRiskKey === savingKey}
                               onChange={(e) => handleRiskStatusChange(risk.projectId, risk.description, e.target.value)}
                             >
-                              <option value="待处理">⏳ 待处理</option>
-                              <option value="持续关注">👁 持续关注</option>
-                              <option value="已解决">✓ 已解决</option>
+                              <option value="待处理">待处理</option>
+                              <option value="持续关注">持续关注</option>
+                              <option value="已解决">已解决</option>
                             </select>
                           ) : (
                             <span style={{ color: risk.status === '待处理' ? '#ff6b6b' : '#9aaec9', fontSize: 12 }}>
@@ -641,7 +586,7 @@ export default function Cockpit() {
                           <span style={{ background: `rgba(${r},${g},${b},0.08)`, color: plan.projectColor, padding: '1px 6px', borderRadius: 4, fontSize: 11 }}>
                             {plan.projectName}
                           </span>
-                          <span style={{ color: '#9aaec9', fontSize: 12 }}>{plan.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
+                          <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{plan.weekLabel}{weekDate ? ` · ${weekDate}` : ''}</span>
                         </div>
                       </div>
                     </div>

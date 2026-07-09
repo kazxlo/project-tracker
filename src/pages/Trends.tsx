@@ -7,12 +7,10 @@ import {
   BarChart, Bar, ResponsiveContainer,
 } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
-import TopNav from '../components/TopNav';
 import shared from '../styles/shared.module.css';
 
 export default function Trends() {
-  const { username, userId, role, doLogout } = useAuth();
-  const isAdmin = role === 'admin';
+  const { userId, role } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,22 +90,17 @@ export default function Trends() {
   const levelColors = { '高': '#ff6b6b', '中': '#ffb347', '低': '#4ADE80' };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: 60, color: '#6b7a93' }}>加载中...</div>;
+    return <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)' }}>加载中...</div>;
   }
 
   if (projects.length === 0) {
     return (
       <div className={shared.pageWrap}>
-        <header className={shared.header}>
-          <div className={shared.headerLeft}><h1 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>项目健康趋势</h1></div>
-          <div className={shared.headerRight}>
-            <TopNav active="trends" theme="light" styles={shared} />
-            <span className={shared.textSmall} style={{ color: '#6b7a93' }}>{username}{isAdmin && <span style={{ fontSize: 11, color: '#4F8EF7', marginLeft: 4 }}>(管理员)</span>}</span>
-            <button className={shared.btnLogout} onClick={() => doLogout()}>退出</button>
-          </div>
-        </header>
         <main className={shared.main}>
-          <div className={shared.emptyState} style={{ padding: 60 }}><p style={{ fontSize: 15, marginBottom: 8 }}>暂无项目</p><p className={shared.textSmall}>请先在仪表盘中添加项目</p></div>
+          <div className={shared.emptyState} style={{ padding: 60 }}>
+            <p style={{ fontSize: 15, marginBottom: 8 }}>暂无项目</p>
+            <p className={shared.textSmall}>请先在仪表盘中添加项目</p>
+          </div>
         </main>
       </div>
     );
@@ -115,15 +108,6 @@ export default function Trends() {
 
   return (
     <div className={shared.pageWrap}>
-      <header className={shared.header}>
-        <div className={shared.headerLeft}><h1 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>项目健康趋势</h1></div>
-        <div className={shared.headerRight}>
-          <TopNav active="trends" theme="light" styles={shared} />
-          <span className={shared.textSmall} style={{ color: '#6b7a93' }}>{username}{isAdmin && <span style={{ fontSize: 11, color: '#4F8EF7', marginLeft: 4 }}>(管理员)</span>}</span>
-          <button className={shared.btnLogout} onClick={() => doLogout()}>退出</button>
-        </div>
-      </header>
-
       <main className={shared.main}>
         <div className={shared.section}>
           <h3 className={shared.sectionTitle}>活跃风险数量趋势</h3>
