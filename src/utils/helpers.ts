@@ -174,7 +174,8 @@ export function calcProjectProgress(
 
 /**
  * 计算父项目综合进度：
- * - 有子项目时：仅聚合各子项目进度（里程碑优先，仅各自自身规划）取简单算术平均，不含自身
+ * - 有子项目时：把「父项目自身里程碑进度」（仅当父自身存在里程碑时）与「各子项目进度」
+ *   一起纳入，取简单算术平均。父自身无里程碑则仅聚合子项目。
  * - 无子项目时：取自身统一进度（里程碑优先）
  * 注意：milestones / tasks 需为全量数据（含子项目），progress 计算才能正确纳入各项目自身里程碑
  */
@@ -188,6 +189,9 @@ export function calcOverallProgress(
 ): number {
   if (childProjects.length > 0) {
     const values: number[] = [];
+    // 父项目自身里程碑进度（仅当父自身挂有里程碑时才纳入平均）
+    const selfMs = calcProjectMilestoneProgress(project.id, allProjects, milestones, tasks);
+    if (selfMs !== null) values.push(selfMs);
     childProjects.forEach(c => {
       const progress = calcProjectProgress(c, allReports, allProjects, milestones, tasks);
       values.push(progress);
