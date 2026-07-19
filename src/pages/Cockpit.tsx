@@ -607,7 +607,8 @@ export default function Cockpit() {
           onConfirm={(selectedIds) => {
             const selectedProjects = projects.filter(p => selectedIds.includes(p.id));
             setShowExportModal(false);
-            exportWeeklySummaryPDF(selectedProjects, allReports);
+            const progressMap = Object.fromEntries(projectStats.map(s => [s.project.id, s.progress]));
+            exportWeeklySummaryPDF(selectedProjects, allReports, progressMap);
           }}
         />
       )}

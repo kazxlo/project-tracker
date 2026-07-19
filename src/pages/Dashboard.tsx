@@ -674,7 +674,14 @@ export default function Dashboard() {
           onConfirm={(selectedIds) => {
             const selectedProjects = projects.filter(p => selectedIds.includes(p.id));
             setShowExportModal(false);
-            exportWeeklySummaryPDF(selectedProjects, allReports);
+            const progressMap: Record<string, number> = {};
+            selectedProjects.forEach(p => {
+              if (!p.parentId) {
+                const childProjects = projects.filter(c => c.parentId === p.id);
+                progressMap[p.id] = calcOverallProgress(p, allReports, childProjects, projects, allMilestones, allTasks);
+              }
+            });
+            exportWeeklySummaryPDF(selectedProjects, allReports, progressMap);
           }}
         />
       )}

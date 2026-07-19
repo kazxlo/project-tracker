@@ -74,7 +74,11 @@ function collectProjectUnresolvedRisks(projectId: string, allReports: WeeklyRepo
   return { newThisWeek, historical };
 }
 
-export function exportWeeklySummaryPDF(projects: Project[], allReports: WeeklyReport[]) {
+export function exportWeeklySummaryPDF(
+  projects: Project[],
+  allReports: WeeklyReport[],
+  progressMap?: Record<string, number>
+) {
   // 1. 构建父子关系映射
   const childByParent = new Map<string, Project[]>();
   projects.forEach(p => {
@@ -257,6 +261,7 @@ ${projectReports.map(pr => {
     <span class="project-dot" style="background:${escapeHtml(project.color)};"></span>
     <span class="project-name">${escapeHtml(project.name)}</span>
     <span class="project-meta">负责人：${escapeHtml(project.owner)} · 子项目 ${childReports.length} 个</span>
+    <span class="project-progress" style="color:${escapeHtml(project.color)};">${progressMap?.[project.id] ?? 0}%</span>
   </div>
 
   <div class="sub-title">📌 建设目标</div>
@@ -349,7 +354,7 @@ ${projectReports.map(pr => {
     <span class="project-dot" style="background:${escapeHtml(project.color)};"></span>
     <span class="project-name">${escapeHtml(project.name)}</span>
     <span class="project-meta">负责人：${escapeHtml(project.owner)} · 状态：${escapeHtml(project.status)}</span>
-    <span class="project-progress" style="color:${escapeHtml(project.color)};">${latestReport?.progress ?? 0}%</span>
+    <span class="project-progress" style="color:${escapeHtml(project.color)};">${progressMap?.[project.id] ?? latestReport?.progress ?? 0}%</span>
   </div>
 
   ${!latestReport ? '<div class="empty">该项目暂无周报数据</div>' : `
