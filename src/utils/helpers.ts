@@ -204,7 +204,7 @@ export function calcOverallProgress(
 
 /**
  * 根据关联任务的完成情况自动推导里程碑状态。
- * - 无关联任务 → 返回原始状态（向后兼容）
+ * - 无关联任务 → 由目标日期驱动：过期且非'已完成'自动'已逾期'，调回未来则消除逾期
  * - 全部完成且无逾期 → '已完成'
  * - 全部完成但有逾期 → '已逾期'
  * - 有进行中/有风险 → '进行中'
@@ -216,7 +216,17 @@ export function deriveMilestoneStatus(
   today?: string
 ): Milestone['status'] {
   const linked = tasks.filter(t => t.milestoneId === milestone.id);
-  if (linked.length === 0) return milestone.status;
+  if (linked.length === 0) {
+    const t = today || getTodayStr();
+    // 无关联任务：逾期由目标日期驱动，与有关联任务行为一致
+    if (milestone.targetDate && milestone.targetDate < t) {
+      // 目标日已过：未完成（非'已完成'）即逾期；已完成则保持已完成
+      return milestone.status === '已完成' ? '已完成' : '已逾期';
+    }
+    // 目标日未过期：逾期不再成立，回到非逾期状态（消除手动/自动的逾期）
+    if (milestone.status === '已逾期') return '待开始';
+    return milestone.status;
+  }
 
   const t = today || getTodayStr();
   const allDone = linked.every(tk => tk.status === '已完成');

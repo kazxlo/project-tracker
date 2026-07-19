@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData } from '../api/db';
+import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData, getAllMilestones, getAllProjectTasks } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import Icon from '../components/Icon';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
-import { getTodayStr, getLatestReport, COLOR_PALETTE, filterVisibleProjects, genId } from '../utils/helpers';
-import type { Project } from '../types';
+import { getTodayStr, getLatestReport, COLOR_PALETTE, filterVisibleProjects, genId, calcOverallProgress } from '../utils/helpers';
+import type { Project, Milestone, ProjectTask } from '../types';
 import ProjectExportModal from '../components/ProjectExportModal';
 import Toast from '../components/Toast';
 import shared from '../styles/shared.module.css';
@@ -24,6 +24,8 @@ function emptyProject(): Project {
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allReports, setAllReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
+  const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
+  const [allTasks, setAllTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const { role, userId } = useAuth();
@@ -48,10 +50,14 @@ export default function Dashboard() {
     let cancelled = false;
     async function load() {
       try {
-        const [projs, reps] = await Promise.all([getProjects(), getAllReports()]);
+        const [projs, reps, mss, tss] = await Promise.all([
+          getProjects(), getAllReports(), getAllMilestones(), getAllProjectTasks(),
+        ]);
         if (!cancelled) {
           setProjects(filterVisibleProjects(projs, userId, role));
           setAllReports(reps);
+          setAllMilestones(mss);
+          setAllTasks(tss);
         }
       } catch (err) {
         console.error('加载数据失败:', err);
@@ -267,14 +273,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 项目逾期提醒 */}
+      {/* 项目逾期提醒（与驾驶舱一致：仅父项目，进度用 calcOverallProgress） */}
       {(() => {
+        const today = getTodayStr();
         const overdue = projects.filter(p => {
+          if (p.parentId) return false;
           if (!p.deadline || p.deadline.trim() === '') return false;
-          const today = getTodayStr();
           if (p.deadline >= today) return false;
-          const stats = getProjectStats(p.id);
-          return stats.progress < 100;
+          const childProjects = projects.filter(c => c.parentId === p.id);
+          const progress = calcOverallProgress(p, allReports, childProjects, projects, allMilestones, allTasks);
+          return progress < 100;
         });
         if (overdue.length === 0) return null;
         return (
@@ -312,6 +320,9 @@ export default function Dashboard() {
       <div className={shared.projectGrid}>
         {projects.filter(p => !p.parentId).map(p => {
           const stats = getProjectStats(p.id);
+          const childProjects = projects.filter(c => c.parentId === p.id);
+          // 进度比例与驾驶舱保持一致：有子项目时聚合子项目，里程碑优先
+          const progress = calcOverallProgress(p, allReports, childProjects, projects, allMilestones, allTasks);
           const tagCls = STATUS_CLASS[p.status] || shared.tagNormal;
           return (
             <div
@@ -327,7 +338,7 @@ export default function Dashboard() {
               <div className={shared.projectStats}>
                 <div>
                   <div className={shared.statValue} style={{ color: p.color }}>
-                    {stats.progress}%
+                    {progress}%
                   </div>
                   <div className={shared.statLabel}>完成进度</div>
                 </div>
