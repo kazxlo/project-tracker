@@ -1,6 +1,40 @@
 import { supabase } from './supabase';
 import type { Project, WeeklyReport, ReportItem, Risk, Milestone, ProjectTask } from '../types';
 
+// ==================== 读取缓存 ====================
+// 作用：同一会话内切换页面时复用已拉取的数据，避免每次导航都重新请求 Supabase。
+// 机制：内存缓存 + 并发去重（同一 key 的在途请求合并）+ 写操作后整体失效。
+const CACHE_TTL = 20_000; // 20 秒
+const _readCache = new Map<string, { time?: number; value?: unknown; inflight?: Promise<unknown> }>();
+let _cacheGen = 0; // 缓存代次：写操作使其递增，用于丢弃"写操作之前发出的在途读取"的结果
+
+function cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
+  const hit = _readCache.get(key);
+  if (hit) {
+    if (hit.inflight) return hit.inflight as Promise<T>;
+    if (hit.time !== undefined && Date.now() - hit.time < CACHE_TTL) return Promise.resolve(hit.value as T);
+  }
+  const gen = _cacheGen;
+  const inflight = loader()
+    .then(value => {
+      // 期间若发生写操作（代次变化），不回填缓存，避免缓存旧数据
+      if (gen === _cacheGen) _readCache.set(key, { time: Date.now(), value });
+      return value;
+    })
+    .catch(err => {
+      if (gen === _cacheGen) _readCache.delete(key);
+      throw err;
+    });
+  _readCache.set(key, { inflight });
+  return inflight;
+}
+
+/** 清空读取缓存（任何写操作后调用，确保后续读取为最新数据） */
+export function invalidateReadCache(): void {
+  _cacheGen++;
+  _readCache.clear();
+}
+
 // ==================== 字段映射 ====================
 // 数据库 snake_case ↔ 前端 camelCase
 
@@ -46,25 +80,29 @@ function mapReport(row: any): WeeklyReport {
 // ==================== 项目 CRUD ====================
 
 export async function getProjects(): Promise<Project[]> {
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return (data || []).map(mapProject);
+  return cachedRead('projects', async () => {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapProject);
+  });
 }
 
 export async function getProject(id: string): Promise<Project | undefined> {
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (error) {
-    if (error.code === 'PGRST116') return undefined; // 未找到
-    throw error;
-  }
-  return mapProject(data);
+  return cachedRead(`project:${id}`, async () => {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) {
+      if (error.code === 'PGRST116') return undefined; // 未找到
+      throw error;
+    }
+    return mapProject(data);
+  });
 }
 
 export async function saveProject(project: Project): Promise<void> {
@@ -88,6 +126,7 @@ export async function saveProject(project: Project): Promise<void> {
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
+  invalidateReadCache();
 }
 
 export async function deleteProject(id: string): Promise<void> {
@@ -97,18 +136,21 @@ export async function deleteProject(id: string): Promise<void> {
   await supabase.from('weekly_reports').delete().eq('project_id', id);
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw error;
+  invalidateReadCache();
 }
 
 // ==================== 周报 CRUD ====================
 
 export async function getReports(projectId: string): Promise<WeeklyReport[]> {
-  const { data, error } = await supabase
-    .from('weekly_reports')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('week_start', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapReport);
+  return cachedRead(`reports:${projectId}`, async () => {
+    const { data, error } = await supabase
+      .from('weekly_reports')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('week_start', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(mapReport);
+  });
 }
 
 export async function getReport(id: string): Promise<WeeklyReport | undefined> {
@@ -157,11 +199,13 @@ export async function saveReport(report: WeeklyReport): Promise<void> {
     updated_at: now,
   });
   if (error) throw error;
+  invalidateReadCache();
 }
 
 export async function deleteReport(id: string): Promise<void> {
   const { error } = await supabase.from('weekly_reports').delete().eq('id', id);
   if (error) throw error;
+  invalidateReadCache();
 }
 
 /**
@@ -175,6 +219,7 @@ export async function updateRiskStatus(
   riskDescription: string,
   newStatus: Risk['status']
 ): Promise<void> {
+  invalidateReadCache(); // 更新前清空缓存，确保基于最新周报计算
   const reports = await getReports(projectId); // 已按 week_start DESC 排序
   const key = riskDescription.trim();
   let updated = false;
@@ -199,12 +244,14 @@ export async function updateRiskStatus(
 }
 
 export async function getAllReports(): Promise<WeeklyReport[]> {
-  const { data, error } = await supabase
-    .from('weekly_reports')
-    .select('*')
-    .order('week_start', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapReport);
+  return cachedRead('allReports', async () => {
+    const { data, error } = await supabase
+      .from('weekly_reports')
+      .select('*')
+      .order('week_start', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(mapReport);
+  });
 }
 
 // ==================== 工具函数（不涉及数据库） ====================
@@ -237,13 +284,15 @@ function mapMilestone(row: any): Milestone {
 }
 
 export async function getMilestones(projectId: string): Promise<Milestone[]> {
-  const { data, error } = await supabase
-    .from('milestones')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  return (data || []).map(mapMilestone);
+  return cachedRead(`milestones:${projectId}`, async () => {
+    const { data, error } = await supabase
+      .from('milestones')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapMilestone);
+  });
 }
 
 export async function saveMilestone(m: Milestone): Promise<void> {
@@ -257,11 +306,13 @@ export async function saveMilestone(m: Milestone): Promise<void> {
     sort_order: m.sortOrder,
   });
   if (error) throw error;
+  invalidateReadCache();
 }
 
 export async function deleteMilestone(id: string): Promise<void> {
   const { error } = await supabase.from('milestones').delete().eq('id', id);
   if (error) throw error;
+  invalidateReadCache();
 }
 
 // ==================== 项目任务 CRUD ====================
@@ -284,13 +335,15 @@ function mapProjectTask(row: any): ProjectTask {
 }
 
 export async function getProjectTasks(projectId: string): Promise<ProjectTask[]> {
-  const { data, error } = await supabase
-    .from('project_tasks')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  return (data || []).map(mapProjectTask);
+  return cachedRead(`tasks:${projectId}`, async () => {
+    const { data, error } = await supabase
+      .from('project_tasks')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapProjectTask);
+  });
 }
 
 export async function saveProjectTask(t: ProjectTask): Promise<void> {
@@ -309,37 +362,44 @@ export async function saveProjectTask(t: ProjectTask): Promise<void> {
     sort_order: t.sortOrder,
   });
   if (error) throw error;
+  invalidateReadCache();
 }
 
 export async function deleteProjectTask(id: string): Promise<void> {
   const { error } = await supabase.from('project_tasks').delete().eq('id', id);
   if (error) throw error;
+  invalidateReadCache();
 }
 
 // ==================== 全局查询（驾驶舱用） ====================
 
 export async function getAllMilestones(): Promise<Milestone[]> {
-  const { data, error } = await supabase
-    .from('milestones')
-    .select('*')
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  return (data || []).map(mapMilestone);
+  return cachedRead('allMilestones', async () => {
+    const { data, error } = await supabase
+      .from('milestones')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapMilestone);
+  });
 }
 
 export async function getAllProjectTasks(): Promise<ProjectTask[]> {
-  const { data, error } = await supabase
-    .from('project_tasks')
-    .select('*')
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  return (data || []).map(mapProjectTask);
+  return cachedRead('allTasks', async () => {
+    const { data, error } = await supabase
+      .from('project_tasks')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapProjectTask);
+  });
 }
 
 // ==================== 数据导出（保留兼容旧功能） ====================
 
 /** 导出项目数据为 JSON（按项目嵌套周报、里程碑、任务） */
 export async function exportAllData(): Promise<string> {
+  invalidateReadCache(); // 导出前清空缓存，确保导出为最新数据
   const [projects, reports, milestones, tasks] = await Promise.all([
     getProjects(), getAllReports(), getAllMilestones(), getAllProjectTasks(),
   ]);
@@ -373,6 +433,7 @@ export async function exportAllData(): Promise<string> {
 /** 从 JSON 导入数据（先写入新数据，再删除不在新数据中的旧记录，避免中途失败丢数据） */
 export async function importAllData(jsonStr: string): Promise<{ success: boolean; message: string }> {
   try {
+    invalidateReadCache(); // 导入前清空缓存，避免读到旧数据
     const parsed = JSON.parse(jsonStr);
     if (!parsed || !Array.isArray(parsed.projects)) {
       return { success: false, message: '数据格式无效：缺少 projects 字段' };
