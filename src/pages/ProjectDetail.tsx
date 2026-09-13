@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus, getMilestones, getProjectTasks, getAllMilestones, getAllProjectTasks } from '../api/db';
+import { getProject, getProjects, getReports, getAllReports, deleteProject, deleteReport, saveProject, updateRiskStatus, getMilestones, getProjectTasks, getAllMilestones, getAllProjectTasks, prefetchReport } from '../api/db';
 import { getAllProfiles } from '../api/profiles';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -366,7 +366,11 @@ export default function ProjectDetail() {
                     })()
                   : null;
                 return (
-                  <div key={r.id} className={shared.reportRow}>
+                  <div
+                    key={r.id}
+                    className={shared.reportRow}
+                    onMouseEnter={() => prefetchReport(r.id)}
+                  >
                     <div>
                       <div className={shared.reportRowTitle}>
                         {r.weekLabel} ({r.weekStart} - {r.weekEnd})
@@ -765,7 +769,11 @@ export default function ProjectDetail() {
                 })()
               : null;
             return (
-            <div key={r.id} className={shared.reportRow}>
+            <div
+              key={r.id}
+              className={shared.reportRow}
+              onMouseEnter={() => prefetchReport(r.id)}
+            >
               <div>
                 <div className={shared.reportRowTitle}>
                   {r.weekLabel} ({r.weekStart} - {r.weekEnd})

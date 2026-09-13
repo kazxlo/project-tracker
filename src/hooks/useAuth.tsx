@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '../api/supabase';
+import { warmupCache } from '../api/db';
 import type { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -85,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session?.user) {
         setUser(data.session.user);
         loadProfile(data.session.user.id);
+        warmupCache();
       }
       setLoading(false);
     });
@@ -95,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         // 登录/注册后延迟加载 profile，给触发器执行时间
         setTimeout(() => loadProfile(session.user.id), 500);
+        warmupCache();
       } else {
         setDisplayName('');
         setRole('member');

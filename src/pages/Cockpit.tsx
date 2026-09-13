@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, getAllReports, updateRiskStatus, getAllMilestones, getAllProjectTasks } from '../api/db';
+import { getProjects, getAllReports, updateRiskStatus, getAllMilestones, getAllProjectTasks, prefetchProjectDetail } from '../api/db';
 import { exportWeeklySummaryPDF } from '../utils/pdfExport';
 import { useAuth } from '../hooks/useAuth';
 import { getTodayStr, hexToRgb, formatDate, getLatestReport, calcOverallProgress, filterVisibleProjects } from '../utils/helpers';
@@ -317,6 +317,7 @@ export default function Cockpit() {
                 key={s.project.id}
                 className={styles.projectCard}
                 style={{ background: bg, border }}
+                onMouseEnter={() => prefetchProjectDetail(s.project.id)}
                 onClick={() => navigate(`/project/${s.project.id}`)}
               >
                 {/* 项目头 */}

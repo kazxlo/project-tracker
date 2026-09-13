@@ -4,7 +4,7 @@ import type { Project, WeeklyReport, ReportItem, Risk, Milestone, ProjectTask } 
 // ==================== 读取缓存 ====================
 // 作用：同一会话内切换页面时复用已拉取的数据，避免每次导航都重新请求 Supabase。
 // 机制：内存缓存 + 并发去重（同一 key 的在途请求合并）+ 写操作后整体失效。
-const CACHE_TTL = 20_000; // 20 秒
+const CACHE_TTL = 300_000; // 5 分钟
 const _readCache = new Map<string, { time?: number; value?: unknown; inflight?: Promise<unknown> }>();
 let _cacheGen = 0; // 缓存代次：写操作使其递增，用于丢弃"写操作之前发出的在途读取"的结果
 
@@ -154,31 +154,35 @@ export async function getReports(projectId: string): Promise<WeeklyReport[]> {
 }
 
 export async function getReport(id: string): Promise<WeeklyReport | undefined> {
-  const { data, error } = await supabase
-    .from('weekly_reports')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (error) {
-    if (error.code === 'PGRST116') return undefined;
-    throw error;
-  }
-  return mapReport(data);
+  return cachedRead(`report:${id}`, async () => {
+    const { data, error } = await supabase
+      .from('weekly_reports')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) {
+      if (error.code === 'PGRST116') return undefined;
+      throw error;
+    }
+    return mapReport(data);
+  });
 }
 
 export async function getLatestReport(projectId: string): Promise<WeeklyReport | undefined> {
-  const { data, error } = await supabase
-    .from('weekly_reports')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('week_start', { ascending: false })
-    .limit(1)
-    .single();
-  if (error) {
-    if (error.code === 'PGRST116') return undefined;
-    throw error;
-  }
-  return mapReport(data);
+  return cachedRead(`latestReport:${projectId}`, async () => {
+    const { data, error } = await supabase
+      .from('weekly_reports')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('week_start', { ascending: false })
+      .limit(1)
+      .single();
+    if (error) {
+      if (error.code === 'PGRST116') return undefined;
+      throw error;
+    }
+    return mapReport(data);
+  });
 }
 
 export async function saveReport(report: WeeklyReport): Promise<void> {
@@ -491,4 +495,31 @@ export async function importAllData(jsonStr: string): Promise<{ success: boolean
   } catch {
     return { success: false, message: '无法解析 JSON 数据，请确认文件格式正确' };
   }
+}
+
+// ==================== 悬停预取（命中缓存后点开即秒开） ====================
+
+/** 预取项目详情所需数据（项目 / 周报列表 / 里程碑 / 任务），用于列表项悬停时提前加载 */
+export function prefetchProjectDetail(projectId: string): void {
+  Promise.all([
+    getProject(projectId),
+    getReports(projectId),
+    getMilestones(projectId),
+    getProjectTasks(projectId),
+  ]).catch(() => { /* 预取失败静默忽略，点击时会正常再请求 */ });
+}
+
+/** 预取单期周报详情，用于周报列表项悬停时提前加载 */
+export function prefetchReport(reportId: string): void {
+  getReport(reportId).catch(() => { /* 预取失败静默忽略，点击时会正常再请求 */ });
+}
+
+/** 启动预热：登录态确认后提前拉取共享数据，缩短首个页面的等待 */
+export function warmupCache(): void {
+  Promise.all([
+    getProjects(),
+    getAllReports(),
+    getAllMilestones(),
+    getAllProjectTasks(),
+  ]).catch(() => { /* 预热失败静默忽略，进入页面时会正常再请求 */ });
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData, getAllMilestones, getAllProjectTasks } from '../api/db';
+import { getProjects, getAllReports, saveProject, deleteProject, exportAllData, importAllData, getAllMilestones, getAllProjectTasks, prefetchProjectDetail } from '../api/db';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import Icon from '../components/Icon';
@@ -332,6 +332,7 @@ export default function Dashboard() {
                 if ((e.target as HTMLElement).closest('button')) return;
                 navigate(`/project/${p.id}`);
               }}
+              onMouseEnter={() => prefetchProjectDetail(p.id)}
               style={{ borderLeftWidth: 4, borderLeftStyle: 'solid', borderLeftColor: p.color }}
             >
               <h3 className={shared.projectName}>{p.name}</h3>
